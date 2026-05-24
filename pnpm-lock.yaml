@@ -9,6 +9,7 @@ importers:
     specifiers:
       '@base-ui/react': ^1.5.0
       '@biomejs/biome': ^1
+      '@phosphor-icons/react': ^2.1.7
       '@tailwindcss/postcss': ^4
       '@testing-library/dom': ^10.4.1
       '@testing-library/jest-dom': ^6.9.1
@@ -20,7 +21,6 @@ importers:
       class-variance-authority: ^0.7.1
       clsx: ^2.1.1
       jsdom: ^24
-      lucide-react: ^1.16.0
       next: 16.2.6
       react: 19.2.4
       react-dom: 19.2.4
@@ -32,9 +32,9 @@ importers:
       vitest: ^2
     dependencies:
       '@base-ui/react': 1.5.0_5ff1ff5b2be3a5911be0d5a8f882a3c1
+      '@phosphor-icons/react': 2.1.10_react-dom@19.2.4+react@19.2.4
       class-variance-authority: 0.7.1
       clsx: 2.1.1
-      lucide-react: 1.16.0_react@19.2.4
       next: 16.2.6_react-dom@19.2.4+react@19.2.4
       react: 19.2.4
       react-dom: 19.2.4_react@19.2.4
@@ -1274,6 +1274,17 @@ packages:
 
   /@open-draft/until/2.1.0:
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
+    dev: false
+
+  /@phosphor-icons/react/2.1.10_react-dom@19.2.4+react@19.2.4:
+    resolution: {integrity: sha512-vt8Tvq8GLjheAZZYa+YG/pW7HDbov8El/MANW8pOAz4eGxrwhnbfrQZq0Cp4q8zBEu8NIhHdnr+r8thnfRSNYA==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>= 16.8'
+      react-dom: '>= 16.8'
+    dependencies:
+      react: 19.2.4
+      react-dom: 19.2.4_react@19.2.4
     dev: false
 
   /@rolldown/pluginutils/1.0.0-beta.27:
@@ -3221,14 +3232,6 @@ packages:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
     dependencies:
       yallist: 3.1.1
-
-  /lucide-react/1.16.0_react@19.2.4:
-    resolution: {integrity: sha512-dYwyPzb4MEKpGUmNYk3WKWPnMrHs3FKM+q94kAnJrcDIqqn1hq2xY8scaS2ovsOCM5D51ey2gaRG3PBb1vgoYQ==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-    dependencies:
-      react: 19.2.4
-    dev: false
 
   /lz-string/1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}

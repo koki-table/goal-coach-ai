@@ -2,15 +2,15 @@
 
 import { NAV_ITEMS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { CheckSquare, LayoutDashboard, Swords, Target } from "lucide-react";
+import { ChatsCircle, CheckSquare, SquaresFour, Target } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const iconMap = {
-	LayoutDashboard,
+	SquaresFour,
 	Target,
 	CheckSquare,
-	Swords,
+	ChatsCircle,
 } as const;
 
 type SidebarProps = {

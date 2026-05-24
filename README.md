@@ -1,6 +1,6 @@
 # Goal Coach AI
 
-AI軍曹があなたの目標達成を支援するアプリケーション。
+AIコーチがあなたの目標達成を支援するアプリケーション。
 
 ## Tech Stack
 
@@ -21,14 +21,14 @@ goal-coach-ai/
 │   │   ├── page.tsx          # ダッシュボード
 │   │   ├── goals/            # 目標管理
 │   │   ├── todos/            # ToDo
-│   │   └── coach/            # AI軍曹
+│   │   └── coach/            # AIコーチ
 │   ├── components/
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   └── ui/              # shadcn/ui コンポーネント
 │   ├── features/
 │   │   ├── goals/           # 目標管理機能
 │   │   ├── todos/           # ToDo機能
-│   │   └── coach/           # AI軍曹機能
+│   │   └── coach/           # AIコーチ機能
 │   ├── hooks/               # 共有カスタムフック
 │   ├── lib/                 # ユーティリティ・定数
 │   └── types/               # 共有型定義
