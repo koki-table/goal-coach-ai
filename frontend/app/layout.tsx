@@ -1,36 +1,58 @@
-import { AppShell } from "@/components/layout/appShell";
 import { TooltipProvider } from "@/components/atom/tooltip";
+import { SWRProvider } from "@/lib/swr/swrProvider";
+import { jaJP } from "@clerk/localizations";
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
-  variable: "--font-sans",
-  subsets: ["latin"],
+	variable: "--font-sans",
+	subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
+	variable: "--font-mono",
+	subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Goal Coach AI",
-  description: "AIコーチがあなたの目標達成を支援します",
+	title: "Goal Coach AI",
+	description: "AIコーチがあなたの目標達成を支援します",
+};
+
+const localization = {
+	...jaJP,
+	signIn: {
+		...jaJP.signIn,
+		start: {
+			...jaJP.signIn?.start,
+			title: "Goal Coach AI にログイン",
+		},
+	},
+	signUp: {
+		...jaJP.signUp,
+		start: {
+			...jaJP.signUp?.start,
+			title: "Goal Coach AI に登録",
+		},
+	},
 };
 
 export default function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return (
-    <html lang="ja" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen antialiased">
-        <TooltipProvider>
-          <AppShell>{children}</AppShell>
-        </TooltipProvider>
-      </body>
-    </html>
-  );
+	return (
+		<ClerkProvider localization={localization} afterSignOutUrl="/sign-in">
+			<html lang="ja" className={`${geistSans.variable} ${geistMono.variable}`}>
+				<body className="min-h-screen antialiased">
+					<SWRProvider>
+						<TooltipProvider>{children}</TooltipProvider>
+					</SWRProvider>
+				</body>
+			</html>
+		</ClerkProvider>
+	);
 }
