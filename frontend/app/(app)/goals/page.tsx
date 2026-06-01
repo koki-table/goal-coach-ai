@@ -9,9 +9,10 @@ import { useGoalStatus } from "@/features/goals/hooks/useGoalStatus";
 import type { GoalInput, GoalStatusInput } from "@/features/goals/schemas/goalSchema";
 import { Skeleton } from "@/components/atom/skeleton";
 import { Card, CardContent } from "@/components/atom/card";
-import { Button } from "@/components/atom/button";
+import { buttonVariants } from "@/components/atom/button";
 import { ListChecks } from "@phosphor-icons/react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function GoalsPage() {
 	const [selectedGoalId, setSelectedGoalId] = useState<string | undefined>(
@@ -122,11 +123,9 @@ export default function GoalsPage() {
 									</p>
 								</div>
 							</div>
-							<Button asChild>
-								<Link href="/todos">
-									TODOを管理する
-								</Link>
-							</Button>
+							<Link href="/todos" className={cn(buttonVariants())}>
+								TODOを管理する
+							</Link>
 						</CardContent>
 					</Card>
 				</div>
