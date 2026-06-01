@@ -1,0 +1,124 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
+import { Target } from "@phosphor-icons/react";
+import type { Todo, Milestone } from "../types";
+import type { TodoInput } from "../schemas/todoSchema";
+import { MilestoneProgress } from "./milestoneProgress";
+import { MilestoneForm } from "./milestoneForm";
+import { TodoBoard } from "./todoBoard";
+
+type GoalTodoGroup = {
+	goalId: string;
+	goalTitle: string;
+	milestones: Milestone[];
+	aiTodos: Todo[];
+	myTodos: Todo[];
+};
+
+type TodoGroupByGoalProps = {
+	groups: GoalTodoGroup[];
+	onToggleComplete: (todoId: string) => void;
+	onResetTodo: (todoId: string) => void;
+	onDeleteTodo: (todoId: string) => void;
+	onMoveTodoToMyTodos: (todoId: string) => void;
+	onMoveTodoToAiGenerated: (todoId: string) => void;
+	onAddTodo: (goalId: string, input: TodoInput) => void;
+	onReorderTodos: (
+		sourceList: "aiTodos" | "myTodos",
+		sourceIndex: number,
+		destinationList: "aiTodos" | "myTodos",
+		destinationIndex: number,
+		goalId: string,
+	) => void;
+	onToggleMilestoneComplete: (goalId: string, milestoneId: string) => void;
+	onSaveMilestones: (
+		goalId: string,
+		data: {
+			short: { title: string; isCompleted: boolean };
+			medium: { title: string; isCompleted: boolean };
+			long: { title: string; isCompleted: boolean };
+		},
+	) => Promise<void>;
+};
+
+export function TodoGroupByGoal({
+	groups,
+	onToggleComplete,
+	onResetTodo,
+	onDeleteTodo,
+	onMoveTodoToMyTodos,
+	onMoveTodoToAiGenerated,
+	onAddTodo,
+	onReorderTodos,
+	onToggleMilestoneComplete,
+	onSaveMilestones,
+}: TodoGroupByGoalProps) {
+	const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+
+	if (groups.length === 0) {
+		return (
+			<div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
+				<div className="text-center">
+					<Target weight="bold" className="mx-auto mb-2 size-12 text-muted-foreground" />
+					<p className="text-muted-foreground">
+						目標がありません。まず目標を設定してください。
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6">
+			{groups.map((group) => (
+				<Card key={group.goalId} className="overflow-hidden">
+					<CardHeader className="bg-muted/30 pb-4">
+						<CardTitle className="flex items-center gap-2">
+							<Target weight="fill" className="size-5 text-primary" />
+							{group.goalTitle}
+						</CardTitle>
+
+						{/* マイルストーン表示/編集 */}
+						{editingGoalId === group.goalId ? (
+							<MilestoneForm
+								milestones={group.milestones}
+								onSave={async (data) => {
+									await onSaveMilestones(group.goalId, data);
+									setEditingGoalId(null);
+								}}
+								onCancel={() => setEditingGoalId(null)}
+								className="mt-3"
+							/>
+						) : (
+							<MilestoneProgress
+								milestones={group.milestones}
+								onEdit={() => setEditingGoalId(group.goalId)}
+								onToggleComplete={(milestoneId) =>
+									onToggleMilestoneComplete(group.goalId, milestoneId)
+								}
+								className="mt-3"
+							/>
+						)}
+					</CardHeader>
+
+					<CardContent className="pt-4">
+						<TodoBoard
+							goalId={group.goalId}
+							aiTodos={group.aiTodos}
+							myTodos={group.myTodos}
+							onToggleComplete={onToggleComplete}
+							onResetTodo={onResetTodo}
+							onDeleteTodo={onDeleteTodo}
+							onMoveTodoToMyTodos={onMoveTodoToMyTodos}
+							onMoveTodoToAiGenerated={onMoveTodoToAiGenerated}
+							onAddTodo={onAddTodo}
+							onReorder={onReorderTodos}
+						/>
+					</CardContent>
+				</Card>
+			))}
+		</div>
+	);
+}
