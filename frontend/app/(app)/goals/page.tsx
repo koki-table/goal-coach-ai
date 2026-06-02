@@ -3,12 +3,16 @@
 import { useState } from "react";
 import { GoalList } from "@/features/goals/components/goalList";
 import { GoalStatusForm } from "@/features/goals/components/goalForm";
-import { TaskBoard } from "@/features/goals/components/taskBoard";
 import { ProbabilityReview } from "@/features/goals/components/probabilityReview";
 import { useGoals } from "@/features/goals/hooks/useGoals";
 import { useGoalStatus } from "@/features/goals/hooks/useGoalStatus";
 import type { GoalInput, GoalStatusInput } from "@/features/goals/schemas/goalSchema";
 import { Skeleton } from "@/components/atom/skeleton";
+import { Card, CardContent } from "@/components/atom/card";
+import { buttonVariants } from "@/components/atom/button";
+import { ListChecks } from "@phosphor-icons/react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function GoalsPage() {
 	const [selectedGoalId, setSelectedGoalId] = useState<string | undefined>(
@@ -21,16 +25,9 @@ export default function GoalsPage() {
 	// 選択中の目標のステータスフック
 	const {
 		data: goalStatus,
-		taskBoard,
 		isLoading: statusLoading,
 		updateStatus,
-		moveTaskToMyTodos,
-		moveTaskToAiGenerated,
-		toggleTaskComplete,
-		addTask,
-		deleteTask,
 		requestAiReview,
-		reorderTasks,
 	} = useGoalStatus(selectedGoalId ?? "");
 
 	const handleCreateGoal = async (data: GoalInput) => {
@@ -112,23 +109,25 @@ export default function GoalsPage() {
 						/>
 					)}
 
-					{/* タスクボード */}
-					{taskBoard && (
-						<div className="space-y-4">
-							<h3 className="text-lg font-semibold">
-								可変ロードマップ & ToDo管理
-							</h3>
-							<TaskBoard
-								taskBoard={taskBoard}
-								onMoveToMyTodos={moveTaskToMyTodos}
-								onMoveToAiGenerated={moveTaskToAiGenerated}
-								onToggleComplete={toggleTaskComplete}
-								onAddTask={addTask}
-								onDeleteTask={deleteTask}
-								onReorder={reorderTasks}
-							/>
-						</div>
-					)}
+					{/* TODOタブへの誘導 */}
+					<Card>
+						<CardContent className="flex items-center justify-between py-6">
+							<div className="flex items-center gap-3">
+								<div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+									<ListChecks weight="fill" className="size-5 text-primary" />
+								</div>
+								<div>
+									<p className="font-medium">タスク管理</p>
+									<p className="text-sm text-muted-foreground">
+										目標ごとのTODOとマイルストーンを管理
+									</p>
+								</div>
+							</div>
+							<Link href="/todos" className={cn(buttonVariants())}>
+								TODOを管理する
+							</Link>
+						</CardContent>
+					</Card>
 				</div>
 			)}
 		</div>
