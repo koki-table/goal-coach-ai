@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import { Check, PencilSimple } from "@phosphor-icons/react";
 import type { Milestone } from "../types";
-import { milestoneLevelLabels, milestoneLevelOrder } from "../types";
 
 type MilestoneProgressProps = {
 	milestones: Milestone[];
@@ -18,12 +17,13 @@ export function MilestoneProgress({
 	onToggleComplete,
 	className,
 }: MilestoneProgressProps) {
-	// マイルストーンをレベル順にソート
+	// マイルストーンをorder順にソート
 	const sortedMilestones = [...milestones].sort(
-		(a, b) => milestoneLevelOrder[a.level] - milestoneLevelOrder[b.level],
+		(a, b) => a.order - b.order,
 	);
 
 	const completedCount = sortedMilestones.filter((m) => m.isCompleted).length;
+	const isCompact = sortedMilestones.length >= 6;
 
 	if (sortedMilestones.length === 0) {
 		return (
@@ -69,8 +69,8 @@ export function MilestoneProgress({
 				)}
 			</div>
 
-			{/* 3段階ステップ表示 */}
-			<div className="flex items-start gap-2">
+			{/* N段階ステップ表示 */}
+			<div className="flex items-start">
 				{sortedMilestones.map((milestone, index) => (
 					<div key={milestone.id} className="flex flex-1 flex-col items-center">
 						{/* ステップインジケーター */}
@@ -93,7 +93,8 @@ export function MilestoneProgress({
 								onClick={() => onToggleComplete?.(milestone.id)}
 								disabled={!onToggleComplete}
 								className={cn(
-									"flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+									"flex shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+									isCompact ? "size-6" : "size-8",
 									milestone.isCompleted
 										? "border-primary bg-primary text-primary-foreground"
 										: "border-muted-foreground/30 bg-background",
@@ -102,9 +103,12 @@ export function MilestoneProgress({
 								)}
 							>
 								{milestone.isCompleted ? (
-									<Check weight="bold" className="size-4" />
+									<Check weight="bold" className={isCompact ? "size-3" : "size-4"} />
 								) : (
-									<span className="text-xs font-medium text-muted-foreground">
+									<span className={cn(
+										"font-medium text-muted-foreground",
+										isCompact ? "text-[10px]" : "text-xs",
+									)}>
 										{index + 1}
 									</span>
 								)}
@@ -123,12 +127,16 @@ export function MilestoneProgress({
 
 						{/* ラベル */}
 						<div className="mt-2 text-center">
-							<p className="text-xs font-medium text-muted-foreground">
-								{milestoneLevelLabels[milestone.level]}
+							<p className={cn(
+								"font-medium text-muted-foreground",
+								isCompact ? "text-[10px]" : "text-xs",
+							)}>
+								{milestone.label}
 							</p>
 							<p
 								className={cn(
-									"mt-0.5 line-clamp-2 text-xs",
+									"mt-0.5 line-clamp-2",
+									isCompact ? "text-[10px]" : "text-xs",
 									milestone.isCompleted
 										? "text-primary"
 										: "text-foreground",

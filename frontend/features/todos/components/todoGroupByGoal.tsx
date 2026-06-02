@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
 import { Target } from "@phosphor-icons/react";
 import type { Todo, Milestone } from "../types";
-import type { TodoInput } from "../schemas/todoSchema";
+import type { TodoInput, MilestoneEntry } from "../schemas/todoSchema";
 import { MilestoneProgress } from "./milestoneProgress";
 import { MilestoneForm } from "./milestoneForm";
 import { TodoBoard } from "./todoBoard";
@@ -13,17 +13,13 @@ type GoalTodoGroup = {
 	goalId: string;
 	goalTitle: string;
 	milestones: Milestone[];
-	aiTodos: Todo[];
 	myTodos: Todo[];
 };
 
 type TodoGroupByGoalProps = {
 	groups: GoalTodoGroup[];
 	onToggleComplete: (todoId: string) => void;
-	onResetTodo: (todoId: string) => void;
 	onDeleteTodo: (todoId: string) => void;
-	onMoveTodoToMyTodos: (todoId: string) => void;
-	onMoveTodoToAiGenerated: (todoId: string) => void;
 	onAddTodo: (goalId: string, input: TodoInput) => void;
 	onReorderTodos: (
 		sourceList: "aiTodos" | "myTodos",
@@ -35,21 +31,14 @@ type TodoGroupByGoalProps = {
 	onToggleMilestoneComplete: (goalId: string, milestoneId: string) => void;
 	onSaveMilestones: (
 		goalId: string,
-		data: {
-			short: { title: string; isCompleted: boolean };
-			medium: { title: string; isCompleted: boolean };
-			long: { title: string; isCompleted: boolean };
-		},
+		data: MilestoneEntry[],
 	) => Promise<void>;
 };
 
 export function TodoGroupByGoal({
 	groups,
 	onToggleComplete,
-	onResetTodo,
 	onDeleteTodo,
-	onMoveTodoToMyTodos,
-	onMoveTodoToAiGenerated,
 	onAddTodo,
 	onReorderTodos,
 	onToggleMilestoneComplete,
@@ -106,13 +95,9 @@ export function TodoGroupByGoal({
 					<CardContent className="pt-4">
 						<TodoBoard
 							goalId={group.goalId}
-							aiTodos={group.aiTodos}
 							myTodos={group.myTodos}
 							onToggleComplete={onToggleComplete}
-							onResetTodo={onResetTodo}
 							onDeleteTodo={onDeleteTodo}
-							onMoveTodoToMyTodos={onMoveTodoToMyTodos}
-							onMoveTodoToAiGenerated={onMoveTodoToAiGenerated}
 							onAddTodo={onAddTodo}
 							onReorder={onReorderTodos}
 						/>

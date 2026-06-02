@@ -21,7 +21,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 	const pathname = usePathname();
 
 	return (
-		<nav className="flex flex-col gap-1 p-4">
+		<nav className="flex flex-col gap-1 p-4 min-w-60">
 			{NAV_ITEMS.map((item) => {
 				const Icon = iconMap[item.icon as keyof typeof iconMap];
 				const isActive = pathname === item.href;

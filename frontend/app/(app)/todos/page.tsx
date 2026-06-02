@@ -4,28 +4,18 @@ import { useCallback } from "react";
 import { useTodos } from "@/features/todos/hooks/useTodos";
 import { useAllMilestones } from "@/features/todos/hooks/useMilestones";
 import { TodoGroupByGoal } from "@/features/todos/components/todoGroupByGoal";
-import type { TodoInput, MilestoneLevel } from "@/features/todos/schemas/todoSchema";
+import type { TodoInput, MilestoneEntry } from "@/features/todos/schemas/todoSchema";
+import type { Milestone } from "@/features/todos/types";
 import { Skeleton } from "@/components/atom/skeleton";
 
 // モック: マイルストーンストア（useMilestonesと共有するため外部化が必要だが、ここでは簡易実装）
-const mockMilestonesStore: Record<
-	string,
-	Array<{
-		id: string;
-		goalId: string;
-		title: string;
-		level: MilestoneLevel;
-		order: 1 | 2 | 3;
-		isCompleted: boolean;
-		createdAt: string;
-	}>
-> = {
+const mockMilestonesStore: Record<string, Milestone[]> = {
 	"goal-1": [
 		{
 			id: "milestone-1-1",
 			goalId: "goal-1",
 			title: "毎日30分の英語学習を習慣化",
-			level: "short",
+			label: "短期目標",
 			order: 1,
 			isCompleted: true,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -34,7 +24,7 @@ const mockMilestonesStore: Record<
 			id: "milestone-1-2",
 			goalId: "goal-1",
 			title: "TOEIC模試で600点達成",
-			level: "medium",
+			label: "中期目標",
 			order: 2,
 			isCompleted: false,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -43,7 +33,7 @@ const mockMilestonesStore: Record<
 			id: "milestone-1-3",
 			goalId: "goal-1",
 			title: "TOEIC本番で900点達成",
-			level: "long",
+			label: "長期目標",
 			order: 3,
 			isCompleted: false,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -54,7 +44,7 @@ const mockMilestonesStore: Record<
 			id: "milestone-2-1",
 			goalId: "goal-2",
 			title: "週3回のジョギング習慣化",
-			level: "short",
+			label: "短期目標",
 			order: 1,
 			isCompleted: true,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -63,7 +53,7 @@ const mockMilestonesStore: Record<
 			id: "milestone-2-2",
 			goalId: "goal-2",
 			title: "ハーフマラソン完走",
-			level: "medium",
+			label: "中期目標",
 			order: 2,
 			isCompleted: false,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -72,7 +62,7 @@ const mockMilestonesStore: Record<
 			id: "milestone-2-3",
 			goalId: "goal-2",
 			title: "フルマラソン完走",
-			level: "long",
+			label: "長期目標",
 			order: 3,
 			isCompleted: false,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -85,11 +75,8 @@ export default function TodosPage() {
 		goalsWithTodos,
 		isLoading: todosLoading,
 		toggleTodoComplete,
-		resetTodo,
 		deleteTodo,
 		addTodo,
-		moveTodoToMyTodos,
-		moveTodoToAiGenerated,
 		reorderTodos,
 	} = useTodos();
 
@@ -100,7 +87,6 @@ export default function TodosPage() {
 		goalId: g.goalId,
 		goalTitle: g.goalTitle,
 		milestones: milestonesMap[g.goalId] || mockMilestonesStore[g.goalId] || [],
-		aiTodos: g.aiGeneratedTodos,
 		myTodos: g.myTodos,
 	}));
 
@@ -112,32 +98,11 @@ export default function TodosPage() {
 		[toggleTodoComplete],
 	);
 
-	const handleResetTodo = useCallback(
-		(todoId: string) => {
-			resetTodo(todoId);
-		},
-		[resetTodo],
-	);
-
 	const handleDeleteTodo = useCallback(
 		(todoId: string) => {
 			deleteTodo(todoId);
 		},
 		[deleteTodo],
-	);
-
-	const handleMoveTodoToMyTodos = useCallback(
-		(todoId: string) => {
-			moveTodoToMyTodos(todoId);
-		},
-		[moveTodoToMyTodos],
-	);
-
-	const handleMoveTodoToAiGenerated = useCallback(
-		(todoId: string) => {
-			moveTodoToAiGenerated(todoId);
-		},
-		[moveTodoToAiGenerated],
 	);
 
 	const handleAddTodo = useCallback(
@@ -169,14 +134,7 @@ export default function TodosPage() {
 	);
 
 	const handleSaveMilestones = useCallback(
-		async (
-			goalId: string,
-			data: {
-				short: { title: string; isCompleted: boolean };
-				medium: { title: string; isCompleted: boolean };
-				long: { title: string; isCompleted: boolean };
-			},
-		) => {
+		async (goalId: string, data: MilestoneEntry[]) => {
 			// TODO: マイルストーン保存の実装
 			console.log("Save milestones for goal:", goalId, data);
 			// 実際のAPIコールやストア更新をここで行う
@@ -215,10 +173,7 @@ export default function TodosPage() {
 			<TodoGroupByGoal
 				groups={groups}
 				onToggleComplete={handleToggleComplete}
-				onResetTodo={handleResetTodo}
 				onDeleteTodo={handleDeleteTodo}
-				onMoveTodoToMyTodos={handleMoveTodoToMyTodos}
-				onMoveTodoToAiGenerated={handleMoveTodoToAiGenerated}
 				onAddTodo={handleAddTodo}
 				onReorderTodos={handleReorderTodos}
 				onToggleMilestoneComplete={handleToggleMilestoneComplete}

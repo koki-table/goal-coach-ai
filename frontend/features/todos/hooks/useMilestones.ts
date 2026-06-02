@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import useSWR from "swr";
 import type { Milestone } from "../types";
-import type { MilestoneLevelEnum } from "../schemas/todoSchema";
+import type { MilestoneEntry } from "../schemas/todoSchema";
 
 // モックデータ: 目標ごとのマイルストーン
 const mockMilestonesStore: Record<string, Milestone[]> = {
@@ -10,7 +10,7 @@ const mockMilestonesStore: Record<string, Milestone[]> = {
 			id: "milestone-1-1",
 			goalId: "goal-1",
 			title: "毎日30分の英語学習を習慣化",
-			level: "short",
+			label: "短期目標",
 			order: 1,
 			isCompleted: true,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -19,7 +19,7 @@ const mockMilestonesStore: Record<string, Milestone[]> = {
 			id: "milestone-1-2",
 			goalId: "goal-1",
 			title: "TOEIC模試で600点達成",
-			level: "medium",
+			label: "中期目標",
 			order: 2,
 			isCompleted: false,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -28,7 +28,7 @@ const mockMilestonesStore: Record<string, Milestone[]> = {
 			id: "milestone-1-3",
 			goalId: "goal-1",
 			title: "TOEIC本番で900点達成",
-			level: "long",
+			label: "長期目標",
 			order: 3,
 			isCompleted: false,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -39,7 +39,7 @@ const mockMilestonesStore: Record<string, Milestone[]> = {
 			id: "milestone-2-1",
 			goalId: "goal-2",
 			title: "週3回のジョギング習慣化",
-			level: "short",
+			label: "短期目標",
 			order: 1,
 			isCompleted: true,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -48,7 +48,7 @@ const mockMilestonesStore: Record<string, Milestone[]> = {
 			id: "milestone-2-2",
 			goalId: "goal-2",
 			title: "ハーフマラソン完走",
-			level: "medium",
+			label: "中期目標",
 			order: 2,
 			isCompleted: false,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -57,7 +57,7 @@ const mockMilestonesStore: Record<string, Milestone[]> = {
 			id: "milestone-2-3",
 			goalId: "goal-2",
 			title: "フルマラソン完走",
-			level: "long",
+			label: "長期目標",
 			order: 3,
 			isCompleted: false,
 			createdAt: "2026-05-01T00:00:00.000Z",
@@ -80,10 +80,7 @@ type UseMilestonesReturn = {
 	) => Promise<Milestone>;
 	createMilestones: (
 		goalId: string,
-		milestones: Array<{
-			title: string;
-			level: (typeof MilestoneLevelEnum)[keyof typeof MilestoneLevelEnum];
-		}>,
+		entries: MilestoneEntry[],
 	) => Promise<Milestone[]>;
 	toggleMilestoneComplete: (milestoneId: string) => Promise<void>;
 };
@@ -126,18 +123,15 @@ export function useMilestones(goalId: string): UseMilestonesReturn {
 	const createMilestones = useCallback(
 		async (
 			targetGoalId: string,
-			newMilestones: Array<{
-				title: string;
-				level: (typeof MilestoneLevelEnum)[keyof typeof MilestoneLevelEnum];
-			}>,
+			entries: MilestoneEntry[],
 		): Promise<Milestone[]> => {
-			const created: Milestone[] = newMilestones.map((m, idx) => ({
+			const created: Milestone[] = entries.map((entry, idx) => ({
 				id: `milestone-${targetGoalId}-${Date.now()}-${idx}`,
 				goalId: targetGoalId,
-				title: m.title,
-				level: m.level,
-				order: (idx + 1) as 1 | 2 | 3,
-				isCompleted: false,
+				title: entry.title,
+				label: entry.label,
+				order: idx + 1,
+				isCompleted: entry.isCompleted,
 				createdAt: new Date().toISOString(),
 			}));
 

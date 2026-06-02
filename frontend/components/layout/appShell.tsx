@@ -12,12 +12,15 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="flex min-h-screen">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:w-60 md:flex-col md:border-r bg-sidebar">
-        <div className="flex h-14 items-center border-b px-4">
+      <aside
+        className={`hidden md:flex md:flex-col md:border-r bg-sidebar overflow-hidden transition-all duration-300 ${sidebarOpen ? "md:w-60" : "md:w-0 md:border-r-0"}`}
+      >
+        <div className="flex h-14 items-center border-b px-4 min-w-60">
           <span className="text-lg">⚔️</span>
           <span className="ml-2 font-bold text-sidebar-foreground">
             {APP_NAME}
@@ -41,7 +44,11 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main Area */}
       <div className="flex flex-1 flex-col">
-        <Header onMenuClick={() => setMobileOpen(true)} />
+        <Header
+          onMenuClick={() => setMobileOpen(true)}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          sidebarOpen={sidebarOpen}
+        />
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>

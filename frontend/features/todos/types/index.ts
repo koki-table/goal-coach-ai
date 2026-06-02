@@ -1,8 +1,4 @@
-import type {
-	MilestoneInput,
-	MilestoneLevel,
-	TodoInput,
-} from "../schemas/todoSchema";
+import type { MilestoneInput, TodoInput } from "../schemas/todoSchema";
 
 // マイルストーンの型定義
 export type Milestone = MilestoneInput & {
@@ -31,19 +27,3 @@ export type GoalWithTodos = {
 	aiGeneratedTodos: Todo[];
 	myTodos: Todo[];
 };
-
-// マイルストーンレベルの表示名マッピング
-export const milestoneLevelLabels: Record<MilestoneLevel, string> = {
-	short: "短期目標",
-	medium: "中期目標",
-	long: "長期目標",
-};
-
-// マイルストーンレベルの順序
-export const milestoneLevelOrder: Record<MilestoneLevel, number> = {
-	short: 1,
-	medium: 2,
-	long: 3,
-};
-
-export type { MilestoneLevel };

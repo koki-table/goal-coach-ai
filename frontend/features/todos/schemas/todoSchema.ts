@@ -1,14 +1,22 @@
 import { z } from "zod";
 
-// マイルストーンレベルの定義
-export const MilestoneLevelEnum = {
-	SHORT: "short",
-	MEDIUM: "medium",
-	LONG: "long",
-} as const;
+// マイルストーン上限
+export const MAX_MILESTONES_PER_GOAL = 10;
 
-export type MilestoneLevel =
-	(typeof MilestoneLevelEnum)[keyof typeof MilestoneLevelEnum];
+// マイルストーンエントリスキーマ（フォーム用）
+export const milestoneEntrySchema = z.object({
+	label: z
+		.string()
+		.min(1, "ラベルは必須です")
+		.max(30, "ラベルは30文字以内で入力してください"),
+	title: z
+		.string()
+		.min(1, "タイトルは必須です")
+		.max(100, "タイトルは100文字以内で入力してください"),
+	isCompleted: z.boolean(),
+});
+
+export type MilestoneEntry = z.infer<typeof milestoneEntrySchema>;
 
 // マイルストーン入力用スキーマ
 export const milestoneInputSchema = z.object({
@@ -16,12 +24,11 @@ export const milestoneInputSchema = z.object({
 		.string()
 		.min(1, "タイトルは必須です")
 		.max(100, "タイトルは100文字以内で入力してください"),
-	level: z.enum([
-		MilestoneLevelEnum.SHORT,
-		MilestoneLevelEnum.MEDIUM,
-		MilestoneLevelEnum.LONG,
-	]),
-	order: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+	label: z
+		.string()
+		.min(1, "ラベルは必須です")
+		.max(30, "ラベルは30文字以内で入力してください"),
+	order: z.number().int().min(1).max(10),
 });
 
 export type MilestoneInput = z.infer<typeof milestoneInputSchema>;
@@ -47,20 +54,12 @@ export const todoInputSchema = z.object({
 
 export type TodoInput = z.infer<typeof todoInputSchema>;
 
-// マイルストーン一括更新用スキーマ（3つセット）
+// マイルストーン一括更新用スキーマ（動的配列）
 export const milestonesFormSchema = z.object({
-	shortTerm: z.object({
-		title: z.string().min(1, "短期目標は必須です").max(100),
-		isCompleted: z.boolean(),
-	}),
-	mediumTerm: z.object({
-		title: z.string().min(1, "中期目標は必須です").max(100),
-		isCompleted: z.boolean(),
-	}),
-	longTerm: z.object({
-		title: z.string().min(1, "長期目標は必須です").max(100),
-		isCompleted: z.boolean(),
-	}),
+	milestones: z
+		.array(milestoneEntrySchema)
+		.min(1, "最低1つのマイルストーンが必要です")
+		.max(MAX_MILESTONES_PER_GOAL, `マイルストーンは${MAX_MILESTONES_PER_GOAL}個以内です`),
 });
 
 export type MilestonesFormInput = z.infer<typeof milestonesFormSchema>;

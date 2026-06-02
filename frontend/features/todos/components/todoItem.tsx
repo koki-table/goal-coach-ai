@@ -10,8 +10,6 @@ import {
 	Trash,
 	DotsSixVertical,
 	Clock,
-	ArrowRight,
-	ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import type { Todo } from "../types";
 
@@ -19,18 +17,14 @@ type TodoItemProps = {
 	todo: Todo;
 	isMyTodo: boolean;
 	onToggleComplete?: () => void;
-	onReset?: () => void;
 	onDelete?: () => void;
-	onMoveToOther?: () => void;
 };
 
 export function TodoItem({
 	todo,
 	isMyTodo,
 	onToggleComplete,
-	onReset,
 	onDelete,
-	onMoveToOther,
 }: TodoItemProps) {
 	const {
 		attributes,
@@ -116,34 +110,6 @@ export function TodoItem({
 
 			{/* アクションボタン */}
 			<div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-				{/* リセットボタン（完了済みのマイTODOのみ） */}
-				{isMyTodo && todo.completed && onReset && (
-					<Button
-						variant="ghost"
-						size="icon-xs"
-						onClick={onReset}
-						title="リセット（再度実行可能にする）"
-					>
-						<ArrowCounterClockwise weight="bold" className="size-3.5" />
-					</Button>
-				)}
-				{/* 移動ボタン */}
-				{onMoveToOther && (
-					<Button
-						variant="ghost"
-						size="icon-xs"
-						onClick={onMoveToOther}
-						title={isMyTodo ? "候補に戻す" : "マイTODOに追加"}
-					>
-						<ArrowRight
-							weight="bold"
-							className={cn(
-								"size-3.5",
-								isMyTodo && "rotate-180",
-							)}
-						/>
-					</Button>
-				)}
 				{/* 削除ボタン */}
 				{onDelete && (
 					<Button variant="ghost" size="icon-xs" onClick={onDelete}>

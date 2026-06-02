@@ -3,30 +3,17 @@
 import { useState } from "react";
 import { Button } from "@/components/atom/button";
 import { Input } from "@/components/atom/input";
-import { Label } from "@/components/atom/label";
 import { cn } from "@/lib/utils";
-import { Check, X } from "@phosphor-icons/react";
+import { Check, Plus, Trash, X } from "@phosphor-icons/react";
 import type { Milestone } from "../types";
-import { milestoneLevelLabels } from "../types";
-import type { MilestoneLevel } from "../schemas/todoSchema";
-
-type MilestoneFormData = {
-	short: { title: string; isCompleted: boolean };
-	medium: { title: string; isCompleted: boolean };
-	long: { title: string; isCompleted: boolean };
-};
+import type { MilestoneEntry } from "../schemas/todoSchema";
+import { MAX_MILESTONES_PER_GOAL } from "../schemas/todoSchema";
 
 type MilestoneFormProps = {
 	milestones: Milestone[];
-	onSave: (data: MilestoneFormData) => Promise<void>;
+	onSave: (data: MilestoneEntry[]) => Promise<void>;
 	onCancel: () => void;
 	className?: string;
-};
-
-const defaultFormData: MilestoneFormData = {
-	short: { title: "", isCompleted: false },
-	medium: { title: "", isCompleted: false },
-	long: { title: "", isCompleted: false },
 };
 
 export function MilestoneForm({
@@ -36,85 +23,126 @@ export function MilestoneForm({
 	className,
 }: MilestoneFormProps) {
 	// 既存のマイルストーンからフォームデータを初期化
-	const initialData = milestones.reduce<MilestoneFormData>(
-		(acc, m) => {
-			acc[m.level] = { title: m.title, isCompleted: m.isCompleted };
-			return acc;
-		},
-		{ ...defaultFormData },
-	);
+	const initialEntries: MilestoneEntry[] =
+		milestones.length > 0
+			? [...milestones]
+					.sort((a, b) => a.order - b.order)
+					.map((m) => ({ label: m.label, title: m.title, isCompleted: m.isCompleted }))
+			: [{ label: "", title: "", isCompleted: false }];
 
-	const [formData, setFormData] = useState<MilestoneFormData>(initialData);
+	const [entries, setEntries] = useState<MilestoneEntry[]>(initialEntries);
 	const [isSaving, setIsSaving] = useState(false);
 
-	const handleChange = (
-		level: MilestoneLevel,
-		field: "title" | "isCompleted",
+	const handleEntryChange = (
+		index: number,
+		field: keyof MilestoneEntry,
 		value: string | boolean,
 	) => {
-		setFormData((prev) => ({
-			...prev,
-			[level]: { ...prev[level], [field]: value },
-		}));
+		setEntries((prev) =>
+			prev.map((entry, i) =>
+				i === index ? { ...entry, [field]: value } : entry,
+			),
+		);
+	};
+
+	const handleAddEntry = () => {
+		if (entries.length >= MAX_MILESTONES_PER_GOAL) return;
+		setEntries((prev) => [...prev, { label: "", title: "", isCompleted: false }]);
+	};
+
+	const handleRemoveEntry = (index: number) => {
+		if (entries.length <= 1) return;
+		setEntries((prev) => prev.filter((_, i) => i !== index));
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!formData.short.title || !formData.medium.title || !formData.long.title) {
-			return;
-		}
+		const hasEmpty = entries.some((entry) => !entry.label || !entry.title);
+		if (hasEmpty) return;
+
 		setIsSaving(true);
 		try {
-			await onSave(formData);
+			await onSave(entries);
 		} finally {
 			setIsSaving(false);
 		}
 	};
 
-	const levels: MilestoneLevel[] = ["short", "medium", "long"];
+	const isValid = entries.every((entry) => entry.label && entry.title);
 
 	return (
 		<form onSubmit={handleSubmit} className={cn("space-y-4", className)}>
 			<div className="space-y-3">
-				{levels.map((level) => (
-					<div key={level} className="space-y-1.5">
-						<div className="flex items-center justify-between">
-							<Label htmlFor={`milestone-${level}`} className="text-sm">
-								{milestoneLevelLabels[level]}
-							</Label>
-							<button
-								type="button"
-								onClick={() =>
-									handleChange(level, "isCompleted", !formData[level].isCompleted)
-								}
-								className={cn(
-									"flex size-5 items-center justify-center rounded border-2 transition-colors",
-									formData[level].isCompleted
-										? "border-primary bg-primary text-primary-foreground"
-										: "border-muted-foreground/30 hover:border-primary/50",
-								)}
-							>
-								{formData[level].isCompleted && (
-									<Check weight="bold" className="size-3" />
-								)}
-							</button>
-						</div>
-						<Input
-							id={`milestone-${level}`}
-							value={formData[level].title}
-							onChange={(e) => handleChange(level, "title", e.target.value)}
-							placeholder={
-								level === "short"
-									? "例: 毎日30分の学習習慣化"
-									: level === "medium"
-										? "例: 模試で目標スコア達成"
-										: "例: 本番で最終目標達成"
+				{entries.map((entry, index) => (
+					<div key={index} className="flex items-start gap-2">
+						{/* 完了トグル */}
+						<button
+							type="button"
+							onClick={() =>
+								handleEntryChange(index, "isCompleted", !entry.isCompleted)
 							}
-							className="text-sm"
+							className={cn(
+								"mt-2 flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
+								entry.isCompleted
+									? "border-primary bg-primary text-primary-foreground"
+									: "border-muted-foreground/30 hover:border-primary/50",
+							)}
+						>
+							{entry.isCompleted && (
+								<Check weight="bold" className="size-3" />
+							)}
+						</button>
+
+						{/* ラベル入力 */}
+						<Input
+							value={entry.label}
+							onChange={(e) => handleEntryChange(index, "label", e.target.value)}
+							placeholder="ラベル（例: 短期目標）"
+							className="w-28 shrink-0 text-sm"
+							maxLength={30}
 						/>
+
+						{/* タイトル入力 */}
+						<Input
+							value={entry.title}
+							onChange={(e) => handleEntryChange(index, "title", e.target.value)}
+							placeholder="目標内容を入力"
+							className="flex-1 text-sm"
+							maxLength={100}
+						/>
+
+						{/* 削除ボタン */}
+						<button
+							type="button"
+							onClick={() => handleRemoveEntry(index)}
+							disabled={entries.length <= 1}
+							className={cn(
+								"mt-2 flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors",
+								entries.length > 1
+									? "hover:text-destructive"
+									: "cursor-not-allowed opacity-30",
+							)}
+						>
+							<Trash weight="bold" className="size-4" />
+						</button>
 					</div>
 				))}
 			</div>
+
+			{/* ステップ追加ボタン */}
+			<button
+				type="button"
+				onClick={handleAddEntry}
+				disabled={entries.length >= MAX_MILESTONES_PER_GOAL}
+				className={cn(
+					"flex items-center gap-1 text-sm text-primary hover:underline",
+					entries.length >= MAX_MILESTONES_PER_GOAL &&
+						"cursor-not-allowed opacity-50 hover:no-underline",
+				)}
+			>
+				<Plus weight="bold" className="size-4" />
+				ステップを追加
+			</button>
 
 			<div className="flex justify-end gap-2">
 				<Button type="button" variant="ghost" size="sm" onClick={onCancel}>
@@ -124,12 +152,7 @@ export function MilestoneForm({
 				<Button
 					type="submit"
 					size="sm"
-					disabled={
-						isSaving ||
-						!formData.short.title ||
-						!formData.medium.title ||
-						!formData.long.title
-					}
+					disabled={isSaving || !isValid}
 				>
 					<Check weight="bold" className="mr-1 size-4" />
 					保存

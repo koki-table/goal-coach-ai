@@ -1,7 +1,6 @@
-import { useCallback } from "react";
-import useSWR from "swr";
-import type { Todo, GoalWithTodos } from "../types";
+import { useCallback, useState } from "react";
 import type { TodoInput } from "../schemas/todoSchema";
+import type { GoalWithTodos, Todo } from "../types";
 
 // モックデータ: 目標情報
 const mockGoals = [
@@ -95,15 +94,8 @@ type UseTodosReturn = {
 	isLoading: boolean;
 	error: Error | undefined;
 	toggleTodoComplete: (todoId: string) => Promise<void>;
-	resetTodo: (todoId: string) => Promise<void>;
-	addTodo: (
-		goalId: string,
-		input: TodoInput,
-		isAiGenerated?: boolean,
-	) => Promise<Todo>;
+	addTodo: (goalId: string, input: TodoInput, isAiGenerated?: boolean) => Promise<Todo>;
 	deleteTodo: (todoId: string) => Promise<void>;
-	moveTodoToMyTodos: (todoId: string) => Promise<void>;
-	moveTodoToAiGenerated: (todoId: string) => Promise<void>;
 	reorderTodos: (
 		sourceList: "aiTodos" | "myTodos",
 		sourceIndex: number,
@@ -113,26 +105,15 @@ type UseTodosReturn = {
 	) => Promise<void>;
 };
 
+// TODO: API実装後にSWR（useSWR）に置き換える
 export function useTodos(): UseTodosReturn {
-	const {
-		data,
-		error,
-		isLoading,
-		mutate,
-	} = useSWR<{ aiTodos: Todo[]; myTodos: Todo[] }>(
-		"/api/todos",
-		async () => {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			return { aiTodos: aiTodosStore, myTodos: myTodosStore };
-		},
-		{
-			fallbackData: { aiTodos: aiTodosStore, myTodos: myTodosStore },
-			revalidateOnFocus: false,
-		},
-	);
+	const [data, setData] = useState<{ aiTodos: Todo[]; myTodos: Todo[] }>({
+		aiTodos: aiTodosStore,
+		myTodos: myTodosStore,
+	});
 
-	const aiTodos = data?.aiTodos || [];
-	const myTodos = data?.myTodos || [];
+	const aiTodos = data.aiTodos;
+	const myTodos = data.myTodos;
 	const todos = [...aiTodos, ...myTodos];
 
 	// 目標ごとにグループ化
@@ -145,72 +126,36 @@ export function useTodos(): UseTodosReturn {
 	}));
 
 	// TODO完了トグル（カウントアップ）
-	const toggleTodoComplete = useCallback(
-		async (todoId: string): Promise<void> => {
-			// AI TODOの場合
-			const aiIndex = aiTodosStore.findIndex((t) => t.id === todoId);
-			if (aiIndex !== -1) {
-				const todo = aiTodosStore[aiIndex];
-				aiTodosStore[aiIndex] = {
-					...todo,
-					completed: !todo.completed,
-					completionCount: !todo.completed
-						? todo.completionCount + 1
-						: todo.completionCount,
-				};
-				await mutate();
-				return;
-			}
+	const toggleTodoComplete = useCallback(async (todoId: string): Promise<void> => {
+		// AI TODOの場合
+		const aiIndex = aiTodosStore.findIndex((t) => t.id === todoId);
+		if (aiIndex !== -1) {
+			const todo = aiTodosStore[aiIndex];
+			aiTodosStore[aiIndex] = {
+				...todo,
+				completed: !todo.completed,
+				completionCount: !todo.completed ? todo.completionCount + 1 : todo.completionCount,
+			};
+			setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
+			return;
+		}
 
-			// マイTODOの場合
-			const myIndex = myTodosStore.findIndex((t) => t.id === todoId);
-			if (myIndex !== -1) {
-				const todo = myTodosStore[myIndex];
-				myTodosStore[myIndex] = {
-					...todo,
-					completed: !todo.completed,
-					completionCount: !todo.completed
-						? todo.completionCount + 1
-						: todo.completionCount,
-				};
-				await mutate();
-			}
-		},
-		[mutate],
-	);
-
-	// TODOリセット（完了状態のみリセット、カウントは維持）
-	const resetTodo = useCallback(
-		async (todoId: string): Promise<void> => {
-			const aiIndex = aiTodosStore.findIndex((t) => t.id === todoId);
-			if (aiIndex !== -1) {
-				aiTodosStore[aiIndex] = {
-					...aiTodosStore[aiIndex],
-					completed: false,
-				};
-				await mutate();
-				return;
-			}
-
-			const myIndex = myTodosStore.findIndex((t) => t.id === todoId);
-			if (myIndex !== -1) {
-				myTodosStore[myIndex] = {
-					...myTodosStore[myIndex],
-					completed: false,
-				};
-				await mutate();
-			}
-		},
-		[mutate],
-	);
+		// マイTODOの場合
+		const myIndex = myTodosStore.findIndex((t) => t.id === todoId);
+		if (myIndex !== -1) {
+			const todo = myTodosStore[myIndex];
+			myTodosStore[myIndex] = {
+				...todo,
+				completed: !todo.completed,
+				completionCount: !todo.completed ? todo.completionCount + 1 : todo.completionCount,
+			};
+			setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
+		}
+	}, []);
 
 	// TODO追加
 	const addTodo = useCallback(
-		async (
-			goalId: string,
-			input: TodoInput,
-			isAiGenerated = false,
-		): Promise<Todo> => {
+		async (goalId: string, input: TodoInput, isAiGenerated = false): Promise<Todo> => {
 			const newTodo: Todo = {
 				id: `todo-${Date.now()}`,
 				goalId,
@@ -228,47 +173,18 @@ export function useTodos(): UseTodosReturn {
 			} else {
 				myTodosStore = [...myTodosStore, newTodo];
 			}
-			await mutate();
+			setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
 			return newTodo;
 		},
-		[mutate],
+		[],
 	);
 
 	// TODO削除
-	const deleteTodo = useCallback(
-		async (todoId: string): Promise<void> => {
-			aiTodosStore = aiTodosStore.filter((t) => t.id !== todoId);
-			myTodosStore = myTodosStore.filter((t) => t.id !== todoId);
-			await mutate();
-		},
-		[mutate],
-	);
-
-	// AI TODOをマイTODOに移動
-	const moveTodoToMyTodos = useCallback(
-		async (todoId: string): Promise<void> => {
-			const todo = aiTodosStore.find((t) => t.id === todoId);
-			if (!todo) return;
-
-			aiTodosStore = aiTodosStore.filter((t) => t.id !== todoId);
-			myTodosStore = [...myTodosStore, { ...todo, isAiGenerated: false }];
-			await mutate();
-		},
-		[mutate],
-	);
-
-	// マイTODOをAI生成エリアに戻す
-	const moveTodoToAiGenerated = useCallback(
-		async (todoId: string): Promise<void> => {
-			const todo = myTodosStore.find((t) => t.id === todoId);
-			if (!todo) return;
-
-			myTodosStore = myTodosStore.filter((t) => t.id !== todoId);
-			aiTodosStore = [...aiTodosStore, { ...todo, isAiGenerated: true }];
-			await mutate();
-		},
-		[mutate],
-	);
+	const deleteTodo = useCallback(async (todoId: string): Promise<void> => {
+		aiTodosStore = aiTodosStore.filter((t) => t.id !== todoId);
+		myTodosStore = myTodosStore.filter((t) => t.id !== todoId);
+		setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
+	}, []);
 
 	// TODOの並び替え
 	const reorderTodos = useCallback(
@@ -279,8 +195,7 @@ export function useTodos(): UseTodosReturn {
 			destinationIndex: number,
 			goalId: string,
 		): Promise<void> => {
-			const sourceStore =
-				sourceList === "aiTodos" ? aiTodosStore : myTodosStore;
+			const sourceStore = sourceList === "aiTodos" ? aiTodosStore : myTodosStore;
 			const goalTodos = sourceStore.filter((t) => t.goalId === goalId);
 			const [movedTodo] = goalTodos.splice(sourceIndex, 1);
 
@@ -295,8 +210,7 @@ export function useTodos(): UseTodosReturn {
 					myTodosStore = [...otherTodos, ...goalTodos];
 				}
 			} else {
-				const destStore =
-					destinationList === "aiTodos" ? aiTodosStore : myTodosStore;
+				const destStore = destinationList === "aiTodos" ? aiTodosStore : myTodosStore;
 				const destGoalTodos = destStore.filter((t) => t.goalId === goalId);
 				const updatedTodo = {
 					...movedTodo,
@@ -316,9 +230,9 @@ export function useTodos(): UseTodosReturn {
 				}
 			}
 
-			await mutate();
+			setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
 		},
-		[mutate],
+		[],
 	);
 
 	return {
@@ -326,14 +240,11 @@ export function useTodos(): UseTodosReturn {
 		aiTodos,
 		myTodos,
 		goalsWithTodos,
-		isLoading,
-		error,
+		isLoading: false,
+		error: undefined,
 		toggleTodoComplete,
-		resetTodo,
 		addTodo,
 		deleteTodo,
-		moveTodoToMyTodos,
-		moveTodoToAiGenerated,
 		reorderTodos,
 	};
 }
