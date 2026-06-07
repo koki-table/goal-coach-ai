@@ -19,6 +19,7 @@ export const todos = sqliteTable(
 		priority: text("priority").notNull().default("medium"),
 		dueDate: text("dueDate"),
 		estimatedMinutes: integer("estimatedMinutes"),
+		isAiGenerated: integer("isAiGenerated").notNull().default(0),
 		sortOrder: integer("sortOrder").notNull().default(0),
 		createdAt: text("createdAt")
 			.notNull()

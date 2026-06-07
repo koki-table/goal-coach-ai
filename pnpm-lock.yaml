@@ -19,6 +19,9 @@ importers:
       hono:
         specifier: ^4
         version: 4.12.23
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@biomejs/biome':
         specifier: ^1
