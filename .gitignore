@@ -33,6 +33,10 @@ yarn-error.log*
 # Testing
 coverage/
 
+# Wrangler
+.wrangler/
+.dev.vars
+
 # Misc
 *.tsbuildinfo
 next-env.d.ts

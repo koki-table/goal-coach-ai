@@ -1,0 +1,12 @@
+name = "goal-coach-ai-api"
+main = "src/index.ts"
+compatibility_date = "2025-05-26"
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:3000"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "goal-coach-db"
+database_id = "4fe0d296-9230-4f14-bea1-aa3ad5cd668b"
+migrations_dir = "drizzle/migrations"
