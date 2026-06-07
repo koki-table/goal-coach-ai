@@ -8,6 +8,5 @@ ALLOWED_ORIGINS = "http://localhost:3000"
 [[d1_databases]]
 binding = "DB"
 database_name = "goal-coach-db"
-# TODO: wrangler d1 create で取得した実際のIDに差し替え
-database_id = "placeholder"
+database_id = "4fe0d296-9230-4f14-bea1-aa3ad5cd668b"
 migrations_dir = "drizzle/migrations"
