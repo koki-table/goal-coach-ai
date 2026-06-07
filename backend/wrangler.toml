@@ -1,0 +1,13 @@
+name = "goal-coach-ai-api"
+main = "src/index.ts"
+compatibility_date = "2025-05-26"
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:3000"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "goal-coach-db"
+# TODO: wrangler d1 create で取得した実際のIDに差し替え
+database_id = "placeholder"
+migrations_dir = "drizzle/migrations"

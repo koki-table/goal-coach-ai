@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
     "build": "pnpm --filter frontend build",
-    "lint": "pnpm --filter frontend lint",
+    "lint": "pnpm --filter frontend lint && pnpm --filter backend lint",
     "test": "pnpm --filter frontend test",
     "test:run": "pnpm --filter frontend test:run"
   }

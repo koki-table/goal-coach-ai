@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1780816385138,
+      "tag": "0000_heavy_toxin",
+      "breakpoints": true
+    }
+  ]
+}
