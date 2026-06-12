@@ -10,8 +10,12 @@ type SWRProviderProps = {
 };
 
 export function SWRProvider({ children }: SWRProviderProps) {
-	const { getToken } = useAuth();
+	const { getToken, isLoaded, isSignedIn } = useAuth();
 	const fetcher = createFetcher(getToken);
 
-	return <SWRConfig value={{ ...swrConfig, fetcher }}>{children}</SWRConfig>;
+	return (
+		<SWRConfig value={{ ...swrConfig, fetcher, isPaused: () => !isLoaded || !isSignedIn }}>
+			{children}
+		</SWRConfig>
+	);
 }

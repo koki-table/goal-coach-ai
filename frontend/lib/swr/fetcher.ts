@@ -1,6 +1,6 @@
 import { createApiError, parseErrorMessage } from "./fetcher.helper";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787/api";
 
 export function createFetcher(getToken: () => Promise<string | null>) {
 	return async <T>(key: string): Promise<T> => {

@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2025-05-26"
 
 [vars]
-ALLOWED_ORIGINS = "http://localhost:3000"
+ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3001"
 
 [[d1_databases]]
 binding = "DB"

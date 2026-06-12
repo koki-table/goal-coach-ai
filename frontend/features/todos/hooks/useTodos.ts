@@ -1,90 +1,9 @@
-import { useCallback, useState } from "react";
+import { createApiClient } from "@/lib/swr/apiClient";
+import { useAuth } from "@clerk/nextjs";
+import { useCallback } from "react";
+import useSWR from "swr";
 import type { TodoInput } from "../schemas/todoSchema";
 import type { GoalWithTodos, Todo } from "../types";
-
-// モックデータ: 目標情報
-const mockGoals = [
-	{ id: "goal-1", title: "TOEIC 900点取得" },
-	{ id: "goal-2", title: "フルマラソン完走" },
-];
-
-// モックデータ: AI生成TODO
-const mockAiTodos: Todo[] = [
-	{
-		id: "ai-todo-1",
-		goalId: "goal-1",
-		title: "TOEICリスニングパート3の練習問題を20問解く",
-		dueDate: "2026-05-27",
-		estimatedMinutes: 45,
-		completed: false,
-		completionCount: 0,
-		isAiGenerated: true,
-		createdAt: "2026-05-26T00:00:00.000Z",
-	},
-	{
-		id: "ai-todo-2",
-		goalId: "goal-1",
-		title: "英単語帳 Chapter 5 の暗記（50語）",
-		dueDate: "2026-05-27",
-		estimatedMinutes: 30,
-		completed: false,
-		completionCount: 0,
-		isAiGenerated: true,
-		createdAt: "2026-05-26T00:00:00.000Z",
-	},
-	{
-		id: "ai-todo-3",
-		goalId: "goal-2",
-		title: "5kmジョギング",
-		dueDate: "2026-05-27",
-		estimatedMinutes: 35,
-		completed: false,
-		completionCount: 0,
-		isAiGenerated: true,
-		createdAt: "2026-05-26T00:00:00.000Z",
-	},
-];
-
-// モックデータ: マイTODO
-const mockMyTodos: Todo[] = [
-	{
-		id: "my-todo-1",
-		goalId: "goal-1",
-		title: "英単語アプリで30分学習",
-		dueDate: "2026-05-26",
-		estimatedMinutes: 30,
-		completed: true,
-		completionCount: 5,
-		isAiGenerated: false,
-		createdAt: "2026-05-25T00:00:00.000Z",
-	},
-	{
-		id: "my-todo-2",
-		goalId: "goal-1",
-		title: "リスニング問題集 Part 2 を解く",
-		dueDate: "2026-05-26",
-		estimatedMinutes: 25,
-		completed: false,
-		completionCount: 2,
-		isAiGenerated: false,
-		createdAt: "2026-05-25T00:00:00.000Z",
-	},
-	{
-		id: "my-todo-3",
-		goalId: "goal-2",
-		title: "ストレッチ15分",
-		dueDate: "2026-05-26",
-		estimatedMinutes: 15,
-		completed: false,
-		completionCount: 8,
-		isAiGenerated: false,
-		createdAt: "2026-05-25T00:00:00.000Z",
-	},
-];
-
-// ストア（メモリ内操作用）
-let aiTodosStore = [...mockAiTodos];
-let myTodosStore = [...mockMyTodos];
 
 type UseTodosReturn = {
 	todos: Todo[];
@@ -105,134 +24,103 @@ type UseTodosReturn = {
 	) => Promise<void>;
 };
 
-// TODO: API実装後にSWR（useSWR）に置き換える
 export function useTodos(): UseTodosReturn {
-	const [data, setData] = useState<{ aiTodos: Todo[]; myTodos: Todo[] }>({
-		aiTodos: aiTodosStore,
-		myTodos: myTodosStore,
-	});
+	const { getToken } = useAuth();
+	const apiClient = createApiClient(getToken);
 
-	const aiTodos = data.aiTodos;
-	const myTodos = data.myTodos;
+	const { data, error, isLoading, mutate } = useSWR<GoalWithTodos[]>("/todos");
+
+	const goalsWithTodos = data ?? [];
+	const aiTodos = goalsWithTodos.flatMap((g) => g.aiGeneratedTodos);
+	const myTodos = goalsWithTodos.flatMap((g) => g.myTodos);
 	const todos = [...aiTodos, ...myTodos];
 
-	// 目標ごとにグループ化
-	const goalsWithTodos: GoalWithTodos[] = mockGoals.map((goal) => ({
-		goalId: goal.id,
-		goalTitle: goal.title,
-		milestones: [], // マイルストーンは別フックで取得
-		aiGeneratedTodos: aiTodos.filter((t) => t.goalId === goal.id),
-		myTodos: myTodos.filter((t) => t.goalId === goal.id),
-	}));
-
-	// TODO完了トグル（カウントアップ）
-	const toggleTodoComplete = useCallback(async (todoId: string): Promise<void> => {
-		// AI TODOの場合
-		const aiIndex = aiTodosStore.findIndex((t) => t.id === todoId);
-		if (aiIndex !== -1) {
-			const todo = aiTodosStore[aiIndex];
-			aiTodosStore[aiIndex] = {
-				...todo,
-				completed: !todo.completed,
-				completionCount: !todo.completed ? todo.completionCount + 1 : todo.completionCount,
-			};
-			setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
-			return;
-		}
-
-		// マイTODOの場合
-		const myIndex = myTodosStore.findIndex((t) => t.id === todoId);
-		if (myIndex !== -1) {
-			const todo = myTodosStore[myIndex];
-			myTodosStore[myIndex] = {
-				...todo,
-				completed: !todo.completed,
-				completionCount: !todo.completed ? todo.completionCount + 1 : todo.completionCount,
-			};
-			setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
-		}
-	}, []);
-
-	// TODO追加
-	const addTodo = useCallback(
-		async (goalId: string, input: TodoInput, isAiGenerated = false): Promise<Todo> => {
-			const newTodo: Todo = {
-				id: `todo-${Date.now()}`,
-				goalId,
-				title: input.title,
-				dueDate: input.dueDate,
-				estimatedMinutes: input.estimatedMinutes,
-				completed: false,
-				completionCount: 0,
-				isAiGenerated,
-				createdAt: new Date().toISOString(),
-			};
-
-			if (isAiGenerated) {
-				aiTodosStore = [...aiTodosStore, newTodo];
-			} else {
-				myTodosStore = [...myTodosStore, newTodo];
-			}
-			setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
-			return newTodo;
+	const toggleTodoComplete = useCallback(
+		async (todoId: string): Promise<void> => {
+			await apiClient.patch(`/todos/${todoId}/toggle`);
+			await mutate();
 		},
-		[],
+		[apiClient, mutate],
 	);
 
-	// TODO削除
-	const deleteTodo = useCallback(async (todoId: string): Promise<void> => {
-		aiTodosStore = aiTodosStore.filter((t) => t.id !== todoId);
-		myTodosStore = myTodosStore.filter((t) => t.id !== todoId);
-		setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
-	}, []);
+	const addTodo = useCallback(
+		async (goalId: string, input: TodoInput, isAiGenerated = false): Promise<Todo> => {
+			const newTodo = await apiClient.post<Todo>(`/goals/${goalId}/todos`, {
+				...input,
+				isAiGenerated,
+			});
+			await mutate();
+			return newTodo;
+		},
+		[apiClient, mutate],
+	);
 
-	// TODOの並び替え
+	const deleteTodo = useCallback(
+		async (todoId: string): Promise<void> => {
+			await apiClient.del(`/todos/${todoId}`);
+			await mutate();
+		},
+		[apiClient, mutate],
+	);
+
 	const reorderTodos = useCallback(
 		async (
-			sourceList: "aiTodos" | "myTodos",
+			_sourceList: "aiTodos" | "myTodos",
 			sourceIndex: number,
-			destinationList: "aiTodos" | "myTodos",
+			_destinationList: "aiTodos" | "myTodos",
 			destinationIndex: number,
 			goalId: string,
 		): Promise<void> => {
-			const sourceStore = sourceList === "aiTodos" ? aiTodosStore : myTodosStore;
-			const goalTodos = sourceStore.filter((t) => t.goalId === goalId);
-			const [movedTodo] = goalTodos.splice(sourceIndex, 1);
+			// 楽観更新: ローカルで並び替えを反映
+			const currentData = data ? [...data] : [];
+			const goalGroup = currentData.find((g) => g.goalId === goalId);
+			if (!goalGroup) return;
 
+			const sourceArr =
+				_sourceList === "aiTodos" ? [...goalGroup.aiGeneratedTodos] : [...goalGroup.myTodos];
+			const [movedTodo] = sourceArr.splice(sourceIndex, 1);
 			if (!movedTodo) return;
 
-			if (sourceList === destinationList) {
-				goalTodos.splice(destinationIndex, 0, movedTodo);
-				const otherTodos = sourceStore.filter((t) => t.goalId !== goalId);
-				if (sourceList === "aiTodos") {
-					aiTodosStore = [...otherTodos, ...goalTodos];
-				} else {
-					myTodosStore = [...otherTodos, ...goalTodos];
-				}
-			} else {
-				const destStore = destinationList === "aiTodos" ? aiTodosStore : myTodosStore;
-				const destGoalTodos = destStore.filter((t) => t.goalId === goalId);
-				const updatedTodo = {
-					...movedTodo,
-					isAiGenerated: destinationList === "aiTodos",
+			if (_sourceList === _destinationList) {
+				sourceArr.splice(destinationIndex, 0, movedTodo);
+				const updatedGroup = {
+					...goalGroup,
+					[_sourceList === "aiTodos" ? "aiGeneratedTodos" : "myTodos"]: sourceArr,
 				};
-				destGoalTodos.splice(destinationIndex, 0, updatedTodo);
-
-				const sourceOther = sourceStore.filter((t) => t.goalId !== goalId);
-				const destOther = destStore.filter((t) => t.goalId !== goalId);
-
-				if (sourceList === "aiTodos") {
-					aiTodosStore = [...sourceOther, ...goalTodos.filter((t) => t.id !== movedTodo.id)];
-					myTodosStore = [...destOther, ...destGoalTodos];
-				} else {
-					myTodosStore = [...sourceOther, ...goalTodos.filter((t) => t.id !== movedTodo.id)];
-					aiTodosStore = [...destOther, ...destGoalTodos];
-				}
+				const optimistic = currentData.map((g) => (g.goalId === goalId ? updatedGroup : g));
+				mutate(optimistic, false);
+			} else {
+				const destArr =
+					_destinationList === "aiTodos" ? [...goalGroup.aiGeneratedTodos] : [...goalGroup.myTodos];
+				destArr.splice(destinationIndex, 0, {
+					...movedTodo,
+					isAiGenerated: _destinationList === "aiTodos",
+				});
+				const updatedGroup = {
+					...goalGroup,
+					[_sourceList === "aiTodos" ? "aiGeneratedTodos" : "myTodos"]: sourceArr,
+					[_destinationList === "aiTodos" ? "aiGeneratedTodos" : "myTodos"]: destArr,
+				};
+				const optimistic = currentData.map((g) => (g.goalId === goalId ? updatedGroup : g));
+				mutate(optimistic, false);
 			}
 
-			setData({ aiTodos: [...aiTodosStore], myTodos: [...myTodosStore] });
+			// API にリオーダーを送信
+			const goalGroup2 = (data ?? []).find((g) => g.goalId === goalId);
+			if (!goalGroup2) return;
+			const allTodosForGoal = [...goalGroup2.aiGeneratedTodos, ...goalGroup2.myTodos];
+			const entries = allTodosForGoal.map((t, idx) => ({
+				id: t.id,
+				sortOrder: idx + 1,
+			}));
+
+			try {
+				await apiClient.patch(`/goals/${goalId}/todos/reorder`, entries);
+			} finally {
+				await mutate();
+			}
 		},
-		[],
+		[apiClient, data, mutate],
 	);
 
 	return {
@@ -240,8 +128,8 @@ export function useTodos(): UseTodosReturn {
 		aiTodos,
 		myTodos,
 		goalsWithTodos,
-		isLoading: false,
-		error: undefined,
+		isLoading,
+		error,
 		toggleTodoComplete,
 		addTodo,
 		deleteTodo,

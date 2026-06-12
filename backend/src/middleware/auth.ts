@@ -27,6 +27,7 @@ export async function authMiddleware(c: AppContext, next: Next) {
 		});
 		authId = payload.sub;
 	} catch (err) {
+		console.error("[auth] verifyToken failed:", err);
 		const message =
 			err instanceof Error && err.message.includes("expired") ? "Token expired" : "Invalid token";
 		return c.json({ message }, 401);

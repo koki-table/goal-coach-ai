@@ -1,26 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { GoalList } from "@/features/goals/components/goalList";
-import { GoalStatusForm } from "@/features/goals/components/goalForm";
-import { ProbabilityReview } from "@/features/goals/components/probabilityReview";
-import { useGoals } from "@/features/goals/hooks/useGoals";
-import { useGoalStatus } from "@/features/goals/hooks/useGoalStatus";
-import type { GoalInput, GoalStatusInput } from "@/features/goals/schemas/goalSchema";
-import { Skeleton } from "@/components/atom/skeleton";
-import { Card, CardContent } from "@/components/atom/card";
 import { buttonVariants } from "@/components/atom/button";
+import { Card, CardContent } from "@/components/atom/card";
+import { Skeleton } from "@/components/atom/skeleton";
+import { GoalStatusForm } from "@/features/goals/components/goalForm";
+import { GoalList } from "@/features/goals/components/goalList";
+import { ProbabilityReview } from "@/features/goals/components/probabilityReview";
+import { calculateGoalProgress } from "@/features/goals/helpers/goalProgress.helper";
+import { useGoalStatus } from "@/features/goals/hooks/useGoalStatus";
+import { useGoals } from "@/features/goals/hooks/useGoals";
+import type { GoalInput, GoalStatusInput } from "@/features/goals/schemas/goalSchema";
+import { useAllMilestones } from "@/features/todos/hooks/useMilestones";
+import { useTodos } from "@/features/todos/hooks/useTodos";
+import { cn } from "@/lib/utils";
 import { ListChecks } from "@phosphor-icons/react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
 
 export default function GoalsPage() {
-	const [selectedGoalId, setSelectedGoalId] = useState<string | undefined>(
-		"goal-1",
-	);
+	const [selectedGoalId, setSelectedGoalId] = useState<string | undefined>(undefined);
 
 	// 目標一覧のフック
 	const { data: goals, isLoading: goalsLoading, createGoal } = useGoals();
+	const { goalsWithTodos } = useTodos();
+	const { milestonesMap } = useAllMilestones();
 
 	// 選択中の目標のステータスフック
 	const {
@@ -43,6 +46,27 @@ export default function GoalsPage() {
 		await requestAiReview();
 	};
 
+	// 進捗率を実データから算出
+	const progressMap = useMemo(() => {
+		const map: Record<string, number> = {};
+		for (const g of goalsWithTodos) {
+			const totalTodos = g.aiGeneratedTodos.length + g.myTodos.length;
+			const completedTodos = [...g.aiGeneratedTodos, ...g.myTodos].filter(
+				(t) => t.completed,
+			).length;
+			const milestones = milestonesMap[g.goalId] ?? [];
+			const totalMilestones = milestones.length;
+			const completedMilestones = milestones.filter((m) => m.isCompleted).length;
+			map[g.goalId] = calculateGoalProgress({
+				totalTodos,
+				completedTodos,
+				totalMilestones,
+				completedMilestones,
+			});
+		}
+		return map;
+	}, [goalsWithTodos, milestonesMap]);
+
 	// ローディング中の表示
 	if (goalsLoading) {
 		return (
@@ -57,19 +81,6 @@ export default function GoalsPage() {
 		);
 	}
 
-	// 達成確率・進捗率のマッピング（モック: 実際はAPIから取得）
-	const probabilityMap: Record<string, number> = {
-		"goal-1": goalStatus?.achievementProbability ?? 32,
-		"goal-2": 58,
-		"goal-3": 75,
-	};
-
-	const progressMap: Record<string, number> = {
-		"goal-1": goalStatus?.progressPercent ?? 28,
-		"goal-2": 45,
-		"goal-3": 62,
-	};
-
 	return (
 		<div className="space-y-8">
 			{/* 目標一覧 */}
@@ -78,7 +89,6 @@ export default function GoalsPage() {
 				selectedGoalId={selectedGoalId}
 				onSelectGoal={setSelectedGoalId}
 				onCreateGoal={handleCreateGoal}
-				probabilityMap={probabilityMap}
 				progressMap={progressMap}
 			/>
 
