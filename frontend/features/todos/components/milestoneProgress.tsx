@@ -70,11 +70,11 @@ export function MilestoneProgress({
 			</div>
 
 			{/* N段階ステップ表示 */}
-			<div className="flex items-start">
-				{sortedMilestones.map((milestone, index) => (
-					<div key={milestone.id} className="flex flex-1 flex-col items-center">
-						{/* ステップインジケーター */}
-						<div className="flex w-full items-center">
+			<div className="space-y-3">
+				{/* 進捗ライン（丸 + 線） */}
+				<div className="flex items-center">
+					{sortedMilestones.map((milestone, index) => (
+						<div key={milestone.id} className="flex flex-1 items-center">
 							{/* 線（最初以外） */}
 							{index > 0 && (
 								<div
@@ -124,29 +124,39 @@ export function MilestoneProgress({
 								/>
 							)}
 						</div>
+					))}
+				</div>
 
-						{/* ラベル */}
-						<div className="mt-2 text-center">
-							<p className={cn(
-								"font-medium text-muted-foreground",
-								isCompact ? "text-[10px]" : "text-xs",
-							)}>
-								{milestone.label}
-							</p>
-							<p
-								className={cn(
-									"mt-0.5 line-clamp-2",
+				{/* カード行 */}
+				<div className="flex gap-2">
+					{sortedMilestones.map((milestone) => (
+						<div
+							key={milestone.id}
+							className={cn(
+								"flex flex-1 items-center justify-center rounded-lg border-2 px-3 py-4 text-center",
+								milestone.isCompleted
+									? "border-primary bg-primary/5"
+									: "border-border bg-background",
+							)}
+						>
+							<div>
+								<p className={cn(
+									"line-clamp-2 font-medium",
+									isCompact ? "text-xs" : "text-sm",
+									milestone.isCompleted ? "text-primary" : "text-foreground",
+								)}>
+									{milestone.title}
+								</p>
+								<p className={cn(
+									"mt-1 line-clamp-1 text-muted-foreground",
 									isCompact ? "text-[10px]" : "text-xs",
-									milestone.isCompleted
-										? "text-primary"
-										: "text-foreground",
-								)}
-							>
-								{milestone.title}
-							</p>
+								)}>
+									{milestone.label}
+								</p>
+							</div>
 						</div>
-					</div>
-				))}
+					))}
+				</div>
 			</div>
 		</div>
 	);

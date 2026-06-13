@@ -1,74 +1,9 @@
+import { createApiClient } from "@/lib/swr/apiClient";
+import { useAuth } from "@clerk/nextjs";
 import { useCallback } from "react";
 import useSWR from "swr";
-import type { Milestone } from "../types";
 import type { MilestoneEntry } from "../schemas/todoSchema";
-
-// モックデータ: 目標ごとのマイルストーン
-const mockMilestonesStore: Record<string, Milestone[]> = {
-	"goal-1": [
-		{
-			id: "milestone-1-1",
-			goalId: "goal-1",
-			title: "毎日30分の英語学習を習慣化",
-			label: "短期目標",
-			order: 1,
-			isCompleted: true,
-			createdAt: "2026-05-01T00:00:00.000Z",
-		},
-		{
-			id: "milestone-1-2",
-			goalId: "goal-1",
-			title: "TOEIC模試で600点達成",
-			label: "中期目標",
-			order: 2,
-			isCompleted: false,
-			createdAt: "2026-05-01T00:00:00.000Z",
-		},
-		{
-			id: "milestone-1-3",
-			goalId: "goal-1",
-			title: "TOEIC本番で900点達成",
-			label: "長期目標",
-			order: 3,
-			isCompleted: false,
-			createdAt: "2026-05-01T00:00:00.000Z",
-		},
-	],
-	"goal-2": [
-		{
-			id: "milestone-2-1",
-			goalId: "goal-2",
-			title: "週3回のジョギング習慣化",
-			label: "短期目標",
-			order: 1,
-			isCompleted: true,
-			createdAt: "2026-05-01T00:00:00.000Z",
-		},
-		{
-			id: "milestone-2-2",
-			goalId: "goal-2",
-			title: "ハーフマラソン完走",
-			label: "中期目標",
-			order: 2,
-			isCompleted: false,
-			createdAt: "2026-05-01T00:00:00.000Z",
-		},
-		{
-			id: "milestone-2-3",
-			goalId: "goal-2",
-			title: "フルマラソン完走",
-			label: "長期目標",
-			order: 3,
-			isCompleted: false,
-			createdAt: "2026-05-01T00:00:00.000Z",
-		},
-	],
-};
-
-// ストアをクローン（メモリ内操作用）
-let milestonesStore = JSON.parse(
-	JSON.stringify(mockMilestonesStore),
-) as typeof mockMilestonesStore;
+import type { Milestone } from "../types";
 
 type UseMilestonesReturn = {
 	milestones: Milestone[] | undefined;
@@ -78,83 +13,61 @@ type UseMilestonesReturn = {
 		milestoneId: string,
 		updates: Partial<Pick<Milestone, "title" | "isCompleted">>,
 	) => Promise<Milestone>;
-	createMilestones: (
-		goalId: string,
-		entries: MilestoneEntry[],
-	) => Promise<Milestone[]>;
+	createMilestones: (goalId: string, entries: MilestoneEntry[]) => Promise<Milestone[]>;
 	toggleMilestoneComplete: (milestoneId: string) => Promise<void>;
 };
 
 export function useMilestones(goalId: string): UseMilestonesReturn {
+	const { getToken } = useAuth();
+	const apiClient = createApiClient(getToken);
+
 	const {
 		data: milestones,
 		error,
 		isLoading,
 		mutate,
-	} = useSWR<Milestone[]>(
-		goalId ? `/api/goals/${goalId}/milestones` : null,
-		async () => {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			return milestonesStore[goalId] || [];
-		},
-		{
-			fallbackData: milestonesStore[goalId] || [],
-			revalidateOnFocus: false,
-		},
-	);
+	} = useSWR<Milestone[]>(goalId ? `/goals/${goalId}/milestones` : null);
 
 	const updateMilestone = useCallback(
 		async (
 			milestoneId: string,
 			updates: Partial<Pick<Milestone, "title" | "isCompleted">>,
 		): Promise<Milestone> => {
-			const goalMilestones = milestonesStore[goalId] || [];
-			const index = goalMilestones.findIndex((m) => m.id === milestoneId);
-			if (index === -1) throw new Error("マイルストーンが見つかりません");
-
-			const updated = { ...goalMilestones[index], ...updates };
-			milestonesStore[goalId][index] = updated;
+			const updated = await apiClient.patch<Milestone>(`/milestones/${milestoneId}`, updates);
 			await mutate();
 			return updated;
 		},
-		[goalId, mutate],
+		[apiClient, mutate],
 	);
 
 	const createMilestones = useCallback(
-		async (
-			targetGoalId: string,
-			entries: MilestoneEntry[],
-		): Promise<Milestone[]> => {
-			const created: Milestone[] = entries.map((entry, idx) => ({
-				id: `milestone-${targetGoalId}-${Date.now()}-${idx}`,
-				goalId: targetGoalId,
+		async (targetGoalId: string, entries: MilestoneEntry[]): Promise<Milestone[]> => {
+			const payload = entries.map((entry, idx) => ({
 				title: entry.title,
 				label: entry.label,
 				order: idx + 1,
-				isCompleted: entry.isCompleted,
-				createdAt: new Date().toISOString(),
 			}));
-
-			milestonesStore[targetGoalId] = created;
+			const created = await apiClient.put<Milestone[]>(
+				`/goals/${targetGoalId}/milestones`,
+				payload,
+			);
 			await mutate();
 			return created;
 		},
-		[mutate],
+		[apiClient, mutate],
 	);
 
 	const toggleMilestoneComplete = useCallback(
 		async (milestoneId: string): Promise<void> => {
-			const goalMilestones = milestonesStore[goalId] || [];
-			const index = goalMilestones.findIndex((m) => m.id === milestoneId);
-			if (index === -1) return;
+			const current = milestones?.find((m) => m.id === milestoneId);
+			if (!current) return;
 
-			milestonesStore[goalId][index] = {
-				...milestonesStore[goalId][index],
-				isCompleted: !milestonesStore[goalId][index].isCompleted,
-			};
+			await apiClient.patch(`/milestones/${milestoneId}`, {
+				isCompleted: !current.isCompleted,
+			});
 			await mutate();
 		},
-		[goalId, mutate],
+		[apiClient, milestones, mutate],
 	);
 
 	return {
@@ -172,20 +85,10 @@ export function useAllMilestones(): {
 	milestonesMap: Record<string, Milestone[]>;
 	isLoading: boolean;
 } {
-	const { data, isLoading } = useSWR<Record<string, Milestone[]>>(
-		"/api/milestones/all",
-		async () => {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			return { ...milestonesStore };
-		},
-		{
-			fallbackData: milestonesStore,
-			revalidateOnFocus: false,
-		},
-	);
+	const { data, isLoading } = useSWR<Record<string, Milestone[]>>("/milestones/all");
 
 	return {
-		milestonesMap: data || {},
+		milestonesMap: data ?? {},
 		isLoading,
 	};
 }
