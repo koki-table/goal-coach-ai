@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { milestonesToFormEntries, validateMilestoneEntries } from "./milestone.helper";
 import type { Milestone } from "../types";
+import { milestonesToFormEntries, validateMilestoneEntries } from "./milestone.helper";
 
 describe("milestonesToFormEntries", () => {
 	it("空配列の場合、デフォルトエントリを1つ返す", () => {
@@ -102,7 +102,9 @@ describe("validateMilestoneEntries", () => {
 	it("空文字タイトルの場合、エラーを返す", () => {
 		const entries = [{ label: "Valid label", title: "", isCompleted: false }];
 		const errors = validateMilestoneEntries(entries);
-		expect(errors.some((e) => e.field === "title" && e.message === "タイトルは必須です")).toBe(true);
+		expect(errors.some((e) => e.field === "title" && e.message === "タイトルは必須です")).toBe(
+			true,
+		);
 	});
 
 	it("30文字超過ラベルの場合、エラーを返す", () => {

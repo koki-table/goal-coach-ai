@@ -1,6 +1,6 @@
-import type { Milestone } from "../types";
 import type { MilestoneEntry } from "../schemas/todoSchema";
 import { MAX_MILESTONES_PER_GOAL } from "../schemas/todoSchema";
+import type { Milestone } from "../types";
 
 /**
  * Milestone[] をフォーム用の MilestoneEntry[] に変換する

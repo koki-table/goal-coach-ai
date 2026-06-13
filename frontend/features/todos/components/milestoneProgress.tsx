@@ -18,9 +18,7 @@ export function MilestoneProgress({
 	className,
 }: MilestoneProgressProps) {
 	// マイルストーンをorder順にソート
-	const sortedMilestones = [...milestones].sort(
-		(a, b) => a.order - b.order,
-	);
+	const sortedMilestones = [...milestones].sort((a, b) => a.order - b.order);
 
 	const completedCount = sortedMilestones.filter((m) => m.isCompleted).length;
 	const isCompact = sortedMilestones.length >= 6;
@@ -33,9 +31,7 @@ export function MilestoneProgress({
 					className,
 				)}
 			>
-				<p className="text-sm text-muted-foreground">
-					マイルストーンが設定されていません
-				</p>
+				<p className="text-sm text-muted-foreground">マイルストーンが設定されていません</p>
 				{onEdit && (
 					<button
 						type="button"
@@ -80,9 +76,7 @@ export function MilestoneProgress({
 								<div
 									className={cn(
 										"h-0.5 flex-1",
-										sortedMilestones[index - 1]?.isCompleted
-											? "bg-primary"
-											: "bg-muted",
+										sortedMilestones[index - 1]?.isCompleted ? "bg-primary" : "bg-muted",
 									)}
 								/>
 							)}
@@ -98,17 +92,18 @@ export function MilestoneProgress({
 									milestone.isCompleted
 										? "border-primary bg-primary text-primary-foreground"
 										: "border-muted-foreground/30 bg-background",
-									onToggleComplete &&
-										"cursor-pointer hover:border-primary/50",
+									onToggleComplete && "cursor-pointer hover:border-primary/50",
 								)}
 							>
 								{milestone.isCompleted ? (
 									<Check weight="bold" className={isCompact ? "size-3" : "size-4"} />
 								) : (
-									<span className={cn(
-										"font-medium text-muted-foreground",
-										isCompact ? "text-[10px]" : "text-xs",
-									)}>
+									<span
+										className={cn(
+											"font-medium text-muted-foreground",
+											isCompact ? "text-[10px]" : "text-xs",
+										)}
+									>
 										{index + 1}
 									</span>
 								)}
@@ -117,10 +112,7 @@ export function MilestoneProgress({
 							{/* 線（最後以外） */}
 							{index < sortedMilestones.length - 1 && (
 								<div
-									className={cn(
-										"h-0.5 flex-1",
-										milestone.isCompleted ? "bg-primary" : "bg-muted",
-									)}
+									className={cn("h-0.5 flex-1", milestone.isCompleted ? "bg-primary" : "bg-muted")}
 								/>
 							)}
 						</div>
@@ -140,17 +132,21 @@ export function MilestoneProgress({
 							)}
 						>
 							<div>
-								<p className={cn(
-									"line-clamp-2 font-medium",
-									isCompact ? "text-xs" : "text-sm",
-									milestone.isCompleted ? "text-primary" : "text-foreground",
-								)}>
+								<p
+									className={cn(
+										"line-clamp-2 font-medium",
+										isCompact ? "text-xs" : "text-sm",
+										milestone.isCompleted ? "text-primary" : "text-foreground",
+									)}
+								>
 									{milestone.title}
 								</p>
-								<p className={cn(
-									"mt-1 line-clamp-1 text-muted-foreground",
-									isCompact ? "text-[10px]" : "text-xs",
-								)}>
+								<p
+									className={cn(
+										"mt-1 line-clamp-1 text-muted-foreground",
+										isCompact ? "text-[10px]" : "text-xs",
+									)}
+								>
 									{milestone.label}
 								</p>
 							</div>

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/atom/button";
 import { Input } from "@/components/atom/input";
 import { cn } from "@/lib/utils";
 import { Check, Plus, Trash, X } from "@phosphor-icons/react";
-import type { Milestone } from "../types";
+import { useState } from "react";
 import type { MilestoneEntry } from "../schemas/todoSchema";
 import { MAX_MILESTONES_PER_GOAL } from "../schemas/todoSchema";
+import type { Milestone } from "../types";
 
 type MilestoneFormProps = {
 	milestones: Milestone[];
@@ -16,12 +16,7 @@ type MilestoneFormProps = {
 	className?: string;
 };
 
-export function MilestoneForm({
-	milestones,
-	onSave,
-	onCancel,
-	className,
-}: MilestoneFormProps) {
+export function MilestoneForm({ milestones, onSave, onCancel, className }: MilestoneFormProps) {
 	// 既存のマイルストーンからフォームデータを初期化
 	const initialEntries: MilestoneEntry[] =
 		milestones.length > 0
@@ -39,9 +34,7 @@ export function MilestoneForm({
 		value: string | boolean,
 	) => {
 		setEntries((prev) =>
-			prev.map((entry, i) =>
-				i === index ? { ...entry, [field]: value } : entry,
-			),
+			prev.map((entry, i) => (i === index ? { ...entry, [field]: value } : entry)),
 		);
 	};
 
@@ -78,9 +71,7 @@ export function MilestoneForm({
 						{/* 完了トグル */}
 						<button
 							type="button"
-							onClick={() =>
-								handleEntryChange(index, "isCompleted", !entry.isCompleted)
-							}
+							onClick={() => handleEntryChange(index, "isCompleted", !entry.isCompleted)}
 							className={cn(
 								"mt-2 flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
 								entry.isCompleted
@@ -88,9 +79,7 @@ export function MilestoneForm({
 									: "border-muted-foreground/30 hover:border-primary/50",
 							)}
 						>
-							{entry.isCompleted && (
-								<Check weight="bold" className="size-3" />
-							)}
+							{entry.isCompleted && <Check weight="bold" className="size-3" />}
 						</button>
 
 						{/* ラベル入力 */}
@@ -118,9 +107,7 @@ export function MilestoneForm({
 							disabled={entries.length <= 1}
 							className={cn(
 								"mt-2 flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors",
-								entries.length > 1
-									? "hover:text-destructive"
-									: "cursor-not-allowed opacity-30",
+								entries.length > 1 ? "hover:text-destructive" : "cursor-not-allowed opacity-30",
 							)}
 						>
 							<Trash weight="bold" className="size-4" />
@@ -149,11 +136,7 @@ export function MilestoneForm({
 					<X weight="bold" className="mr-1 size-4" />
 					キャンセル
 				</Button>
-				<Button
-					type="submit"
-					size="sm"
-					disabled={isSaving || !isValid}
-				>
+				<Button type="submit" size="sm" disabled={isSaving || !isValid}>
 					<Check weight="bold" className="mr-1 size-4" />
 					保存
 				</Button>

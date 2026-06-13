@@ -1,18 +1,8 @@
 "use client";
 
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/atom/card";
 import { Badge } from "@/components/atom/badge";
-import {
-	Progress,
-	ProgressLabel,
-	ProgressValue,
-} from "@/components/atom/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/atom/card";
+import { Progress, ProgressLabel, ProgressValue } from "@/components/atom/progress";
 import { cn } from "@/lib/utils";
 import type { Goal } from "../types";
 import { categoryLabels } from "../types";
@@ -34,8 +24,7 @@ export function GoalCard({
 }: GoalCardProps) {
 	// 期限までの残り日数を計算
 	const daysRemaining = Math.ceil(
-		(new Date(goal.deadline).getTime() - new Date().getTime()) /
-			(1000 * 60 * 60 * 24),
+		(new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
 	);
 
 	// 達成確率に応じた色を返す
@@ -58,9 +47,7 @@ export function GoalCard({
 					<div className="space-y-1">
 						<CardTitle className="line-clamp-1">{goal.title}</CardTitle>
 						{goal.description && (
-							<CardDescription className="line-clamp-2">
-								{goal.description}
-							</CardDescription>
+							<CardDescription className="line-clamp-2">{goal.description}</CardDescription>
 						)}
 					</div>
 					<Badge variant="secondary">{categoryLabels[goal.category]}</Badge>
@@ -78,12 +65,7 @@ export function GoalCard({
 					{achievementProbability !== undefined && (
 						<div className="flex items-center gap-1.5">
 							<span className="text-muted-foreground">達成確率:</span>
-							<span
-								className={cn(
-									"font-semibold",
-									getProbabilityColor(achievementProbability),
-								)}
-							>
+							<span className={cn("font-semibold", getProbabilityColor(achievementProbability))}>
 								{achievementProbability}%
 							</span>
 						</div>

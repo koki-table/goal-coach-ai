@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
 import { Target } from "@phosphor-icons/react";
-import type { Todo, Milestone } from "../types";
-import type { TodoInput, MilestoneEntry } from "../schemas/todoSchema";
-import { MilestoneProgress } from "./milestoneProgress";
+import { useState } from "react";
+import type { MilestoneEntry } from "../schemas/todoSchema";
+import type { Milestone, Todo } from "../types";
 import { MilestoneForm } from "./milestoneForm";
+import { MilestoneProgress } from "./milestoneProgress";
 import { TodoBoard } from "./todoBoard";
 
 type GoalTodoGroup = {
@@ -20,7 +20,8 @@ type TodoGroupByGoalProps = {
 	groups: GoalTodoGroup[];
 	onToggleComplete: (todoId: string) => void;
 	onDeleteTodo: (todoId: string) => void;
-	onAddTodo: (goalId: string, input: TodoInput) => void;
+	onAddTodo: (goalId: string) => void;
+	onEditTodo: (todo: Todo) => void;
 	onReorderTodos: (
 		sourceList: "aiTodos" | "myTodos",
 		sourceIndex: number,
@@ -29,10 +30,7 @@ type TodoGroupByGoalProps = {
 		goalId: string,
 	) => void;
 	onToggleMilestoneComplete: (goalId: string, milestoneId: string) => void;
-	onSaveMilestones: (
-		goalId: string,
-		data: MilestoneEntry[],
-	) => Promise<void>;
+	onSaveMilestones: (goalId: string, data: MilestoneEntry[]) => Promise<void>;
 };
 
 export function TodoGroupByGoal({
@@ -40,6 +38,7 @@ export function TodoGroupByGoal({
 	onToggleComplete,
 	onDeleteTodo,
 	onAddTodo,
+	onEditTodo,
 	onReorderTodos,
 	onToggleMilestoneComplete,
 	onSaveMilestones,
@@ -51,9 +50,7 @@ export function TodoGroupByGoal({
 			<div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
 				<div className="text-center">
 					<Target weight="bold" className="mx-auto mb-2 size-12 text-muted-foreground" />
-					<p className="text-muted-foreground">
-						目標がありません。まず目標を設定してください。
-					</p>
+					<p className="text-muted-foreground">目標がありません。まず目標を設定してください。</p>
 				</div>
 			</div>
 		);
@@ -96,9 +93,11 @@ export function TodoGroupByGoal({
 						<TodoBoard
 							goalId={group.goalId}
 							myTodos={group.myTodos}
+							milestones={group.milestones}
 							onToggleComplete={onToggleComplete}
 							onDeleteTodo={onDeleteTodo}
 							onAddTodo={onAddTodo}
+							onEditTodo={onEditTodo}
 							onReorder={onReorderTodos}
 						/>
 					</CardContent>

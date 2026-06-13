@@ -1,16 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/atom/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/atom/card";
 import { Input } from "@/components/atom/input";
 import { Label } from "@/components/atom/label";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/atom/card";
+import { useState } from "react";
 import { GoalCategory, goalInputSchema, goalStatusInputSchema } from "../schemas/goalSchema";
 import type { GoalInput, GoalStatusInput } from "../schemas/goalSchema";
 
@@ -31,12 +25,7 @@ type GoalFormProps = {
 	isLoading?: boolean;
 };
 
-export function GoalForm({
-	initialData,
-	onSubmit,
-	onCancel,
-	isLoading = false,
-}: GoalFormProps) {
+export function GoalForm({ initialData, onSubmit, onCancel, isLoading = false }: GoalFormProps) {
 	const [formData, setFormData] = useState<Partial<GoalInput>>({
 		title: initialData?.title ?? "",
 		description: initialData?.description ?? "",
@@ -67,9 +56,7 @@ export function GoalForm({
 		<Card>
 			<CardHeader>
 				<CardTitle>目標を設定する</CardTitle>
-				<CardDescription>
-					半年〜1年で達成したい大きな目標を設定しましょう
-				</CardDescription>
+				<CardDescription>半年〜1年で達成したい大きな目標を設定しましょう</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={handleSubmit} className="space-y-4">
@@ -81,14 +68,10 @@ export function GoalForm({
 							id="title"
 							placeholder="例: TOEIC 900点を取得する"
 							value={formData.title}
-							onChange={(e) =>
-								setFormData((prev) => ({ ...prev, title: e.target.value }))
-							}
+							onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
 							aria-invalid={!!errors.title}
 						/>
-						{errors.title && (
-							<p className="text-sm text-destructive">{errors.title}</p>
-						)}
+						{errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
 					</div>
 
 					<div className="space-y-2">
@@ -105,9 +88,7 @@ export function GoalForm({
 								}))
 							}
 						/>
-						{errors.description && (
-							<p className="text-sm text-destructive">{errors.description}</p>
-						)}
+						{errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
 					</div>
 
 					<div className="grid gap-4 sm:grid-cols-2">
@@ -119,14 +100,10 @@ export function GoalForm({
 								id="deadline"
 								type="date"
 								value={formData.deadline}
-								onChange={(e) =>
-									setFormData((prev) => ({ ...prev, deadline: e.target.value }))
-								}
+								onChange={(e) => setFormData((prev) => ({ ...prev, deadline: e.target.value }))}
 								aria-invalid={!!errors.deadline}
 							/>
-							{errors.deadline && (
-								<p className="text-sm text-destructive">{errors.deadline}</p>
-							)}
+							{errors.deadline && <p className="text-sm text-destructive">{errors.deadline}</p>}
 						</div>
 
 						<div className="space-y-2">
@@ -150,9 +127,7 @@ export function GoalForm({
 									</option>
 								))}
 							</select>
-							{errors.category && (
-								<p className="text-sm text-destructive">{errors.category}</p>
-							)}
+							{errors.category && <p className="text-sm text-destructive">{errors.category}</p>}
 						</div>
 					</div>
 
@@ -179,11 +154,7 @@ type GoalStatusFormProps = {
 	isLoading?: boolean;
 };
 
-export function GoalStatusForm({
-	initialData,
-	onSubmit,
-	isLoading = false,
-}: GoalStatusFormProps) {
+export function GoalStatusForm({ initialData, onSubmit, isLoading = false }: GoalStatusFormProps) {
 	const [formData, setFormData] = useState<Partial<GoalStatusInput>>({
 		progressPercent: initialData?.progressPercent ?? 0,
 		memo: initialData?.memo ?? "",
@@ -213,9 +184,7 @@ export function GoalStatusForm({
 		<Card>
 			<CardHeader>
 				<CardTitle>現状を更新する</CardTitle>
-				<CardDescription>
-					目標に対する現在の立ち位置を入力してください
-				</CardDescription>
+				<CardDescription>目標に対する現在の立ち位置を入力してください</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={handleSubmit} className="space-y-4">
@@ -253,9 +222,7 @@ export function GoalStatusForm({
 							className="min-h-20 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 							placeholder="現在の状況や気づきなどを記入"
 							value={formData.memo}
-							onChange={(e) =>
-								setFormData((prev) => ({ ...prev, memo: e.target.value }))
-							}
+							onChange={(e) => setFormData((prev) => ({ ...prev, memo: e.target.value }))}
 						/>
 					</div>
 
@@ -266,9 +233,7 @@ export function GoalStatusForm({
 							className="min-h-20 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 							placeholder="目標達成を妨げている要因"
 							value={formData.obstacles}
-							onChange={(e) =>
-								setFormData((prev) => ({ ...prev, obstacles: e.target.value }))
-							}
+							onChange={(e) => setFormData((prev) => ({ ...prev, obstacles: e.target.value }))}
 						/>
 					</div>
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/atom/button";
 import { Plus } from "@phosphor-icons/react";
+import { useState } from "react";
+import type { GoalInput } from "../schemas/goalSchema";
+import type { Goal } from "../types";
 import { GoalCard } from "./goalCard";
 import { GoalForm } from "./goalForm";
-import type { Goal } from "../types";
-import type { GoalInput } from "../schemas/goalSchema";
 
 type GoalListProps = {
 	goals: Goal[];
@@ -39,11 +39,7 @@ export function GoalList({
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
 				<h2 className="text-xl font-semibold">目標一覧</h2>
-				<Button
-					size="sm"
-					onClick={() => setShowCreateForm(true)}
-					disabled={showCreateForm}
-				>
+				<Button size="sm" onClick={() => setShowCreateForm(true)} disabled={showCreateForm}>
 					<Plus weight="bold" className="mr-1" />
 					新規作成
 				</Button>

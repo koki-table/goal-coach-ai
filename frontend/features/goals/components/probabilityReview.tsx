@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
 import { Button } from "@/components/atom/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
 import { cn } from "@/lib/utils";
-import { Lightning, Warning, ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowsClockwise, Lightning, Warning } from "@phosphor-icons/react";
 import type { GoalStatus } from "../types";
 
 type ProbabilityReviewProps = {
@@ -55,12 +55,7 @@ export function ProbabilityReview({
 						<Lightning weight="fill" className={cn("size-5", style.textColor)} />
 						達成確率レビュー
 					</CardTitle>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={onRequestReview}
-						disabled={isLoading}
-					>
+					<Button variant="outline" size="sm" onClick={onRequestReview} disabled={isLoading}>
 						<ArrowsClockwise
 							weight="bold"
 							className={cn("mr-1 size-4", isLoading && "animate-spin")}
@@ -74,9 +69,7 @@ export function ProbabilityReview({
 				<div className={cn("rounded-lg p-4", style.bgColor)}>
 					<div className="flex items-center justify-between">
 						<div className="space-y-1">
-							<p className="text-sm font-medium text-muted-foreground">
-								現在の達成確率
-							</p>
+							<p className="text-sm font-medium text-muted-foreground">現在の達成確率</p>
 							<div className="flex items-baseline gap-2">
 								<span className={cn("text-4xl font-bold", style.textColor)}>
 									{achievementProbability}%
@@ -104,8 +97,7 @@ export function ProbabilityReview({
 							<div
 								className={cn("h-full transition-all duration-500", {
 									"bg-success": achievementProbability >= 70,
-									"bg-warning":
-										achievementProbability >= 40 && achievementProbability < 70,
+									"bg-warning": achievementProbability >= 40 && achievementProbability < 70,
 									"bg-destructive": achievementProbability < 40,
 								})}
 								style={{ width: `${achievementProbability}%` }}
@@ -125,9 +117,7 @@ export function ProbabilityReview({
 						<Warning weight="fill" className="size-5 text-warning" />
 						<h4 className="font-semibold">AIコーチからのフィードバック</h4>
 					</div>
-					<p className="text-sm leading-relaxed text-foreground/90">
-						{coachFeedback}
-					</p>
+					<p className="text-sm leading-relaxed text-foreground/90">{coachFeedback}</p>
 				</div>
 			</CardContent>
 		</Card>

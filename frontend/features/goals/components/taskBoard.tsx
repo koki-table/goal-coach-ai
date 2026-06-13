@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { Badge } from "@/components/atom/badge";
+import { Button } from "@/components/atom/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
+import { Input } from "@/components/atom/input";
+import { cn } from "@/lib/utils";
 import {
 	DndContext,
+	type DragEndEvent,
 	DragOverlay,
-	closestCorners,
+	type DragStartEvent,
 	KeyboardSensor,
 	PointerSensor,
+	closestCorners,
 	useSensor,
 	useSensors,
-	type DragEndEvent,
-	type DragStartEvent,
 } from "@dnd-kit/core";
 import {
 	SortableContext,
@@ -19,23 +23,19 @@ import {
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
-import { Button } from "@/components/atom/button";
-import { Input } from "@/components/atom/input";
-import { Badge } from "@/components/atom/badge";
-import { cn } from "@/lib/utils";
 import {
-	Robot,
-	ListChecks,
-	Check,
-	Trash,
-	Plus,
-	DotsSixVertical,
 	ArrowRight,
+	Check,
 	Clock,
+	DotsSixVertical,
+	ListChecks,
+	Plus,
+	Robot,
+	Trash,
 } from "@phosphor-icons/react";
-import type { Task, TaskBoard } from "../types";
+import { useState } from "react";
 import type { TaskInput } from "../schemas/goalSchema";
+import type { Task, TaskBoard } from "../types";
 
 // ドラッグ可能なタスクアイテム
 type SortableTaskItemProps = {
@@ -53,14 +53,9 @@ function SortableTaskItem({
 	onMoveToOther,
 	isMyTodo,
 }: SortableTaskItemProps) {
-	const {
-		attributes,
-		listeners,
-		setNodeRef,
-		transform,
-		transition,
-		isDragging,
-	} = useSortable({ id: task.id });
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+		id: task.id,
+	});
 
 	const style = {
 		transform: CSS.Transform.toString(transform),
@@ -120,9 +115,7 @@ function SortableTaskItem({
 							{task.dueDate}
 						</span>
 					)}
-					{task.estimatedMinutes && (
-						<span>{task.estimatedMinutes}分</span>
-					)}
+					{task.estimatedMinutes && <span>{task.estimatedMinutes}分</span>}
 				</div>
 			</div>
 
@@ -294,9 +287,7 @@ export function TaskBoard({
 								<Robot weight="fill" className="size-5 text-primary" />
 								AI候補タスク
 							</CardTitle>
-							<Badge variant="secondary">
-								{taskBoard.aiGeneratedTasks.length}件
-							</Badge>
+							<Badge variant="secondary">{taskBoard.aiGeneratedTasks.length}件</Badge>
 						</div>
 						<p className="text-xs text-muted-foreground">
 							AIが提案したタスク。右にドラッグしてマイTODOに追加
@@ -378,9 +369,7 @@ export function TaskBoard({
 				</Card>
 			</div>
 
-			<DragOverlay>
-				{activeTask ? <TaskOverlay task={activeTask} /> : null}
-			</DragOverlay>
+			<DragOverlay>{activeTask ? <TaskOverlay task={activeTask} /> : null}</DragOverlay>
 		</DndContext>
 	);
 }
