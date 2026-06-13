@@ -1,14 +1,20 @@
 "use client";
 
 import { Skeleton } from "@/components/atom/skeleton";
+import { TodoEditSheet } from "@/features/todos/components/todoEditSheet";
 import { TodoGroupByGoal } from "@/features/todos/components/todoGroupByGoal";
 import { useAllMilestones } from "@/features/todos/hooks/useMilestones";
 import { useTodos } from "@/features/todos/hooks/useTodos";
-import type { MilestoneEntry, TodoInput } from "@/features/todos/schemas/todoSchema";
+import type {
+	MilestoneEntry,
+	TodoInput,
+	TodoUpdateInput,
+} from "@/features/todos/schemas/todoSchema";
+import type { Todo } from "@/features/todos/types";
 import { createApiClient } from "@/lib/swr/apiClient";
 import { revalidateByPrefix } from "@/lib/swr/mutate";
 import { useAuth } from "@clerk/nextjs";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 export default function TodosPage() {
 	const { getToken } = useAuth();
@@ -20,10 +26,17 @@ export default function TodosPage() {
 		toggleTodoComplete,
 		deleteTodo,
 		addTodo,
+		updateTodo,
 		reorderTodos,
 	} = useTodos();
 
 	const { milestonesMap, isLoading: milestonesLoading } = useAllMilestones();
+
+	// 編集中のTodo状態
+	const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+
+	// 新規追加対象のゴールID
+	const [addingGoalId, setAddingGoalId] = useState<string | null>(null);
 
 	// 目標ごとのTODOグループを構築（マイルストーンを含む）
 	const groups = goalsWithTodos.map((g) => ({
@@ -32,6 +45,12 @@ export default function TodosPage() {
 		milestones: milestonesMap[g.goalId] ?? [],
 		myTodos: g.myTodos,
 	}));
+
+	// 編集中のTodoが属するゴールのマイルストーン
+	const editingMilestones = editingTodo ? (milestonesMap[editingTodo.goalId] ?? []) : [];
+
+	// 新規追加対象のゴールのマイルストーン
+	const addingMilestones = addingGoalId ? (milestonesMap[addingGoalId] ?? []) : [];
 
 	// ハンドラー
 	const handleToggleComplete = useCallback(
@@ -48,11 +67,27 @@ export default function TodosPage() {
 		[deleteTodo],
 	);
 
-	const handleAddTodo = useCallback(
+	const handleAddTodo = useCallback((goalId: string) => {
+		setAddingGoalId(goalId);
+	}, []);
+
+	const handleCreateTodo = useCallback(
 		(goalId: string, input: TodoInput) => {
 			addTodo(goalId, input, false);
+			setAddingGoalId(null);
 		},
 		[addTodo],
+	);
+
+	const handleEditTodo = useCallback((todo: Todo) => {
+		setEditingTodo(todo);
+	}, []);
+
+	const handleSaveEdit = useCallback(
+		(todoId: string, input: TodoUpdateInput) => {
+			updateTodo(todoId, input);
+		},
+		[updateTodo],
 	);
 
 	const handleReorderTodos = useCallback(
@@ -126,10 +161,33 @@ export default function TodosPage() {
 				onToggleComplete={handleToggleComplete}
 				onDeleteTodo={handleDeleteTodo}
 				onAddTodo={handleAddTodo}
+				onEditTodo={handleEditTodo}
 				onReorderTodos={handleReorderTodos}
 				onToggleMilestoneComplete={handleToggleMilestoneComplete}
 				onSaveMilestones={handleSaveMilestones}
 			/>
+
+			{/* 編集用Sheet */}
+			<TodoEditSheet
+				mode="edit"
+				todo={editingTodo}
+				milestones={editingMilestones}
+				isOpen={editingTodo !== null}
+				onClose={() => setEditingTodo(null)}
+				onSave={handleSaveEdit}
+			/>
+
+			{/* 新規作成用Sheet */}
+			{addingGoalId && (
+				<TodoEditSheet
+					mode="create"
+					goalId={addingGoalId}
+					milestones={addingMilestones}
+					isOpen={addingGoalId !== null}
+					onClose={() => setAddingGoalId(null)}
+					onCreate={handleCreateTodo}
+				/>
+			)}
 		</div>
 	);
 }

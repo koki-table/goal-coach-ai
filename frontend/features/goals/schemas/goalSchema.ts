@@ -18,15 +18,10 @@ export const goalInputSchema = z.object({
 		.string()
 		.min(1, "タイトルは必須です")
 		.max(100, "タイトルは100文字以内で入力してください"),
-	description: z
-		.string()
-		.max(500, "説明は500文字以内で入力してください")
-		.optional(),
-	deadline: z
-		.string()
-		.refine((val) => !val || !Number.isNaN(Date.parse(val)), {
-			message: "有効な日付を入力してください",
-		}),
+	description: z.string().max(500, "説明は500文字以内で入力してください").optional(),
+	deadline: z.string().refine((val) => !val || !Number.isNaN(Date.parse(val)), {
+		message: "有効な日付を入力してください",
+	}),
 	category: z.enum([
 		GoalCategory.STUDY,
 		GoalCategory.CAREER,
@@ -46,10 +41,7 @@ export const goalStatusInputSchema = z.object({
 		.min(0, "進捗率は0%以上で入力してください")
 		.max(100, "進捗率は100%以下で入力してください"),
 	memo: z.string().max(1000, "メモは1000文字以内で入力してください").optional(),
-	obstacles: z
-		.string()
-		.max(500, "障害事項は500文字以内で入力してください")
-		.optional(),
+	obstacles: z.string().max(500, "障害事項は500文字以内で入力してください").optional(),
 });
 
 export type GoalStatusInput = z.infer<typeof goalStatusInputSchema>;

@@ -2,7 +2,7 @@ import { createApiClient } from "@/lib/swr/apiClient";
 import { useAuth } from "@clerk/nextjs";
 import { useCallback } from "react";
 import useSWR from "swr";
-import type { TodoInput } from "../schemas/todoSchema";
+import type { TodoInput, TodoUpdateInput } from "../schemas/todoSchema";
 import type { GoalWithTodos, Todo } from "../types";
 
 type UseTodosReturn = {
@@ -14,6 +14,7 @@ type UseTodosReturn = {
 	error: Error | undefined;
 	toggleTodoComplete: (todoId: string) => Promise<void>;
 	addTodo: (goalId: string, input: TodoInput, isAiGenerated?: boolean) => Promise<Todo>;
+	updateTodo: (todoId: string, input: TodoUpdateInput) => Promise<void>;
 	deleteTodo: (todoId: string) => Promise<void>;
 	reorderTodos: (
 		sourceList: "aiTodos" | "myTodos",
@@ -51,6 +52,14 @@ export function useTodos(): UseTodosReturn {
 			});
 			await mutate();
 			return newTodo;
+		},
+		[apiClient, mutate],
+	);
+
+	const updateTodo = useCallback(
+		async (todoId: string, input: TodoUpdateInput): Promise<void> => {
+			await apiClient.patch(`/todos/${todoId}`, input);
+			await mutate();
 		},
 		[apiClient, mutate],
 	);
@@ -132,6 +141,7 @@ export function useTodos(): UseTodosReturn {
 		error,
 		toggleTodoComplete,
 		addTodo,
+		updateTodo,
 		deleteTodo,
 		reorderTodos,
 	};

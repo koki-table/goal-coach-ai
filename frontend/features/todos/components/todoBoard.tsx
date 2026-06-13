@@ -1,37 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { Badge } from "@/components/atom/badge";
+import { Button } from "@/components/atom/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
 import {
 	DndContext,
+	type DragEndEvent,
 	DragOverlay,
-	closestCorners,
+	type DragStartEvent,
 	KeyboardSensor,
 	PointerSensor,
+	closestCorners,
 	useSensor,
 	useSensors,
-	type DragEndEvent,
-	type DragStartEvent,
 } from "@dnd-kit/core";
 import {
 	SortableContext,
 	sortableKeyboardCoordinates,
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
-import { Button } from "@/components/atom/button";
-import { Input } from "@/components/atom/input";
-import { Badge } from "@/components/atom/badge";
 import { ListChecks, Plus } from "@phosphor-icons/react";
-import type { Todo } from "../types";
-import type { TodoInput } from "../schemas/todoSchema";
+import { useState } from "react";
+import type { Milestone, Todo } from "../types";
 import { TodoItem, TodoItemOverlay } from "./todoItem";
 
 type TodoBoardProps = {
 	myTodos: Todo[];
+	milestones: Milestone[];
 	goalId: string;
 	onToggleComplete: (todoId: string) => void;
 	onDeleteTodo: (todoId: string) => void;
-	onAddTodo: (goalId: string, input: TodoInput) => void;
+	onAddTodo: (goalId: string) => void;
+	onEditTodo: (todo: Todo) => void;
 	onReorder: (
 		sourceList: "aiTodos" | "myTodos",
 		sourceIndex: number,
@@ -41,45 +41,14 @@ type TodoBoardProps = {
 	) => void;
 };
 
-// 新規タスク追加フォーム
-function AddTodoForm({
-	onAdd,
-	placeholder = "新しいTODOを追加...",
-}: {
-	onAdd: (input: TodoInput) => void;
-	placeholder?: string;
-}) {
-	const [title, setTitle] = useState("");
-
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!title.trim()) return;
-		onAdd({ title: title.trim() });
-		setTitle("");
-	};
-
-	return (
-		<form onSubmit={handleSubmit} className="flex gap-2">
-			<Input
-				value={title}
-				onChange={(e) => setTitle(e.target.value)}
-				placeholder={placeholder}
-				className="flex-1"
-			/>
-			<Button type="submit" size="sm" disabled={!title.trim()}>
-				<Plus weight="bold" className="mr-1" />
-				追加
-			</Button>
-		</form>
-	);
-}
-
 export function TodoBoard({
 	myTodos,
+	milestones,
 	goalId,
 	onToggleComplete,
 	onDeleteTodo,
 	onAddTodo,
+	onEditTodo,
 	onReorder,
 }: TodoBoardProps) {
 	const [activeTodo, setActiveTodo] = useState<Todo | null>(null);
@@ -154,15 +123,18 @@ export function TodoBoard({
 								{completedCount}/{totalMyTodos}完了
 							</Badge>
 						</div>
-						<p className="text-xs text-muted-foreground">
-							実行するタスク
-						</p>
+						<p className="text-xs text-muted-foreground">実行するタスク</p>
 					</CardHeader>
 					<CardContent className="space-y-3">
-						<AddTodoForm
-							onAdd={(input) => onAddTodo(goalId, input)}
-							placeholder="今日やるタスクを追加..."
-						/>
+						<Button
+							variant="outline"
+							size="sm"
+							className="w-full"
+							onClick={() => onAddTodo(goalId)}
+						>
+							<Plus weight="bold" className="mr-1" />
+							新規追加
+						</Button>
 						<SortableContext
 							id={`my-droppable-${goalId}`}
 							items={myTodos.map((t) => t.id)}
@@ -171,7 +143,7 @@ export function TodoBoard({
 							<div className="min-h-24 space-y-2">
 								{myTodos.length === 0 ? (
 									<div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
-										上のフォームからタスクを追加
+										上のボタンからタスクを追加
 									</div>
 								) : (
 									myTodos.map((todo) => (
@@ -179,8 +151,10 @@ export function TodoBoard({
 											key={todo.id}
 											todo={todo}
 											isMyTodo={true}
+											milestones={milestones}
 											onToggleComplete={() => onToggleComplete(todo.id)}
 											onDelete={() => onDeleteTodo(todo.id)}
+											onEdit={() => onEditTodo(todo)}
 										/>
 									))
 								)}
@@ -190,9 +164,7 @@ export function TodoBoard({
 				</Card>
 			</div>
 
-			<DragOverlay>
-				{activeTodo ? <TodoItemOverlay todo={activeTodo} /> : null}
-			</DragOverlay>
+			<DragOverlay>{activeTodo ? <TodoItemOverlay todo={activeTodo} /> : null}</DragOverlay>
 		</DndContext>
 	);
 }

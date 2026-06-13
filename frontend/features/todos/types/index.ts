@@ -1,5 +1,8 @@
 import type { MilestoneInput, TodoInput } from "../schemas/todoSchema";
 
+// 優先度の型定義
+export type TodoPriority = "low" | "medium" | "high";
+
 // マイルストーンの型定義
 export type Milestone = MilestoneInput & {
 	id: string;
@@ -13,6 +16,8 @@ export type Todo = TodoInput & {
 	id: string;
 	goalId: string;
 	milestoneId?: string;
+	priority?: TodoPriority;
+	description?: string;
 	completed: boolean;
 	completionCount: number; // 累計完了回数（繰り返し完了用）
 	isAiGenerated: boolean;

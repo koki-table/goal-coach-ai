@@ -1,44 +1,43 @@
 "use client";
 
+import { Badge } from "@/components/atom/badge";
+import { Button } from "@/components/atom/button";
 import { cn } from "@/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Badge } from "@/components/atom/badge";
-import { Button } from "@/components/atom/button";
-import {
-	Check,
-	Trash,
-	DotsSixVertical,
-	Clock,
-} from "@phosphor-icons/react";
-import type { Todo } from "../types";
+import { Check, Clock, DotsSixVertical, PencilSimple, Trash } from "@phosphor-icons/react";
+import type { Milestone, Todo } from "../types";
+import { TodoPriorityBadge } from "./todoPriorityBadge";
 
 type TodoItemProps = {
 	todo: Todo;
 	isMyTodo: boolean;
+	milestones?: Milestone[];
 	onToggleComplete?: () => void;
 	onDelete?: () => void;
+	onEdit?: () => void;
 };
 
 export function TodoItem({
 	todo,
 	isMyTodo,
+	milestones = [],
 	onToggleComplete,
 	onDelete,
+	onEdit,
 }: TodoItemProps) {
-	const {
-		attributes,
-		listeners,
-		setNodeRef,
-		transform,
-		transition,
-		isDragging,
-	} = useSortable({ id: todo.id });
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+		id: todo.id,
+	});
 
 	const style = {
 		transform: CSS.Transform.toString(transform),
 		transition,
 	};
+
+	const linkedMilestone = todo.milestoneId
+		? milestones.find((m) => m.id === todo.milestoneId)
+		: undefined;
 
 	return (
 		<div
@@ -76,8 +75,18 @@ export function TodoItem({
 				</button>
 			)}
 
-			{/* タスク内容 */}
-			<div className="min-w-0 flex-1">
+			{/* タスク内容（クリックで編集Sheet） */}
+			<div
+				className="min-w-0 flex-1 cursor-pointer"
+				onClick={onEdit}
+				onKeyDown={(e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						onEdit?.();
+					}
+				}}
+				role="button"
+				tabIndex={0}
+			>
 				<div className="flex items-center gap-2">
 					<p
 						className={cn(
@@ -87,16 +96,19 @@ export function TodoItem({
 					>
 						{todo.title}
 					</p>
+					{/* 優先度バッジ */}
+					{todo.priority && <TodoPriorityBadge priority={todo.priority} />}
 					{/* 完了回数バッジ */}
 					{todo.completionCount > 0 && (
-						<Badge
-							variant="secondary"
-							className="shrink-0 px-1.5 py-0 text-xs font-normal"
-						>
+						<Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-xs font-normal">
 							{todo.completionCount}回達成
 						</Badge>
 					)}
 				</div>
+				{/* 説明文（truncate） */}
+				{todo.description && (
+					<p className="truncate text-xs text-muted-foreground">{todo.description}</p>
+				)}
 				<div className="flex items-center gap-2 text-xs text-muted-foreground">
 					{todo.dueDate && (
 						<span className="flex items-center gap-1">
@@ -105,11 +117,21 @@ export function TodoItem({
 						</span>
 					)}
 					{todo.estimatedMinutes && <span>{todo.estimatedMinutes}分</span>}
+					{/* マイルストーンラベル */}
+					{linkedMilestone && (
+						<span className="rounded bg-muted px-1.5 py-0.5">{linkedMilestone.title}</span>
+					)}
 				</div>
 			</div>
 
 			{/* アクションボタン */}
 			<div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+				{/* 編集ボタン */}
+				{onEdit && (
+					<Button variant="ghost" size="icon-xs" onClick={onEdit}>
+						<PencilSimple weight="bold" className="size-3.5 text-muted-foreground" />
+					</Button>
+				)}
 				{/* 削除ボタン */}
 				{onDelete && (
 					<Button variant="ghost" size="icon-xs" onClick={onDelete}>
