@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/atom/card";
 import { Skeleton } from "@/components/atom/skeleton";
 import { GoalStatusForm } from "@/features/goals/components/goalForm";
 import { GoalList } from "@/features/goals/components/goalList";
-import { ProbabilityReview } from "@/features/goals/components/probabilityReview";
+// import { ProbabilityReview } from "@/features/goals/components/probabilityReview";
 import { calculateGoalProgress } from "@/features/goals/helpers/goalProgress.helper";
 import { useGoalStatus } from "@/features/goals/hooks/useGoalStatus";
 import { useGoals } from "@/features/goals/hooks/useGoals";
@@ -98,13 +98,13 @@ export default function GoalsPage() {
 					<h2 className="text-xl font-semibold">選択中の目標</h2>
 
 					{/* 達成確率レビュー */}
-					{goalStatus && (
+					{/* {goalStatus && (
 						<ProbabilityReview
 							status={goalStatus}
 							onRequestReview={handleRequestReview}
 							isLoading={statusLoading}
 						/>
-					)}
+					)} */}
 
 					{/* 現状ステータス更新フォーム */}
 					{goalStatus && (
