@@ -23,6 +23,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: backend
+          wranglerVersion: "4.96.0"
           command: d1 migrations apply goal-coach-db --remote
       - name: Deploy Backend
         uses: cloudflare/wrangler-action@v3
@@ -30,6 +31,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: backend
+          wranglerVersion: "4.96.0"
           command: deploy
 
   deploy-frontend:
@@ -57,4 +59,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: frontend
+          wranglerVersion: "4.96.0"
           command: deploy
