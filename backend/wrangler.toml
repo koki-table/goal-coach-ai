@@ -3,10 +3,14 @@ main = "src/index.ts"
 compatibility_date = "2025-05-26"
 
 [vars]
-ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3001"
+ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3001,https://goal-coach.app,https://www.goal-coach.app"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "goal-coach-db"
 database_id = "4fe0d296-9230-4f14-bea1-aa3ad5cd668b"
 migrations_dir = "drizzle/migrations"
+
+[[routes]]
+pattern = "api.goal-coach.app"
+custom_domain = true

@@ -9,6 +9,9 @@
     "build": "pnpm --filter frontend build",
     "lint": "pnpm --filter frontend lint && pnpm --filter backend lint",
     "test": "pnpm --filter frontend test",
-    "test:run": "pnpm --filter frontend test:run"
+    "test:run": "pnpm --filter frontend test:run",
+    "deploy:frontend": "pnpm --filter frontend run deploy",
+    "deploy:backend": "pnpm --filter backend run deploy",
+    "deploy": "pnpm run deploy:backend && pnpm run deploy:frontend"
   }
 }
