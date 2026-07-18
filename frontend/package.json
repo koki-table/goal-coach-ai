@@ -10,7 +10,10 @@
 		"lint:fix": "biome check --fix .",
 		"format": "biome format --write .",
 		"test": "vitest",
-		"test:run": "vitest run"
+		"test:run": "vitest run",
+		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+		"upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.5.0",
@@ -19,6 +22,7 @@
 		"@dnd-kit/core": "^6.3.1",
 		"@dnd-kit/sortable": "^10.0.0",
 		"@dnd-kit/utilities": "^3.2.2",
+		"@opennextjs/cloudflare": "^1.19.11",
 		"@phosphor-icons/react": "^2.1.7",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
@@ -44,6 +48,7 @@
 		"jsdom": "^24",
 		"tailwindcss": "^4",
 		"typescript": "^5",
-		"vitest": "^2"
+		"vitest": "^2",
+		"wrangler": "^4.100.0"
 	}
 }

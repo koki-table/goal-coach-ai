@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "goal-coach-ai",
+  "compatibility_date": "2025-05-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "routes": [
+    {
+      "pattern": "goal-coach.app",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.goal-coach.app",
+      "custom_domain": true
+    }
+  ]
+}
