@@ -26,10 +26,12 @@ type UseTodosReturn = {
 };
 
 export function useTodos(): UseTodosReturn {
-	const { getToken } = useAuth();
+	const { getToken, isLoaded, isSignedIn } = useAuth();
 	const apiClient = createApiClient(getToken);
 
-	const { data, error, isLoading, mutate } = useSWR<GoalWithTodos[]>("/todos");
+	const { data, error, isLoading, mutate } = useSWR<GoalWithTodos[]>(
+		isLoaded && isSignedIn ? "/todos" : null,
+	);
 
 	const goalsWithTodos = data ?? [];
 	const aiTodos = goalsWithTodos.flatMap((g) => g.aiGeneratedTodos);
@@ -137,7 +139,7 @@ export function useTodos(): UseTodosReturn {
 		aiTodos,
 		myTodos,
 		goalsWithTodos,
-		isLoading,
+		isLoading: isLoading || !isLoaded,
 		error,
 		toggleTodoComplete,
 		addTodo,

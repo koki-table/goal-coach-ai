@@ -18,7 +18,7 @@ type UseMilestonesReturn = {
 };
 
 export function useMilestones(goalId: string): UseMilestonesReturn {
-	const { getToken } = useAuth();
+	const { getToken, isLoaded, isSignedIn } = useAuth();
 	const apiClient = createApiClient(getToken);
 
 	const {
@@ -26,7 +26,7 @@ export function useMilestones(goalId: string): UseMilestonesReturn {
 		error,
 		isLoading,
 		mutate,
-	} = useSWR<Milestone[]>(goalId ? `/goals/${goalId}/milestones` : null);
+	} = useSWR<Milestone[]>(isLoaded && isSignedIn && goalId ? `/goals/${goalId}/milestones` : null);
 
 	const updateMilestone = useCallback(
 		async (
@@ -72,7 +72,7 @@ export function useMilestones(goalId: string): UseMilestonesReturn {
 
 	return {
 		milestones,
-		isLoading,
+		isLoading: isLoading || !isLoaded,
 		error,
 		updateMilestone,
 		createMilestones,
@@ -85,10 +85,13 @@ export function useAllMilestones(): {
 	milestonesMap: Record<string, Milestone[]>;
 	isLoading: boolean;
 } {
-	const { data, isLoading } = useSWR<Record<string, Milestone[]>>("/milestones/all");
+	const { isLoaded, isSignedIn } = useAuth();
+	const { data, isLoading } = useSWR<Record<string, Milestone[]>>(
+		isLoaded && isSignedIn ? "/milestones/all" : null,
+	);
 
 	return {
 		milestonesMap: data ?? {},
-		isLoading,
+		isLoading: isLoading || !isLoaded,
 	};
 }

@@ -13,10 +13,12 @@ export type UseGoalsReturn = SwrResponse<Goal[]> & {
 };
 
 export function useGoals(): UseGoalsReturn {
-	const { getToken } = useAuth();
+	const { getToken, isLoaded, isSignedIn } = useAuth();
 	const apiClient = createApiClient(getToken);
 
-	const { data, error, isLoading, isValidating, mutate } = useSWR<Goal[]>("/goals");
+	const { data, error, isLoading, isValidating, mutate } = useSWR<Goal[]>(
+		isLoaded && isSignedIn ? "/goals" : null,
+	);
 
 	const createGoal = useCallback(
 		async (input: GoalInput): Promise<Goal> => {
@@ -47,7 +49,7 @@ export function useGoals(): UseGoalsReturn {
 	return {
 		data,
 		error,
-		isLoading,
+		isLoading: isLoading || !isLoaded,
 		isValidating,
 		mutate: () => mutate(),
 		createGoal,
