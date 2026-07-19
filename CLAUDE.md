@@ -40,11 +40,24 @@ features/{name}/
 ## スタイリング
 - Tailwind CSS v4 + shadcn/ui
 - デザイントークンは `app/globals.css` のCSS変数で管理
-- デフォルトライトモード（水色基調、優しい雰囲気）
+- デフォルトライトモード（Zennデザインシステム準拠、読みやすさ重視）
+- Clerk UIは `@clerk/ui` の shadcn テーマ（`ClerkProvider` の `appearance={{ theme: shadcn }}`）でSemanticトークンに追従
+
+## タイポグラフィ（Zenn準拠）
+- フォント: システムフォントスタック（next/font 不使用）
+  - 本文/UI: `-apple-system, "system-ui", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif`
+  - コード: `SFMono-Regular, Consolas, Menlo, monospace`
+- 本文: 16px / weight 400 / line-height 1.8
+- 見出し: weight 700 / line-height 1.5
+
+## 形状・エレベーション（Zenn準拠）
+- 角丸: 8px（ボタン・入力 = `rounded-lg`）/ 12px（カード = `rounded-xl`）
+- カードは `border-border` のボーダー、ベースシャドウなし
+- シャドウ3段階: `shadow-sm`(hover) / `shadow-md`(dropdown) / `shadow-lg`(modal)
 
 ## カラートークン設計（2層構造）
 
-参考: デジタル庁デザインシステム参考
+参考: Zennデザインシステム（値）+ デジタル庁デザインシステム（2層構造）
 
 ### Layer 1: Primitive Colors（不変の色パレット）
 - 色相ごとに13段階: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200
@@ -52,6 +65,14 @@ features/{name}/
 - 定義する色相: Blue, Light Blue, Cyan, Green, Yellow, Orange, Red, Gray
 - 変数名: `--{color}-{step}` (例: `--light-blue-500`)
 - Primitiveは絶対に変更しない（全テーマ共通）
+- Zennアンカー値（このベースラインを維持すること）:
+  - `--light-blue-500` = #3ea8ff (Zenn Blue) / `--light-blue-600` = #0f83fd
+  - `--green-500` = #10b981 / `--orange-500` = #f59e0b / `--red-500` = #f43f5e
+  - `--gray-100` = #f1f5f9 (Surface) / `--gray-200` = #d6e3ed (Border)
+  - Grayは青みがかったクールグレー（slate系）
+- アルファプリミティブ（テキスト用、テーマ非依存）:
+  - `--black-a82` / `--black-a55` / `--black-a36`（ライトの本文/補助/無効）
+  - `--white-a90` / `--white-a60` / `--white-a38`（ダークの本文/補助/無効）
 
 ### Layer 2: Semantic Colors（用途別マッピング）
 - shadcn/ui互換の変数名 (`--primary`, `--background`, etc.)
@@ -65,10 +86,12 @@ features/{name}/
 - 新しいSemanticを追加する時は必ずPrimitiveを参照すること
 
 ### Goal Coach AI のカラー方針
-- Primary: Light Blue系（優しい水色）
-- ステータス: Success=Green-600, Error=Red-600, Warning=Orange-600
-- 背景: White（ライト）/ Gray-900（ダーク）
+- Primary: Light Blue系（Zenn Blue #3ea8ff）
+- ステータス: Success=Green-500, Error=Red-500, Warning=Orange-500
+- テキスト: `--black-a82`（ライト）/ `--white-a90`（ダーク）— アルファプリミティブ参照
+- 背景: White（ライト）/ Gray-900（ダーク）、面: Gray-100
 - ボーダー: Gray-200（ライト）/ Gray-700（ダーク）
+- Warningのforegroundはライトでは `--black-a82`（白字はコントラスト不足のため）
 
 ## パッケージマネージャー
 - pnpm (workspaces)
