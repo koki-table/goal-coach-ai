@@ -17,9 +17,11 @@ export const goalUpdateSchema = z.object({
 });
 
 export const milestoneCreateSchema = z.object({
+	id: z.string().optional(),
 	title: z.string().min(1).max(200),
 	label: z.string().max(100),
 	order: z.number().int().min(0),
+	isCompleted: z.boolean().optional(),
 });
 
 export const milestoneCreateBatchSchema = z.array(milestoneCreateSchema);

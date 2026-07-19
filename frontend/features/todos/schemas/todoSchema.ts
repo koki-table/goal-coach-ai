@@ -4,7 +4,9 @@ import { z } from "zod";
 export const MAX_MILESTONES_PER_GOAL = 10;
 
 // マイルストーンエントリスキーマ（フォーム用）
+// idあり=既存マイルストーン（バックエンドで更新）、idなし=新規（作成）
 export const milestoneEntrySchema = z.object({
+	id: z.string().optional(),
 	label: z.string().min(1, "ラベルは必須です").max(30, "ラベルは30文字以内で入力してください"),
 	title: z
 		.string()

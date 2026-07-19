@@ -120,9 +120,11 @@ export default function TodosPage() {
 	const handleSaveMilestones = useCallback(
 		async (goalId: string, entries: MilestoneEntry[]) => {
 			const payload = entries.map((entry, idx) => ({
+				id: entry.id,
 				title: entry.title,
 				label: entry.label,
 				order: idx + 1,
+				isCompleted: entry.isCompleted,
 			}));
 			await apiClient.put(`/goals/${goalId}/milestones`, payload);
 			await revalidateByPrefix("/milestones");
