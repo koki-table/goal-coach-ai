@@ -4,8 +4,10 @@
   "private": true,
   "packageManager": "pnpm@10.23.0",
   "scripts": {
-    "dev": "pnpm --filter frontend dev",
+    "dev": "pnpm --parallel --filter frontend --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev",
+    "dev:backend:remote": "pnpm --filter backend dev:remote",
     "build": "pnpm --filter frontend build",
     "lint": "pnpm --filter frontend lint && pnpm --filter backend lint",
     "test": "pnpm --filter frontend test",
