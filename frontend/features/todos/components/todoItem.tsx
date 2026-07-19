@@ -67,7 +67,7 @@ export function TodoItem({
 					className={cn(
 						"flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
 						todo.completed
-							? "border-emerald-500 bg-emerald-500 text-white"
+							? "border-success bg-success text-success-foreground"
 							: "border-muted-foreground hover:border-primary",
 					)}
 				>
