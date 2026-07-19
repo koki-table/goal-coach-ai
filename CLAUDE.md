@@ -41,6 +41,7 @@ features/{name}/
 - Tailwind CSS v4 + shadcn/ui
 - デザイントークンは `app/globals.css` のCSS変数で管理
 - デフォルトライトモード（Zennデザインシステム準拠、読みやすさ重視）
+- Clerk UIは `@clerk/ui` の shadcn テーマ（`ClerkProvider` の `appearance={{ theme: shadcn }}`）でSemanticトークンに追従
 
 ## タイポグラフィ（Zenn準拠）
 - フォント: システムフォントスタック（next/font 不使用）

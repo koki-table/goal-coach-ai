@@ -2,6 +2,7 @@ import { TooltipProvider } from "@/components/atom/tooltip";
 import { SWRProvider } from "@/lib/swr/swrProvider";
 import { jaJP } from "@clerk/localizations";
 import { ClerkProvider } from "@clerk/nextjs";
+import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
 import "./globals.css";
 
@@ -34,7 +35,11 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<ClerkProvider localization={localization} afterSignOutUrl="/sign-in">
+		<ClerkProvider
+			localization={localization}
+			afterSignOutUrl="/sign-in"
+			appearance={{ theme: shadcn }}
+		>
 			<html lang="ja">
 				<body className="min-h-screen antialiased">
 					<SWRProvider>
