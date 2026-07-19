@@ -18,18 +18,6 @@ export class MilestoneRepository {
 		return this.db.select().from(milestones).where(eq(milestones.id, id)).get();
 	}
 
-	async createMany(
-		entries: {
-			goalId: string;
-			title: string;
-			label?: string;
-			sortOrder: number;
-		}[],
-	) {
-		if (entries.length === 0) return [];
-		return this.db.insert(milestones).values(entries).returning().all();
-	}
-
 	async update(
 		id: string,
 		data: Partial<{
@@ -48,7 +36,39 @@ export class MilestoneRepository {
 			.get();
 	}
 
-	async deleteAllByGoalId(goalId: string) {
-		return this.db.delete(milestones).where(eq(milestones.goalId, goalId)).returning().all();
+	// db.batch() 用のステートメント（実行しない）
+	deleteByIdsStmt(ids: string[]) {
+		return this.db.delete(milestones).where(inArray(milestones.id, ids));
+	}
+
+	// db.batch() 用のステートメント（実行しない）
+	updateStmt(
+		id: string,
+		data: Partial<{
+			title: string;
+			label: string;
+			sortOrder: number;
+			isCompleted: number;
+			completedAt: string | null;
+		}>,
+	) {
+		return this.db
+			.update(milestones)
+			.set({ ...data, updatedAt: new Date().toISOString() })
+			.where(eq(milestones.id, id));
+	}
+
+	// db.batch() 用のステートメント（実行しない）
+	insertManyStmt(
+		entries: {
+			goalId: string;
+			title: string;
+			label?: string;
+			sortOrder: number;
+			isCompleted?: number;
+			completedAt?: string;
+		}[],
+	) {
+		return this.db.insert(milestones).values(entries);
 	}
 }
