@@ -21,7 +21,7 @@ export default function GoalsPage() {
 	const [selectedGoalId, setSelectedGoalId] = useState<string | undefined>(undefined);
 
 	// 目標一覧のフック
-	const { data: goals, isLoading: goalsLoading, createGoal, updateGoal } = useGoals();
+	const { data: goals, isLoading: goalsLoading, createGoal, updateGoal, deleteGoal } = useGoals();
 	const { goalsWithTodos } = useTodos();
 	const { milestonesMap } = useAllMilestones();
 
@@ -44,6 +44,17 @@ export default function GoalsPage() {
 	const handleUpdateGoal = async (data: GoalInput) => {
 		if (!selectedGoal) return;
 		await updateGoal(selectedGoal.id, data);
+	};
+
+	const handleDeleteGoal = async () => {
+		if (!selectedGoal) return;
+		if (
+			!window.confirm("この目標を削除しますか？関連するTODO・マイルストーンもすべて削除されます。")
+		) {
+			return;
+		}
+		await deleteGoal(selectedGoal.id);
+		setSelectedGoalId(undefined);
 	};
 
 	const handleUpdateStatus = async (data: GoalStatusInput) => {
@@ -117,6 +128,7 @@ export default function GoalsPage() {
 								category: selectedGoal.category,
 							}}
 							onSubmit={handleUpdateGoal}
+							onDelete={handleDeleteGoal}
 						/>
 					)}
 
