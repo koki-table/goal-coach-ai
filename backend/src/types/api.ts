@@ -33,6 +33,7 @@ export type MilestoneCreateRequest = {
 	title: string;
 	label: string;
 	order: number;
+	isCompleted?: boolean;
 };
 
 export type MilestoneUpdateRequest = {

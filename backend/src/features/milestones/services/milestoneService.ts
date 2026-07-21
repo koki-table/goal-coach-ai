@@ -1,15 +1,19 @@
+import { eq } from "drizzle-orm";
 import { GoalNotFoundError, MilestoneNotFoundError } from "../../../common/errors";
 import { GoalRepository } from "../../../common/repositories/goalRepository";
 import { MilestoneRepository } from "../../../common/repositories/milestoneRepository";
 import type { Database } from "../../../db";
+import { milestones, todos } from "../../../db/schema";
 import type { MilestoneCreateRequest, MilestoneResponse } from "../../../types/api";
 import { mapMilestoneToResponse } from "../helpers/milestoneMapper.helper";
 
 export class MilestoneService {
+	private db: Database;
 	private milestoneRepo: MilestoneRepository;
 	private goalRepo: GoalRepository;
 
 	constructor(db: Database) {
+		this.db = db;
 		this.milestoneRepo = new MilestoneRepository(db);
 		this.goalRepo = new GoalRepository(db);
 	}
@@ -45,17 +49,35 @@ export class MilestoneService {
 	): Promise<MilestoneResponse[]> {
 		await this.verifyGoalOwnership(userId, goalId);
 
-		await this.milestoneRepo.deleteAllByGoalId(goalId);
+		const now = new Date().toISOString();
+		// todosの複合FK(milestoneId, goalId)のSET NULLはNOT NULLのgoalIdまでNULL化しようとして
+		// 失敗するため、milestone削除前にtodoの紐付けを明示的に解除する（原子性はD1のbatch）
+		const unlinkTodos = this.db
+			.update(todos)
+			.set({ milestoneId: null, updatedAt: now })
+			.where(eq(todos.goalId, goalId));
+		const deleteMilestones = this.db.delete(milestones).where(eq(milestones.goalId, goalId));
 
-		const created = await this.milestoneRepo.createMany(
-			entries.map((entry) => ({
-				goalId,
-				title: entry.title,
-				label: entry.label,
-				sortOrder: entry.order,
-			})),
-		);
+		if (entries.length === 0) {
+			await this.db.batch([unlinkTodos, deleteMilestones]);
+			return [];
+		}
 
+		const insertMilestones = this.db
+			.insert(milestones)
+			.values(
+				entries.map((entry) => ({
+					goalId,
+					title: entry.title,
+					label: entry.label,
+					sortOrder: entry.order,
+					isCompleted: entry.isCompleted ? 1 : 0,
+					completedAt: entry.isCompleted ? now : null,
+				})),
+			)
+			.returning();
+
+		const [, , created] = await this.db.batch([unlinkTodos, deleteMilestones, insertMilestones]);
 		return created.map(mapMilestoneToResponse);
 	}
 

@@ -118,16 +118,34 @@ export default function TodosPage() {
 	);
 
 	const handleSaveMilestones = useCallback(
-		async (goalId: string, entries: MilestoneEntry[]) => {
+		async (goalId: string, entries: MilestoneEntry[]): Promise<boolean> => {
+			// マイルストーンは全削除→再作成されるため、既存TODOの紐付けは解除される
+			const goal = goalsWithTodos.find((g) => g.goalId === goalId);
+			const hasLinkedTodos = [...(goal?.aiGeneratedTodos ?? []), ...(goal?.myTodos ?? [])].some(
+				(t) => t.milestoneId,
+			);
+			if (
+				hasLinkedTodos &&
+				!window.confirm(
+					"マイルストーンを更新すると、この目標のTODOとマイルストーンの紐付けはすべて解除されます。よろしいですか？",
+				)
+			) {
+				return false;
+			}
+
 			const payload = entries.map((entry, idx) => ({
 				title: entry.title,
 				label: entry.label,
 				order: idx + 1,
+				isCompleted: entry.isCompleted,
 			}));
 			await apiClient.put(`/goals/${goalId}/milestones`, payload);
 			await revalidateByPrefix("/milestones");
+			// todo側のmilestoneIdもサーバで解除されるため再検証する
+			await revalidateByPrefix("/todos");
+			return true;
 		},
-		[apiClient],
+		[apiClient, goalsWithTodos],
 	);
 
 	const isLoading = todosLoading || milestonesLoading;

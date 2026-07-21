@@ -46,6 +46,7 @@ export function useMilestones(goalId: string): UseMilestonesReturn {
 				title: entry.title,
 				label: entry.label,
 				order: idx + 1,
+				isCompleted: entry.isCompleted,
 			}));
 			const created = await apiClient.put<Milestone[]>(
 				`/goals/${targetGoalId}/milestones`,

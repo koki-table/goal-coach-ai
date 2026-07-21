@@ -24,6 +24,8 @@ export class MilestoneRepository {
 			title: string;
 			label?: string;
 			sortOrder: number;
+			isCompleted?: number;
+			completedAt?: string | null;
 		}[],
 	) {
 		if (entries.length === 0) return [];

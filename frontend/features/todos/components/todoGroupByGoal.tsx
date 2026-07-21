@@ -30,7 +30,7 @@ type TodoGroupByGoalProps = {
 		goalId: string,
 	) => void;
 	onToggleMilestoneComplete: (goalId: string, milestoneId: string) => void;
-	onSaveMilestones: (goalId: string, data: MilestoneEntry[]) => Promise<void>;
+	onSaveMilestones: (goalId: string, data: MilestoneEntry[]) => Promise<boolean>;
 };
 
 export function TodoGroupByGoal({
@@ -71,8 +71,10 @@ export function TodoGroupByGoal({
 							<MilestoneForm
 								milestones={group.milestones}
 								onSave={async (data) => {
-									await onSaveMilestones(group.goalId, data);
-									setEditingGoalId(null);
+									const saved = await onSaveMilestones(group.goalId, data);
+									if (saved) {
+										setEditingGoalId(null);
+									}
 								}}
 								onCancel={() => setEditingGoalId(null)}
 								className="mt-3"
