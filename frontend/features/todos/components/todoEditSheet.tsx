@@ -92,8 +92,9 @@ export function TodoEditSheet(props: TodoEditSheetProps) {
 			if (description !== (todo.description ?? "")) {
 				input.description = description || null;
 			}
-			if (priority !== (todo.priority ?? "")) {
-				input.priority = priority || null;
+			// priorityはDB上必須（デフォルト"medium"）のためnullは送らない
+			if (priority && priority !== (todo.priority ?? "")) {
+				input.priority = priority;
 			}
 			if (dueDate !== (todo.dueDate ?? "")) {
 				input.dueDate = dueDate || null;
