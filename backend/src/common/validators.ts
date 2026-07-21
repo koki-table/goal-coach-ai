@@ -36,6 +36,7 @@ export const todoCreateSchema = z.object({
 	dueDate: z.string().optional(),
 	estimatedMinutes: z.number().int().min(1).optional(),
 	milestoneId: z.string().optional(),
+	priority: z.enum(["low", "medium", "high"]).optional(),
 	isAiGenerated: z.boolean().optional(),
 });
 

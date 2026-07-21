@@ -9,6 +9,7 @@ export function mapTodoToResponse(
 		description: string | null;
 		dueDate: string | null;
 		estimatedMinutes: number | null;
+		priority: string;
 		isCompleted: number;
 		isAiGenerated: number;
 		createdAt: string;
@@ -23,6 +24,7 @@ export function mapTodoToResponse(
 		description: todo.description ?? undefined,
 		dueDate: todo.dueDate ?? undefined,
 		estimatedMinutes: todo.estimatedMinutes ?? undefined,
+		priority: todo.priority,
 		completed: todo.isCompleted === 1,
 		completionCount,
 		isAiGenerated: todo.isAiGenerated === 1,

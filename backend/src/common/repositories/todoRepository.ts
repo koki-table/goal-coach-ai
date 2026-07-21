@@ -25,6 +25,7 @@ export class TodoRepository {
 		dueDate?: string;
 		estimatedMinutes?: number;
 		milestoneId?: string;
+		priority?: string;
 		isAiGenerated?: number;
 	}) {
 		return this.db.insert(todos).values(data).returning().get();

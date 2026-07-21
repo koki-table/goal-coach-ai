@@ -12,6 +12,7 @@ describe("todoMapper helper", () => {
 				description: "Unit tests for helpers",
 				dueDate: "2026-06-15",
 				estimatedMinutes: 60,
+				priority: "high",
 				isCompleted: 0,
 				isAiGenerated: 0,
 				createdAt: "2026-01-01T00:00:00.000Z",
@@ -27,6 +28,7 @@ describe("todoMapper helper", () => {
 				description: "Unit tests for helpers",
 				dueDate: "2026-06-15",
 				estimatedMinutes: 60,
+				priority: "high",
 				completed: false,
 				completionCount: 3,
 				isAiGenerated: false,
@@ -43,6 +45,7 @@ describe("todoMapper helper", () => {
 				description: null,
 				dueDate: null,
 				estimatedMinutes: null,
+				priority: "medium",
 				isCompleted: 1,
 				isAiGenerated: 1,
 				createdAt: "2026-01-01T00:00:00.000Z",
@@ -51,6 +54,7 @@ describe("todoMapper helper", () => {
 			const result = mapTodoToResponse(todo, 0);
 
 			expect(result.completed).toBe(true);
+			expect(result.priority).toBe("medium");
 			expect(result.isAiGenerated).toBe(true);
 			expect(result.milestoneId).toBeUndefined();
 			expect(result.description).toBeUndefined();
@@ -67,6 +71,7 @@ describe("todoMapper helper", () => {
 				description: null,
 				dueDate: null,
 				estimatedMinutes: null,
+				priority: "low",
 				isCompleted: 0,
 				isAiGenerated: 0,
 				createdAt: "2026-01-01T00:00:00.000Z",

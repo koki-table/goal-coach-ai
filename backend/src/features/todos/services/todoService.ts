@@ -76,6 +76,7 @@ export class TodoService {
 			dueDate: input.dueDate,
 			estimatedMinutes: input.estimatedMinutes,
 			milestoneId: input.milestoneId,
+			priority: input.priority,
 			isAiGenerated: input.isAiGenerated ? 1 : 0,
 		});
 

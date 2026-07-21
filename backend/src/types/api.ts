@@ -49,6 +49,7 @@ export type TodoResponse = {
 	description?: string;
 	dueDate?: string;
 	estimatedMinutes?: number;
+	priority: string;
 	completed: boolean;
 	completionCount: number;
 	isAiGenerated: boolean;
@@ -61,6 +62,7 @@ export type TodoCreateRequest = {
 	dueDate?: string;
 	estimatedMinutes?: number;
 	milestoneId?: string;
+	priority?: string;
 	isAiGenerated?: boolean;
 };
 
