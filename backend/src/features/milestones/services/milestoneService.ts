@@ -1,21 +1,24 @@
-import { eq } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { GoalNotFoundError, MilestoneNotFoundError } from "../../../common/errors";
 import { GoalRepository } from "../../../common/repositories/goalRepository";
 import { MilestoneRepository } from "../../../common/repositories/milestoneRepository";
+import { TodoRepository } from "../../../common/repositories/todoRepository";
 import type { Database } from "../../../db";
-import { milestones, todos } from "../../../db/schema";
 import type { MilestoneCreateRequest, MilestoneResponse } from "../../../types/api";
 import { mapMilestoneToResponse } from "../helpers/milestoneMapper.helper";
+import { calculateMilestoneSync } from "../helpers/milestoneSync.helper";
 
 export class MilestoneService {
 	private db: Database;
 	private milestoneRepo: MilestoneRepository;
 	private goalRepo: GoalRepository;
+	private todoRepo: TodoRepository;
 
 	constructor(db: Database) {
 		this.db = db;
 		this.milestoneRepo = new MilestoneRepository(db);
 		this.goalRepo = new GoalRepository(db);
+		this.todoRepo = new TodoRepository(db);
 	}
 
 	async getByGoalId(userId: string, goalId: string): Promise<MilestoneResponse[]> {
@@ -42,6 +45,9 @@ export class MilestoneService {
 		return result;
 	}
 
+	// 差分同期: 既存(idあり)は更新、idなしは新規作成、リクエストに無い既存は削除。
+	// 削除対象に紐づくtodoは先にmilestoneIdを解除する（複合FKのSET NULLがNOT NULLの
+	// goalIdまでNULLにしようとして削除が失敗するため）。
 	async createBatch(
 		userId: string,
 		goalId: string,
@@ -49,36 +55,52 @@ export class MilestoneService {
 	): Promise<MilestoneResponse[]> {
 		await this.verifyGoalOwnership(userId, goalId);
 
-		const now = new Date().toISOString();
-		// todosの複合FK(milestoneId, goalId)のSET NULLはNOT NULLのgoalIdまでNULL化しようとして
-		// 失敗するため、milestone削除前にtodoの紐付けを明示的に解除する（原子性はD1のbatch）
-		const unlinkTodos = this.db
-			.update(todos)
-			.set({ milestoneId: null, updatedAt: now })
-			.where(eq(todos.goalId, goalId));
-		const deleteMilestones = this.db.delete(milestones).where(eq(milestones.goalId, goalId));
+		const existing = await this.milestoneRepo.findAllByGoalId(goalId);
+		const { toDelete, toUpdate, toInsert } = calculateMilestoneSync(existing, entries);
 
-		if (entries.length === 0) {
-			await this.db.batch([unlinkTodos, deleteMilestones]);
-			return [];
+		const now = new Date().toISOString();
+		const statements: BatchItem<"sqlite">[] = [];
+
+		if (toDelete.length > 0) {
+			statements.push(this.todoRepo.unlinkByMilestoneIdsStmt(toDelete));
+			statements.push(this.milestoneRepo.deleteByIdsStmt(toDelete));
 		}
 
-		const insertMilestones = this.db
-			.insert(milestones)
-			.values(
-				entries.map((entry) => ({
-					goalId,
-					title: entry.title,
-					label: entry.label,
-					sortOrder: entry.order,
-					isCompleted: entry.isCompleted ? 1 : 0,
-					completedAt: entry.isCompleted ? now : null,
-				})),
-			)
-			.returning();
+		for (const update of toUpdate) {
+			statements.push(
+				this.milestoneRepo.updateStmt(update.id, {
+					title: update.title,
+					label: update.label,
+					sortOrder: update.sortOrder,
+					...(update.isCompleted !== undefined && {
+						isCompleted: update.isCompleted ? 1 : 0,
+						completedAt: update.isCompleted ? now : null,
+					}),
+				}),
+			);
+		}
 
-		const [, , created] = await this.db.batch([unlinkTodos, deleteMilestones, insertMilestones]);
-		return created.map(mapMilestoneToResponse);
+		if (toInsert.length > 0) {
+			statements.push(
+				this.milestoneRepo.insertManyStmt(
+					toInsert.map((entry) => ({
+						goalId,
+						title: entry.title,
+						label: entry.label,
+						sortOrder: entry.sortOrder,
+						...(entry.isCompleted && { isCompleted: 1, completedAt: now }),
+					})),
+				),
+			);
+		}
+
+		// D1はdb.transaction()非対応のためdb.batch()を使う（全体がアトミックに実行される）
+		if (statements.length > 0) {
+			await this.db.batch(statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+		}
+
+		const refreshed = await this.milestoneRepo.findAllByGoalId(goalId);
+		return refreshed.sort((a, b) => a.sortOrder - b.sortOrder).map(mapMilestoneToResponse);
 	}
 
 	async update(

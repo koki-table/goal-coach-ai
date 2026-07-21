@@ -1,6 +1,7 @@
 import { GoalNotFoundError } from "../../../common/errors";
 import { GoalCategoryRepository } from "../../../common/repositories/goalCategoryRepository";
 import { GoalRepository } from "../../../common/repositories/goalRepository";
+import { TodoRepository } from "../../../common/repositories/todoRepository";
 import type { Database } from "../../../db";
 import type {
 	GoalCategoryType,
@@ -11,12 +12,16 @@ import type {
 import { getCategoryNameFromKey, mapGoalToResponse } from "../helpers/categoryMapping.helper";
 
 export class GoalService {
+	private db: Database;
 	private goalRepo: GoalRepository;
 	private categoryRepo: GoalCategoryRepository;
+	private todoRepo: TodoRepository;
 
 	constructor(db: Database) {
+		this.db = db;
 		this.goalRepo = new GoalRepository(db);
 		this.categoryRepo = new GoalCategoryRepository(db);
+		this.todoRepo = new TodoRepository(db);
 	}
 
 	async getAll(userId: string): Promise<GoalResponse[]> {
@@ -75,10 +80,18 @@ export class GoalService {
 	}
 
 	async delete(userId: string, goalId: string): Promise<void> {
-		const deleted = await this.goalRepo.delete(goalId, userId);
-		if (!deleted) {
+		const existing = await this.goalRepo.findByIdAndUserId(goalId, userId);
+		if (!existing) {
 			throw new GoalNotFoundError(goalId);
 		}
+
+		// milestonesへのcascade削除が複合FKのSET NULLを発火させ、NOT NULLの
+		// todos.goalIdまでNULLにしようとして失敗するため、先にtodoの紐づけを解除する。
+		// D1はdb.transaction()非対応のためdb.batch()でアトミックに実行する。
+		await this.db.batch([
+			this.todoRepo.unlinkByGoalIdStmt(goalId),
+			this.goalRepo.deleteStmt(goalId, userId),
+		]);
 	}
 
 	private async resolveCategoryId(userId: string, categoryKey: GoalCategoryType): Promise<string> {

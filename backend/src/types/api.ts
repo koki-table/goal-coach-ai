@@ -30,6 +30,7 @@ export type MilestoneResponse = {
 };
 
 export type MilestoneCreateRequest = {
+	id?: string;
 	title: string;
 	label: string;
 	order: number;

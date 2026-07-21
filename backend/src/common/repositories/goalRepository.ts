@@ -55,4 +55,9 @@ export class GoalRepository {
 			.returning()
 			.get();
 	}
+
+	// db.batch() 用のステートメント（実行しない）
+	deleteStmt(id: string, userId: string) {
+		return this.db.delete(goals).where(and(eq(goals.id, id), eq(goals.userId, userId)));
+	}
 }

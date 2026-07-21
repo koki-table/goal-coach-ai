@@ -22,7 +22,12 @@ export function MilestoneForm({ milestones, onSave, onCancel, className }: Miles
 		milestones.length > 0
 			? [...milestones]
 					.sort((a, b) => a.order - b.order)
-					.map((m) => ({ label: m.label, title: m.title, isCompleted: m.isCompleted }))
+					.map((m) => ({
+						id: m.id,
+						label: m.label,
+						title: m.title,
+						isCompleted: m.isCompleted,
+					}))
 			: [{ label: "", title: "", isCompleted: false }];
 
 	const [entries, setEntries] = useState<MilestoneEntry[]>(initialEntries);

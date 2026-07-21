@@ -72,4 +72,20 @@ export class TodoRepository {
 	async delete(id: string) {
 		return this.db.delete(todos).where(eq(todos.id, id)).returning().get();
 	}
+
+	// db.batch() 用のステートメント（実行しない）
+	unlinkByMilestoneIdsStmt(milestoneIds: string[]) {
+		return this.db
+			.update(todos)
+			.set({ milestoneId: null, updatedAt: new Date().toISOString() })
+			.where(inArray(todos.milestoneId, milestoneIds));
+	}
+
+	// db.batch() 用のステートメント（実行しない）
+	unlinkByGoalIdStmt(goalId: string) {
+		return this.db
+			.update(todos)
+			.set({ milestoneId: null, updatedAt: new Date().toISOString() })
+			.where(eq(todos.goalId, goalId));
+	}
 }
