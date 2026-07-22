@@ -9,3 +9,6 @@ export const defaultCategories = [
 
 export const todoLogTypes = ["completed", "started", "paused"] as const;
 export type TodoLogType = (typeof todoLogTypes)[number];
+
+export const taskTypes = ["daily", "once"] as const;
+export type TaskType = (typeof taskTypes)[number];

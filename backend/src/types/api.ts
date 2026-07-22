@@ -43,6 +43,8 @@ export type MilestoneUpdateRequest = {
 	isCompleted?: boolean;
 };
 
+export type TaskTypeValue = "daily" | "once";
+
 export type TodoResponse = {
 	id: string;
 	goalId: string;
@@ -52,6 +54,7 @@ export type TodoResponse = {
 	dueDate?: string;
 	estimatedMinutes?: number;
 	priority: string;
+	taskType: TaskTypeValue;
 	completed: boolean;
 	completionCount: number;
 	isAiGenerated: boolean;
@@ -65,6 +68,7 @@ export type TodoCreateRequest = {
 	estimatedMinutes?: number;
 	milestoneId?: string;
 	priority?: string;
+	taskType?: TaskTypeValue;
 	isAiGenerated?: boolean;
 };
 
@@ -75,6 +79,7 @@ export type TodoUpdateRequest = {
 	estimatedMinutes?: number;
 	milestoneId?: string;
 	priority?: string;
+	taskType?: TaskTypeValue;
 	isAiGenerated?: boolean;
 };
 

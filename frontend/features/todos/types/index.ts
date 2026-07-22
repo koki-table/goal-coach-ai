@@ -3,6 +3,9 @@ import type { MilestoneInput, TodoInput } from "../schemas/todoSchema";
 // 優先度の型定義
 export type TodoPriority = "low" | "medium" | "high";
 
+// タスク種別の型定義（daily=毎日リセット / once=一回のみ）
+export type TaskType = "daily" | "once";
+
 // マイルストーンの型定義
 export type Milestone = MilestoneInput & {
 	id: string;
@@ -17,6 +20,7 @@ export type Todo = TodoInput & {
 	goalId: string;
 	milestoneId?: string;
 	priority?: TodoPriority;
+	taskType: TaskType;
 	description?: string;
 	completed: boolean;
 	completionCount: number; // 累計完了回数（繰り返し完了用）

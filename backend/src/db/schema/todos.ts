@@ -1,4 +1,5 @@
 import { foreignKey, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { taskTypes } from "./constants";
 import { goals } from "./goals";
 import { milestones } from "./milestones";
 
@@ -17,6 +18,9 @@ export const todos = sqliteTable(
 		isCompleted: integer("isCompleted").notNull().default(0),
 		completedAt: text("completedAt"),
 		priority: text("priority").notNull().default("medium"),
+		taskType: text("taskType", { enum: [...taskTypes] })
+			.notNull()
+			.default("once"),
 		dueDate: text("dueDate"),
 		estimatedMinutes: integer("estimatedMinutes"),
 		isAiGenerated: integer("isAiGenerated").notNull().default(0),

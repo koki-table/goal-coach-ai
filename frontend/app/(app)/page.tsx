@@ -15,10 +15,10 @@ export default function DashboardPage() {
 
 	const isLoading = goalsLoading || todosLoading;
 
-	// 本日の TODO を算出
+	// 本日の TODO を算出（daily は期限に関係なく毎日対象、once は今日期限のみ対象）
 	const todayStats = useMemo(() => {
 		const today = new Date().toISOString().split("T")[0];
-		const todayTodos = todos.filter((t) => t.dueDate === today);
+		const todayTodos = todos.filter((t) => t.taskType === "daily" || t.dueDate === today);
 		const completed = todayTodos.filter((t) => t.completed).length;
 		const total = todayTodos.length;
 		return { completed, total, remaining: total - completed };

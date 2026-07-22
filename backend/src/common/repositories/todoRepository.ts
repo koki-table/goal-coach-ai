@@ -1,6 +1,7 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Database } from "../../db";
 import { todos } from "../../db/schema";
+import type { TaskType } from "../../db/schema/constants";
 
 export class TodoRepository {
 	constructor(private db: Database) {}
@@ -36,6 +37,7 @@ export class TodoRepository {
 		estimatedMinutes?: number;
 		milestoneId?: string;
 		priority?: string;
+		taskType?: TaskType;
 		isAiGenerated?: number;
 	}) {
 		return this.db.insert(todos).values(data).returning().get();
@@ -50,6 +52,7 @@ export class TodoRepository {
 			estimatedMinutes: number;
 			milestoneId: string;
 			priority: string;
+			taskType: TaskType;
 			isCompleted: number;
 			completedAt: string | null;
 			sortOrder: number;
@@ -62,6 +65,16 @@ export class TodoRepository {
 			.where(eq(todos.id, id))
 			.returning()
 			.get();
+	}
+
+	// デイリータスクの完了チェックを一括リセット（Cron Trigger から実行）
+	// completionCount は todo_logs 由来のため影響しない
+	async resetDailyCompletion() {
+		return this.db
+			.update(todos)
+			.set({ isCompleted: 0, completedAt: null, updatedAt: new Date().toISOString() })
+			.where(and(eq(todos.taskType, "daily"), eq(todos.isCompleted, 1)))
+			.run();
 	}
 
 	async updateSortOrders(entries: { id: string; sortOrder: number }[]) {

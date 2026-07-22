@@ -39,6 +39,7 @@ export const todoCreateSchema = z.object({
 	estimatedMinutes: z.number().int().min(1).optional(),
 	milestoneId: z.string().optional(),
 	priority: z.enum(["low", "medium", "high"]).optional(),
+	taskType: z.enum(["daily", "once"]).optional(),
 	isAiGenerated: z.boolean().optional(),
 });
 
@@ -49,6 +50,7 @@ export const todoUpdateSchema = z.object({
 	estimatedMinutes: z.number().int().min(1).optional(),
 	milestoneId: z.string().optional(),
 	priority: z.enum(["low", "medium", "high"]).optional(),
+	taskType: z.enum(["daily", "once"]).optional(),
 	isAiGenerated: z.boolean().optional(),
 });
 

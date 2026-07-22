@@ -7,7 +7,7 @@ import { Select } from "@/components/atom/select";
 import { Textarea } from "@/components/atom/textarea";
 import { useEffect, useState } from "react";
 import type { TodoInput, TodoUpdateInput } from "../schemas/todoSchema";
-import type { Milestone, Todo, TodoPriority } from "../types";
+import type { Milestone, TaskType, Todo, TodoPriority } from "../types";
 
 type TodoEditFormEditProps = {
 	mode: "edit";
@@ -39,6 +39,7 @@ export function TodoEditForm(props: TodoEditFormProps) {
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [priority, setPriority] = useState<TodoPriority | "">("");
+	const [taskType, setTaskType] = useState<TaskType>("once");
 	const [dueDate, setDueDate] = useState("");
 	const [estimatedMinutes, setEstimatedMinutes] = useState("");
 	const [milestoneId, setMilestoneId] = useState("");
@@ -47,6 +48,7 @@ export function TodoEditForm(props: TodoEditFormProps) {
 		setTitle("");
 		setDescription("");
 		setPriority("");
+		setTaskType("once");
 		setDueDate("");
 		setEstimatedMinutes("");
 		setMilestoneId("");
@@ -62,6 +64,7 @@ export function TodoEditForm(props: TodoEditFormProps) {
 			setTitle(props.todo.title);
 			setDescription(props.todo.description ?? "");
 			setPriority(props.todo.priority ?? "");
+			setTaskType(props.todo.taskType ?? "once");
 			setDueDate(props.todo.dueDate ?? "");
 			setEstimatedMinutes(props.todo.estimatedMinutes ? String(props.todo.estimatedMinutes) : "");
 			setMilestoneId(props.todo.milestoneId ?? "");
@@ -87,6 +90,9 @@ export function TodoEditForm(props: TodoEditFormProps) {
 			if (priority && priority !== (todo.priority ?? "")) {
 				input.priority = priority;
 			}
+			if (taskType !== todo.taskType) {
+				input.taskType = taskType;
+			}
 			if (dueDate !== (todo.dueDate ?? "")) {
 				input.dueDate = dueDate || null;
 			}
@@ -105,6 +111,7 @@ export function TodoEditForm(props: TodoEditFormProps) {
 		} else {
 			const input: TodoInput = {
 				title: title.trim(),
+				taskType,
 				...(description && { description }),
 				...(priority && { priority }),
 				...(dueDate && { dueDate }),
@@ -156,6 +163,19 @@ export function TodoEditForm(props: TodoEditFormProps) {
 						<option value="high">高</option>
 						<option value="medium">中</option>
 						<option value="low">低</option>
+					</Select>
+				</div>
+
+				{/* タスク種別 */}
+				<div className="space-y-1.5">
+					<Label htmlFor="todo-task-type">タスク種別</Label>
+					<Select
+						id="todo-task-type"
+						value={taskType}
+						onChange={(e) => setTaskType(e.target.value as TaskType)}
+					>
+						<option value="once">1回のみ</option>
+						<option value="daily">毎日リセット（0時にリセット）</option>
 					</Select>
 				</div>
 

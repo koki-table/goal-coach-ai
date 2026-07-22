@@ -3,6 +3,7 @@
 import { Badge } from "@/components/atom/badge";
 import { Button } from "@/components/atom/button";
 import { CardTitle } from "@/components/atom/card";
+import { cn } from "@/lib/utils";
 import {
 	DndContext,
 	type DragEndEvent,
@@ -19,8 +20,9 @@ import {
 	sortableKeyboardCoordinates,
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ListChecks, Plus } from "@phosphor-icons/react";
+import { CaretDown, ListChecks, Plus } from "@phosphor-icons/react";
 import { useState } from "react";
+import { partitionTodos } from "../helpers/todoPartition.helper";
 import type { Milestone, Todo } from "../types";
 import { TodoItem, TodoItemOverlay } from "./todoItem";
 
@@ -52,6 +54,10 @@ export function TodoBoard({
 	onReorder,
 }: TodoBoardProps) {
 	const [activeTodo, setActiveTodo] = useState<Todo | null>(null);
+	const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+
+	// once かつ完了済みは「完了済み」セクションへ、それ以外はメインリストへ
+	const { activeTodos, completedOnceTodos } = partitionTodos(myTodos);
 
 	const sensors = useSensors(
 		useSensor(PointerSensor, {
@@ -66,7 +72,7 @@ export function TodoBoard({
 
 	const handleDragStart = (event: DragStartEvent) => {
 		const { active } = event;
-		const todo = myTodos.find((t) => t.id === active.id);
+		const todo = activeTodos.find((t) => t.id === active.id);
 		if (todo) {
 			setActiveTodo(todo);
 		}
@@ -81,19 +87,16 @@ export function TodoBoard({
 		const activeId = active.id as string;
 		const overId = over.id as string;
 
+		// index は useTodos が splice する全 myTodos 基準で算出する
+		// （SortableContext は activeTodos のみだが、完了onceが挟まると部分配列indexがズレるため）
 		const sourceList = "myTodos" as const;
 		const sourceIndex = myTodos.findIndex((t) => t.id === activeId);
 
-		let destinationList: "aiTodos" | "myTodos";
-		let destinationIndex: number;
-
-		if (overId === `my-droppable-${goalId}`) {
-			destinationList = "myTodos";
-			destinationIndex = myTodos.length;
-		} else {
-			destinationList = "myTodos";
-			destinationIndex = myTodos.findIndex((t) => t.id === overId);
-		}
+		const destinationList = "myTodos" as const;
+		const destinationIndex =
+			overId === `my-droppable-${goalId}`
+				? myTodos.length
+				: myTodos.findIndex((t) => t.id === overId);
 
 		if (sourceIndex === -1) return;
 
@@ -128,16 +131,16 @@ export function TodoBoard({
 					</Button>
 					<SortableContext
 						id={`my-droppable-${goalId}`}
-						items={myTodos.map((t) => t.id)}
+						items={activeTodos.map((t) => t.id)}
 						strategy={verticalListSortingStrategy}
 					>
 						<div className="min-h-24 space-y-2">
-							{myTodos.length === 0 ? (
+							{activeTodos.length === 0 ? (
 								<div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
 									上のボタンからタスクを追加
 								</div>
 							) : (
-								myTodos.map((todo) => (
+								activeTodos.map((todo) => (
 									<TodoItem
 										key={todo.id}
 										todo={todo}
@@ -151,6 +154,43 @@ export function TodoBoard({
 							)}
 						</div>
 					</SortableContext>
+
+					{/* 完了済み（once）セクション — トグルで開閉、D&D対象外 */}
+					{completedOnceTodos.length > 0 && (
+						<div className="border-border border-t pt-3">
+							<button
+								type="button"
+								onClick={() => setIsCompletedOpen((prev) => !prev)}
+								aria-expanded={isCompletedOpen}
+								className="flex w-full items-center gap-1.5 text-muted-foreground text-xs hover:text-foreground"
+							>
+								<CaretDown
+									weight="bold"
+									className={cn(
+										"size-3.5 transition-transform",
+										isCompletedOpen ? "" : "-rotate-90",
+									)}
+								/>
+								完了済み ({completedOnceTodos.length})
+							</button>
+							{isCompletedOpen && (
+								<div className="mt-2 space-y-2">
+									{completedOnceTodos.map((todo) => (
+										<TodoItem
+											key={todo.id}
+											todo={todo}
+											isMyTodo={true}
+											milestones={milestones}
+											dragDisabled={true}
+											onToggleComplete={() => onToggleComplete(todo.id)}
+											onDelete={() => onDeleteTodo(todo.id)}
+											onEdit={() => onEditTodo(todo)}
+										/>
+									))}
+								</div>
+							)}
+						</div>
+					)}
 				</div>
 			</div>
 
