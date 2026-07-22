@@ -174,8 +174,8 @@ export function TodoEditForm(props: TodoEditFormProps) {
 						value={taskType}
 						onChange={(e) => setTaskType(e.target.value as TaskType)}
 					>
-						<option value="once">一回のみ</option>
-						<option value="daily">毎日（毎朝リセット）</option>
+						<option value="once">1回のみ</option>
+						<option value="daily">毎日リセット（0時にリセット）</option>
 					</Select>
 				</div>
 
