@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/atom/badge";
 import { Button } from "@/components/atom/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
+import { CardTitle } from "@/components/atom/card";
 import {
 	DndContext,
 	type DragEndEvent,
@@ -110,58 +110,48 @@ export function TodoBoard({
 			onDragStart={handleDragStart}
 			onDragEnd={handleDragEnd}
 		>
-			<div className="grid gap-4">
-				{/* マイTODOエリア */}
-				<Card className="border-primary/30">
-					<CardHeader className="pb-3">
-						<div className="flex items-center justify-between">
-							<CardTitle className="flex items-center gap-2 text-base">
-								<ListChecks weight="fill" className="size-5 text-primary" />
-								マイTODO
-							</CardTitle>
-							<Badge>
-								{completedCount}/{totalMyTodos}完了
-							</Badge>
+			{/* TODOセクション（枠なし） */}
+			<div>
+				<div className="mb-3 flex items-center justify-between">
+					<CardTitle className="flex items-center gap-2 text-sm">
+						<ListChecks weight="fill" className="size-4 text-primary" />
+						TODO
+					</CardTitle>
+					<Badge>
+						{completedCount}/{totalMyTodos}完了
+					</Badge>
+				</div>
+				<div className="space-y-3">
+					<Button variant="outline" size="sm" className="w-full" onClick={() => onAddTodo(goalId)}>
+						<Plus weight="bold" className="mr-1" />
+						新規追加
+					</Button>
+					<SortableContext
+						id={`my-droppable-${goalId}`}
+						items={myTodos.map((t) => t.id)}
+						strategy={verticalListSortingStrategy}
+					>
+						<div className="min-h-24 space-y-2">
+							{myTodos.length === 0 ? (
+								<div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+									上のボタンからタスクを追加
+								</div>
+							) : (
+								myTodos.map((todo) => (
+									<TodoItem
+										key={todo.id}
+										todo={todo}
+										isMyTodo={true}
+										milestones={milestones}
+										onToggleComplete={() => onToggleComplete(todo.id)}
+										onDelete={() => onDeleteTodo(todo.id)}
+										onEdit={() => onEditTodo(todo)}
+									/>
+								))
+							)}
 						</div>
-						<p className="text-xs text-muted-foreground">実行するタスク</p>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<Button
-							variant="outline"
-							size="sm"
-							className="w-full"
-							onClick={() => onAddTodo(goalId)}
-						>
-							<Plus weight="bold" className="mr-1" />
-							新規追加
-						</Button>
-						<SortableContext
-							id={`my-droppable-${goalId}`}
-							items={myTodos.map((t) => t.id)}
-							strategy={verticalListSortingStrategy}
-						>
-							<div className="min-h-24 space-y-2">
-								{myTodos.length === 0 ? (
-									<div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
-										上のボタンからタスクを追加
-									</div>
-								) : (
-									myTodos.map((todo) => (
-										<TodoItem
-											key={todo.id}
-											todo={todo}
-											isMyTodo={true}
-											milestones={milestones}
-											onToggleComplete={() => onToggleComplete(todo.id)}
-											onDelete={() => onDeleteTodo(todo.id)}
-											onEdit={() => onEditTodo(todo)}
-										/>
-									))
-								)}
-							</div>
-						</SortableContext>
-					</CardContent>
-				</Card>
+					</SortableContext>
+				</div>
 			</div>
 
 			<DragOverlay>{activeTodo ? <TodoItemOverlay todo={activeTodo} /> : null}</DragOverlay>

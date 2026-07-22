@@ -51,7 +51,7 @@ export function MilestoneProgress({
 			{/* 進捗バー */}
 			<div className="flex items-center justify-between">
 				<p className="text-xs font-medium text-muted-foreground">
-					マイルストーン進捗: {completedCount}/{sortedMilestones.length}
+					進捗: {completedCount}/{sortedMilestones.length}
 				</p>
 				{onEdit && (
 					<button
