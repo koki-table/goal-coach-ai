@@ -32,6 +32,9 @@ export type MilestoneInput = z.infer<typeof milestoneInputSchema>;
 // 優先度スキーマ
 export const todoPrioritySchema = z.enum(["low", "medium", "high"]);
 
+// タスク種別スキーマ
+export const todoTaskTypeSchema = z.enum(["daily", "once"]);
+
 // TODO入力用スキーマ
 export const todoInputSchema = z.object({
 	title: z
@@ -50,6 +53,7 @@ export const todoInputSchema = z.object({
 		.max(480, "見積もり時間は8時間以内で入力してください")
 		.optional(),
 	priority: todoPrioritySchema.optional(),
+	taskType: todoTaskTypeSchema.optional(),
 	description: z.string().max(500, "説明は500文字以内で入力してください").optional(),
 	milestoneId: z.string().optional(),
 });
@@ -77,6 +81,7 @@ export const todoUpdateSchema = z.object({
 		.nullable()
 		.optional(),
 	priority: todoPrioritySchema.nullable().optional(),
+	taskType: todoTaskTypeSchema.optional(),
 	description: z.string().max(500, "説明は500文字以内で入力してください").nullable().optional(),
 	milestoneId: z.string().nullable().optional(),
 });

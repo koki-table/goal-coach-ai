@@ -8,11 +8,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { Check, Clock, DotsSixVertical, PencilSimple, Trash } from "@phosphor-icons/react";
 import type { Milestone, Todo } from "../types";
 import { TodoPriorityBadge } from "./todoPriorityBadge";
+import { TodoTaskTypeBadge } from "./todoTaskTypeBadge";
 
 type TodoItemProps = {
 	todo: Todo;
 	isMyTodo: boolean;
 	milestones?: Milestone[];
+	dragDisabled?: boolean;
 	onToggleComplete?: () => void;
 	onDelete?: () => void;
 	onEdit?: () => void;
@@ -22,12 +24,14 @@ export function TodoItem({
 	todo,
 	isMyTodo,
 	milestones = [],
+	dragDisabled = false,
 	onToggleComplete,
 	onDelete,
 	onEdit,
 }: TodoItemProps) {
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: todo.id,
+		disabled: dragDisabled,
 	});
 
 	const style = {
@@ -49,15 +53,17 @@ export function TodoItem({
 				todo.completed && "bg-muted/50",
 			)}
 		>
-			{/* ドラッグハンドル */}
-			<button
-				type="button"
-				className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
-				{...attributes}
-				{...listeners}
-			>
-				<DotsSixVertical weight="bold" className="size-5" />
-			</button>
+			{/* ドラッグハンドル（ドラッグ不可の時は非表示） */}
+			{!dragDisabled && (
+				<button
+					type="button"
+					className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+					{...attributes}
+					{...listeners}
+				>
+					<DotsSixVertical weight="bold" className="size-5" />
+				</button>
+			)}
 
 			{/* 完了チェックボックス（マイTODOのみ） */}
 			{isMyTodo && (
@@ -96,6 +102,8 @@ export function TodoItem({
 					>
 						{todo.title}
 					</p>
+					{/* タスク種別バッジ（dailyのみ表示） */}
+					<TodoTaskTypeBadge taskType={todo.taskType} />
 					{/* 優先度バッジ */}
 					{todo.priority && <TodoPriorityBadge priority={todo.priority} />}
 					{/* 完了回数バッジ */}
