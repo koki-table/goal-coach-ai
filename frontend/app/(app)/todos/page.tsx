@@ -1,6 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/atom/skeleton";
+import { TodoEditModal } from "@/features/todos/components/todoEditModal";
 import { TodoEditSheet } from "@/features/todos/components/todoEditSheet";
 import { TodoGroupByGoal } from "@/features/todos/components/todoGroupByGoal";
 import { useAllMilestones } from "@/features/todos/hooks/useMilestones";
@@ -11,6 +12,7 @@ import type {
 	TodoUpdateInput,
 } from "@/features/todos/schemas/todoSchema";
 import type { Todo } from "@/features/todos/types";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { createApiClient } from "@/lib/swr/apiClient";
 import { revalidateByPrefix } from "@/lib/swr/mutate";
 import { useAuth } from "@clerk/nextjs";
@@ -31,6 +33,9 @@ export default function TodosPage() {
 	} = useTodos();
 
 	const { milestonesMap, isLoading: milestonesLoading } = useAllMilestones();
+
+	// PC（md以上）はModal、モバイルはSheetで編集する
+	const isDesktop = useMediaQuery("(min-width: 768px)");
 
 	// 編集中のTodo状態
 	const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
@@ -176,13 +181,6 @@ export default function TodosPage() {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h2 className="text-2xl font-bold tracking-tight">TODO</h2>
-				<p className="text-muted-foreground">
-					目標ごとのタスクを管理します。TODOを完了すると達成回数がカウントされます。
-				</p>
-			</div>
-
 			<TodoGroupByGoal
 				groups={groups}
 				onToggleComplete={handleToggleComplete}
@@ -194,27 +192,48 @@ export default function TodosPage() {
 				onSaveMilestones={handleSaveMilestones}
 			/>
 
-			{/* 編集用Sheet */}
-			<TodoEditSheet
-				mode="edit"
-				todo={editingTodo}
-				milestones={editingMilestones}
-				isOpen={editingTodo !== null}
-				onClose={() => setEditingTodo(null)}
-				onSave={handleSaveEdit}
-			/>
-
-			{/* 新規作成用Sheet */}
-			{addingGoalId && (
+			{/* 編集用（PC=Modal / モバイル=Sheet） */}
+			{isDesktop ? (
+				<TodoEditModal
+					mode="edit"
+					todo={editingTodo}
+					milestones={editingMilestones}
+					isOpen={editingTodo !== null}
+					onClose={() => setEditingTodo(null)}
+					onSave={handleSaveEdit}
+				/>
+			) : (
 				<TodoEditSheet
-					mode="create"
-					goalId={addingGoalId}
-					milestones={addingMilestones}
-					isOpen={addingGoalId !== null}
-					onClose={() => setAddingGoalId(null)}
-					onCreate={handleCreateTodo}
+					mode="edit"
+					todo={editingTodo}
+					milestones={editingMilestones}
+					isOpen={editingTodo !== null}
+					onClose={() => setEditingTodo(null)}
+					onSave={handleSaveEdit}
 				/>
 			)}
+
+			{/* 新規作成用（PC=Modal / モバイル=Sheet） */}
+			{addingGoalId &&
+				(isDesktop ? (
+					<TodoEditModal
+						mode="create"
+						goalId={addingGoalId}
+						milestones={addingMilestones}
+						isOpen={addingGoalId !== null}
+						onClose={() => setAddingGoalId(null)}
+						onCreate={handleCreateTodo}
+					/>
+				) : (
+					<TodoEditSheet
+						mode="create"
+						goalId={addingGoalId}
+						milestones={addingMilestones}
+						isOpen={addingGoalId !== null}
+						onClose={() => setAddingGoalId(null)}
+						onCreate={handleCreateTodo}
+					/>
+				))}
 		</div>
 	);
 }
