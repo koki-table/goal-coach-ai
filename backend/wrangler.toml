@@ -14,3 +14,7 @@ migrations_dir = "drizzle/migrations"
 [[routes]]
 pattern = "api.goal-coach.app"
 custom_domain = true
+
+# デイリータスクの完了チェックを毎日リセット（UTC 15:00 = JST 0:00）
+[triggers]
+crons = ["0 15 * * *"]

@@ -77,6 +77,7 @@ export class TodoService {
 			estimatedMinutes: input.estimatedMinutes,
 			milestoneId: input.milestoneId,
 			priority: input.priority,
+			taskType: input.taskType,
 			isAiGenerated: input.isAiGenerated ? 1 : 0,
 		});
 
@@ -98,6 +99,7 @@ export class TodoService {
 		if (input.estimatedMinutes !== undefined) updateData.estimatedMinutes = input.estimatedMinutes;
 		if (input.milestoneId !== undefined) updateData.milestoneId = input.milestoneId;
 		if (input.priority !== undefined) updateData.priority = input.priority;
+		if (input.taskType !== undefined) updateData.taskType = input.taskType;
 
 		const updated = await this.todoRepo.update(todoId, updateData);
 		if (!updated) {

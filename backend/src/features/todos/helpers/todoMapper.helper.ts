@@ -1,4 +1,4 @@
-import type { TodoResponse } from "../../../types/api";
+import type { TaskTypeValue, TodoResponse } from "../../../types/api";
 
 export function mapTodoToResponse(
 	todo: {
@@ -10,6 +10,7 @@ export function mapTodoToResponse(
 		dueDate: string | null;
 		estimatedMinutes: number | null;
 		priority: string;
+		taskType: TaskTypeValue;
 		isCompleted: number;
 		isAiGenerated: number;
 		createdAt: string;
@@ -25,6 +26,7 @@ export function mapTodoToResponse(
 		dueDate: todo.dueDate ?? undefined,
 		estimatedMinutes: todo.estimatedMinutes ?? undefined,
 		priority: todo.priority,
+		taskType: todo.taskType,
 		completed: todo.isCompleted === 1,
 		completionCount,
 		isAiGenerated: todo.isAiGenerated === 1,

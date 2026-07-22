@@ -1,0 +1,1 @@
+ALTER TABLE `todos` ADD `taskType` text DEFAULT 'once' NOT NULL;
