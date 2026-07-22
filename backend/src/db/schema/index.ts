@@ -4,5 +4,7 @@ export { goals } from "./goals";
 export { milestones } from "./milestones";
 export { todos } from "./todos";
 export { todoLogs } from "./todoLogs";
+export { coachEvaluations } from "./coachEvaluations";
+export { coachEvaluationSuggestions } from "./coachEvaluationSuggestions";
 export { defaultCategories, todoLogTypes } from "./constants";
 export type { TodoLogType } from "./constants";

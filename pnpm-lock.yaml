@@ -10,9 +10,15 @@ importers:
 
   backend:
     dependencies:
+      '@ai-sdk/google':
+        specifier: ^4.0.21
+        version: 4.0.21(zod@4.4.3)
       '@clerk/backend':
         specifier: ^1
         version: 1.34.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      ai:
+        specifier: ^7.0.34
+        version: 7.0.34(zod@4.4.3)
       drizzle-orm:
         specifier: ^0.44
         version: 0.44.7(@cloudflare/workers-types@4.20260602.1)
@@ -149,6 +155,28 @@ packages:
 
   '@adobe/css-tools@4.5.0':
     resolution: {integrity: sha512-6OzddxPio9UiWTCemp4N8cYLV2ZN1ncRnV1cVGtve7dhPOtRkleRyx32GQCYSwDYgaHU3USMm84tNsvKzRCa1Q==}
+
+  '@ai-sdk/gateway@4.0.26':
+    resolution: {integrity: sha512-b/nc3COKtk8IxzgcCi418IoZFky/Bw+Jg8+J0/SBBnu/mOXA4bkIKCu81coEtJAWuH2g5Fvvsa0ar7EpmzNWTw==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/google@4.0.21':
+    resolution: {integrity: sha512-ijIvZnnSmLKT2yXnd4Aym0sM3/CsBHx1U7H/++wTUOdbIMKn8pbfsnGArLXksjlHUxWagFMh7zdGhj5Vb5cQeA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@5.0.12':
+    resolution: {integrity: sha512-bbhlOgHeYwrIGheLkM6fhS8hVger8uFPmcOLg+kxc9EFh7y30XYorWhthlYAgpadO3SJhFZrIcEknN7qEqEVvA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider@4.0.3':
+    resolution: {integrity: sha512-e0CpNWJUY7OxAFAnCZkw+ri9QOHWwTs1tXP42782KFGCU07qt8NiXCrCVowyCB5dP2r5/Uls+g2oPd8kOJn9dw==}
+    engines: {node: '>=22'}
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -3024,6 +3052,9 @@ packages:
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
+  '@standard-schema/spec@1.1.0':
+    resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
 
@@ -3236,6 +3267,10 @@ packages:
   '@types/yargs@17.0.35':
     resolution: {integrity: sha512-qUHkeCyQFxMXg79wQfTtfndEC+N9ZZg76HJftDJp+qH2tV7Gj4OJi7l+PiWwJ+pWtW8GwSmqsDj/oymhrTWXjg==}
 
+  '@vercel/oidc@3.2.0':
+    resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
+    engines: {node: '>= 20'}
+
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -3325,6 +3360,9 @@ packages:
     resolution: {integrity: sha512-8WiRPaKk/wNNRZhB2eVhpR/JW7/aqTCMoZhgVUCujuzDmxxmGvsosMxdCG4NAdYkoyozAHCX8/xLtlWUn5mNdQ==}
     engines: {node: '>=22'}
 
+  '@workflow/serde@4.1.0':
+    resolution: {integrity: sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ==}
+
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
@@ -3345,6 +3383,12 @@ packages:
   agentkeepalive@4.6.0:
     resolution: {integrity: sha512-kja8j7PjmncONqaTsB8fQ+wE2mSU2DJ9D4XKoJ5PFWIdRMa6SLSN1ff4mOr4jCbfRSsxR4keIiySJU0N9T5hIQ==}
     engines: {node: '>= 8.0.0'}
+
+  ai@7.0.34:
+    resolution: {integrity: sha512-jDqclWYqPGFKcUG4CQiKcBiwi5XqVMqvYy6eJdujVpvE1SDoB6j7RtjrGYz3Bn5B1dzTj1StAlrOebY//WK9/Q==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
@@ -4600,6 +4644,9 @@ packages:
 
   json-schema-typed@8.0.2:
     resolution: {integrity: sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==}
+
+  json-schema@0.4.0:
+    resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
 
   json-stringify-safe@5.0.1:
     resolution: {integrity: sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==}
@@ -6149,6 +6196,31 @@ packages:
 snapshots:
 
   '@adobe/css-tools@4.5.0': {}
+
+  '@ai-sdk/gateway@4.0.26(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.3
+      '@ai-sdk/provider-utils': 5.0.12(zod@4.4.3)
+      '@vercel/oidc': 3.2.0
+      zod: 4.4.3
+
+  '@ai-sdk/google@4.0.21(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.3
+      '@ai-sdk/provider-utils': 5.0.12(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/provider-utils@5.0.12(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.3
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
+      eventsource-parser: 3.0.8
+      zod: 4.4.3
+
+  '@ai-sdk/provider@4.0.3':
+    dependencies:
+      json-schema: 0.4.0
 
   '@alloc/quick-lru@5.2.0': {}
 
@@ -9167,6 +9239,8 @@ snapshots:
 
   '@stablelib/base64@1.0.1': {}
 
+  '@standard-schema/spec@1.1.0': {}
+
   '@swc/helpers@0.5.15':
     dependencies:
       tslib: 2.8.1
@@ -9381,6 +9455,8 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
+  '@vercel/oidc@3.2.0': {}
+
   '@vitejs/plugin-react@4.7.0(vite@5.4.21(@types/node@20.19.41)(lightningcss@1.32.0)(terser@5.16.9))':
     dependencies:
       '@babel/core': 7.29.7
@@ -9504,6 +9580,8 @@ snapshots:
     dependencies:
       '@wallet-standard/base': 1.1.1
 
+  '@workflow/serde@4.1.0': {}
+
   abort-controller@3.0.0:
     dependencies:
       event-target-shim: 5.0.1
@@ -9520,6 +9598,13 @@ snapshots:
   agentkeepalive@4.6.0:
     dependencies:
       humanize-ms: 1.2.1
+
+  ai@7.0.34(zod@4.4.3):
+    dependencies:
+      '@ai-sdk/gateway': 4.0.26(zod@4.4.3)
+      '@ai-sdk/provider': 4.0.3
+      '@ai-sdk/provider-utils': 5.0.12(zod@4.4.3)
+      zod: 4.4.3
 
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
@@ -10782,6 +10867,8 @@ snapshots:
 
   json-schema-typed@8.0.2: {}
 
+  json-schema@0.4.0: {}
+
   json-stringify-safe@5.0.1: {}
 
   json5@2.2.3: {}
@@ -11634,7 +11721,7 @@ snapshots:
 
   rpc-websockets@9.3.9:
     dependencies:
-      '@swc/helpers': 0.5.15
+      '@swc/helpers': 0.5.21
       '@types/uuid': 10.0.0
       '@types/ws': 8.18.1
       buffer: 6.0.3

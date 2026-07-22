@@ -6,6 +6,11 @@ import type { TodoLogType } from "../../db/schema";
 export class TodoLogRepository {
 	constructor(private db: Database) {}
 
+	async findAllByTodoIds(todoIds: string[]) {
+		if (todoIds.length === 0) return [];
+		return this.db.select().from(todoLogs).where(inArray(todoLogs.todoId, todoIds)).all();
+	}
+
 	async countCompletedByTodoIds(todoIds: string[]): Promise<Map<string, number>> {
 		if (todoIds.length === 0) return new Map();
 		const results = await this.db

@@ -60,3 +60,11 @@ export const todoReorderSchema = z.array(
 		sortOrder: z.number().int().min(0),
 	}),
 );
+
+export const coachEvaluateSchema = z.object({
+	goalId: z.string().min(1),
+	progressPercent: z.number().int().min(0).max(100),
+	memo: z.string().max(1000).optional(),
+	obstacles: z.string().max(500).optional(),
+	persona: z.enum(["harsh"]).optional().default("harsh"),
+});

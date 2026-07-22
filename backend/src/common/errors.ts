@@ -18,3 +18,17 @@ export class TodoNotFoundError extends Error {
 		this.name = "TodoNotFoundError";
 	}
 }
+
+export class CoachNotConfiguredError extends Error {
+	constructor() {
+		super("Coach evaluation is not configured: GEMINI_API_KEY is missing");
+		this.name = "CoachNotConfiguredError";
+	}
+}
+
+export class CoachRateLimitError extends Error {
+	constructor(userId: string) {
+		super(`Coach evaluation rate limit exceeded for user: ${userId}`);
+		this.name = "CoachRateLimitError";
+	}
+}

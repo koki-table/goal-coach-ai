@@ -16,7 +16,9 @@
 		"db:migrate:remote": "wrangler d1 migrations apply goal-coach-db --remote"
 	},
 	"dependencies": {
+		"@ai-sdk/google": "^4.0.21",
 		"@clerk/backend": "^1",
+		"ai": "^7.0.34",
 		"drizzle-orm": "^0.44",
 		"hono": "^4",
 		"zod": "^4.4.3"

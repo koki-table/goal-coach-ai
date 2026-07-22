@@ -90,3 +90,9 @@ export type GoalWithTodosResponse = {
 	aiGeneratedTodos: TodoResponse[];
 	myTodos: TodoResponse[];
 };
+
+export type CoachEvaluationResponse = {
+	feedback: string;
+	successRate: number;
+	actionableSuggestions: string[];
+};
