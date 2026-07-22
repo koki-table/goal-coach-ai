@@ -19,13 +19,22 @@ const categoryLabels: Record<string, string> = {
 };
 
 type GoalFormProps = {
+	mode?: "create" | "edit";
 	initialData?: Partial<GoalInput>;
 	onSubmit: (data: GoalInput) => void;
 	onCancel?: () => void;
+	onDelete?: () => void;
 	isLoading?: boolean;
 };
 
-export function GoalForm({ initialData, onSubmit, onCancel, isLoading = false }: GoalFormProps) {
+export function GoalForm({
+	mode = "create",
+	initialData,
+	onSubmit,
+	onCancel,
+	onDelete,
+	isLoading = false,
+}: GoalFormProps) {
 	const [formData, setFormData] = useState<Partial<GoalInput>>({
 		title: initialData?.title ?? "",
 		description: initialData?.description ?? "",
@@ -55,8 +64,12 @@ export function GoalForm({ initialData, onSubmit, onCancel, isLoading = false }:
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>目標を設定する</CardTitle>
-				<CardDescription>半年〜1年で達成したい大きな目標を設定しましょう</CardDescription>
+				<CardTitle>{mode === "edit" ? "目標を編集する" : "目標を設定する"}</CardTitle>
+				<CardDescription>
+					{mode === "edit"
+						? "目標の内容を変更できます"
+						: "半年〜1年で達成したい大きな目標を設定しましょう"}
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={handleSubmit} className="space-y-4">
@@ -131,15 +144,24 @@ export function GoalForm({ initialData, onSubmit, onCancel, isLoading = false }:
 						</div>
 					</div>
 
-					<div className="flex justify-end gap-2 pt-4">
-						{onCancel && (
-							<Button type="button" variant="outline" onClick={onCancel}>
-								キャンセル
+					<div className="flex justify-between gap-2 pt-4">
+						<div>
+							{mode === "edit" && onDelete && (
+								<Button type="button" variant="destructive" onClick={onDelete}>
+									目標を削除
+								</Button>
+							)}
+						</div>
+						<div className="flex gap-2">
+							{onCancel && (
+								<Button type="button" variant="outline" onClick={onCancel}>
+									キャンセル
+								</Button>
+							)}
+							<Button type="submit" disabled={isLoading}>
+								{isLoading ? "保存中..." : mode === "edit" ? "変更を保存" : "目標を保存"}
 							</Button>
-						)}
-						<Button type="submit" disabled={isLoading}>
-							{isLoading ? "保存中..." : "目標を保存"}
-						</Button>
+						</div>
 					</div>
 				</form>
 			</CardContent>
@@ -239,7 +261,7 @@ export function GoalStatusForm({ initialData, onSubmit, isLoading = false }: Goa
 
 					<div className="flex justify-end pt-2">
 						<Button type="submit" disabled={isLoading}>
-							{isLoading ? "更新中..." : "ステータスを更新"}
+							{isLoading ? "更新中..." : "現状を更新する"}
 						</Button>
 					</div>
 				</form>

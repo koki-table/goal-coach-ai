@@ -92,35 +92,33 @@ export function useTodos(): UseTodosReturn {
 			const [movedTodo] = sourceArr.splice(sourceIndex, 1);
 			if (!movedTodo) return;
 
-			if (_sourceList === _destinationList) {
-				sourceArr.splice(destinationIndex, 0, movedTodo);
-				const updatedGroup = {
-					...goalGroup,
-					[_sourceList === "aiTodos" ? "aiGeneratedTodos" : "myTodos"]: sourceArr,
-				};
-				const optimistic = currentData.map((g) => (g.goalId === goalId ? updatedGroup : g));
-				mutate(optimistic, false);
-			} else {
-				const destArr =
-					_destinationList === "aiTodos" ? [...goalGroup.aiGeneratedTodos] : [...goalGroup.myTodos];
-				destArr.splice(destinationIndex, 0, {
-					...movedTodo,
-					isAiGenerated: _destinationList === "aiTodos",
-				});
-				const updatedGroup = {
-					...goalGroup,
-					[_sourceList === "aiTodos" ? "aiGeneratedTodos" : "myTodos"]: sourceArr,
-					[_destinationList === "aiTodos" ? "aiGeneratedTodos" : "myTodos"]: destArr,
-				};
-				const optimistic = currentData.map((g) => (g.goalId === goalId ? updatedGroup : g));
-				mutate(optimistic, false);
-			}
+			const srcKey = _sourceList === "aiTodos" ? "aiGeneratedTodos" : "myTodos";
+			const dstKey = _destinationList === "aiTodos" ? "aiGeneratedTodos" : "myTodos";
+			const sameList = _sourceList === _destinationList;
 
-			// API にリオーダーを送信
-			const goalGroup2 = (data ?? []).find((g) => g.goalId === goalId);
-			if (!goalGroup2) return;
-			const allTodosForGoal = [...goalGroup2.aiGeneratedTodos, ...goalGroup2.myTodos];
-			const entries = allTodosForGoal.map((t, idx) => ({
+			const destArr = sameList
+				? sourceArr
+				: _destinationList === "aiTodos"
+					? [...goalGroup.aiGeneratedTodos]
+					: [...goalGroup.myTodos];
+
+			destArr.splice(
+				destinationIndex,
+				0,
+				sameList ? movedTodo : { ...movedTodo, isAiGenerated: _destinationList === "aiTodos" },
+			);
+
+			const updatedGroup: GoalWithTodos = {
+				...goalGroup,
+				[srcKey]: sourceArr,
+				[dstKey]: destArr,
+			};
+			const optimistic = currentData.map((g) => (g.goalId === goalId ? updatedGroup : g));
+			mutate(optimistic, false);
+
+			// API にリオーダーを送信（楽観更新後の並びを永続化する）
+			const newAll = [...updatedGroup.aiGeneratedTodos, ...updatedGroup.myTodos];
+			const entries = newAll.map((t, idx) => ({
 				id: t.id,
 				sortOrder: idx + 1,
 			}));

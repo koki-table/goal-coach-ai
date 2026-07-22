@@ -13,7 +13,7 @@ import {
 	SheetTitle,
 } from "@/components/atom/sheet";
 import { Textarea } from "@/components/atom/textarea";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { TodoInput, TodoUpdateInput } from "../schemas/todoSchema";
 import type { Milestone, Todo, TodoPriority } from "../types";
 
@@ -60,20 +60,25 @@ export function TodoEditSheet(props: TodoEditSheetProps) {
 		setMilestoneId("");
 	};
 
-	// フォームを初期化（Sheetが開かれるたびに）
-	const handleOpenChange = (open: boolean) => {
-		if (open) {
-			if (mode === "edit" && props.todo) {
-				setTitle(props.todo.title);
-				setDescription(props.todo.description ?? "");
-				setPriority(props.todo.priority ?? "");
-				setDueDate(props.todo.dueDate ?? "");
-				setEstimatedMinutes(props.todo.estimatedMinutes ? String(props.todo.estimatedMinutes) : "");
-				setMilestoneId(props.todo.milestoneId ?? "");
-			} else if (mode === "create") {
-				resetForm();
-			}
+	// Sheetは@base-ui/react/dialogのcontrolled propで開かれるため、
+	// プログラム的なopen時はonOpenChangeが発火しない。
+	// フォーム初期化はopen状態と対象todoに応じてuseEffectで宣言的に行う。
+	// biome-ignore lint/correctness/useExhaustiveDependencies: todoはidが変わった時のみ再初期化する
+	useEffect(() => {
+		if (!isOpen) return;
+		if (mode === "edit" && props.todo) {
+			setTitle(props.todo.title);
+			setDescription(props.todo.description ?? "");
+			setPriority(props.todo.priority ?? "");
+			setDueDate(props.todo.dueDate ?? "");
+			setEstimatedMinutes(props.todo.estimatedMinutes ? String(props.todo.estimatedMinutes) : "");
+			setMilestoneId(props.todo.milestoneId ?? "");
+		} else if (mode === "create") {
+			resetForm();
 		}
+	}, [isOpen, mode, props.todo?.id]);
+
+	const handleOpenChange = (open: boolean) => {
 		if (!open) {
 			onClose();
 		}
@@ -92,8 +97,9 @@ export function TodoEditSheet(props: TodoEditSheetProps) {
 			if (description !== (todo.description ?? "")) {
 				input.description = description || null;
 			}
-			if (priority !== (todo.priority ?? "")) {
-				input.priority = priority || null;
+			// priorityはDB上必須（デフォルト"medium"）のためnullは送らない
+			if (priority && priority !== (todo.priority ?? "")) {
+				input.priority = priority;
 			}
 			if (dueDate !== (todo.dueDate ?? "")) {
 				input.dueDate = dueDate || null;

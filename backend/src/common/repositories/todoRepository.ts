@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import type { Database } from "../../db";
 import { todos } from "../../db/schema";
 
@@ -7,11 +7,21 @@ export class TodoRepository {
 
 	async findAllByGoalIds(goalIds: string[]) {
 		if (goalIds.length === 0) return [];
-		return this.db.select().from(todos).where(inArray(todos.goalId, goalIds)).all();
+		return this.db
+			.select()
+			.from(todos)
+			.where(inArray(todos.goalId, goalIds))
+			.orderBy(asc(todos.sortOrder), asc(todos.createdAt))
+			.all();
 	}
 
 	async findAllByGoalId(goalId: string) {
-		return this.db.select().from(todos).where(eq(todos.goalId, goalId)).all();
+		return this.db
+			.select()
+			.from(todos)
+			.where(eq(todos.goalId, goalId))
+			.orderBy(asc(todos.sortOrder), asc(todos.createdAt))
+			.all();
 	}
 
 	async findById(id: string) {
@@ -25,6 +35,7 @@ export class TodoRepository {
 		dueDate?: string;
 		estimatedMinutes?: number;
 		milestoneId?: string;
+		priority?: string;
 		isAiGenerated?: number;
 	}) {
 		return this.db.insert(todos).values(data).returning().get();

@@ -101,3 +101,6 @@ features/{name}/
 - Biome を使用（ESLintではない）
 - `pnpm lint` → `biome check .`
 - `pnpm format` → `biome format --write .`
+
+## コーディング規約
+- `let` は使わない — 変数は `const` で宣言する。条件分岐で値が変わる場合は三項演算子や関数抽出で `const` に収める

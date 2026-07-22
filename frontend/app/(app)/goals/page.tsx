@@ -3,7 +3,7 @@
 import { buttonVariants } from "@/components/atom/button";
 import { Card, CardContent } from "@/components/atom/card";
 import { Skeleton } from "@/components/atom/skeleton";
-import { GoalStatusForm } from "@/features/goals/components/goalForm";
+import { GoalForm, GoalStatusForm } from "@/features/goals/components/goalForm";
 import { GoalList } from "@/features/goals/components/goalList";
 // import { ProbabilityReview } from "@/features/goals/components/probabilityReview";
 import { calculateGoalProgress } from "@/features/goals/helpers/goalProgress.helper";
@@ -21,7 +21,7 @@ export default function GoalsPage() {
 	const [selectedGoalId, setSelectedGoalId] = useState<string | undefined>(undefined);
 
 	// 目標一覧のフック
-	const { data: goals, isLoading: goalsLoading, createGoal } = useGoals();
+	const { data: goals, isLoading: goalsLoading, createGoal, updateGoal, deleteGoal } = useGoals();
 	const { goalsWithTodos } = useTodos();
 	const { milestonesMap } = useAllMilestones();
 
@@ -33,9 +33,28 @@ export default function GoalsPage() {
 		requestAiReview,
 	} = useGoalStatus(selectedGoalId ?? "");
 
+	// 選択中の目標
+	const selectedGoal = goals?.find((g) => g.id === selectedGoalId);
+
 	const handleCreateGoal = async (data: GoalInput) => {
 		const newGoal = await createGoal(data);
 		setSelectedGoalId(newGoal.id);
+	};
+
+	const handleUpdateGoal = async (data: GoalInput) => {
+		if (!selectedGoal) return;
+		await updateGoal(selectedGoal.id, data);
+	};
+
+	const handleDeleteGoal = async () => {
+		if (!selectedGoal) return;
+		if (
+			!window.confirm("この目標を削除しますか？関連するTODO・マイルストーンもすべて削除されます。")
+		) {
+			return;
+		}
+		await deleteGoal(selectedGoal.id);
+		setSelectedGoalId(undefined);
 	};
 
 	const handleUpdateStatus = async (data: GoalStatusInput) => {
@@ -96,6 +115,22 @@ export default function GoalsPage() {
 			{selectedGoalId && (
 				<div className="space-y-6">
 					<h2 className="text-xl font-semibold">選択中の目標</h2>
+
+					{/* 目標の編集フォーム */}
+					{selectedGoal && (
+						<GoalForm
+							key={selectedGoal.id} // 目標切替時にフォームstateをリセット
+							mode="edit"
+							initialData={{
+								title: selectedGoal.title,
+								description: selectedGoal.description,
+								deadline: selectedGoal.deadline.slice(0, 10),
+								category: selectedGoal.category,
+							}}
+							onSubmit={handleUpdateGoal}
+							onDelete={handleDeleteGoal}
+						/>
+					)}
 
 					{/* 達成確率レビュー */}
 					{/* {goalStatus && (

@@ -118,7 +118,27 @@ export default function TodosPage() {
 	);
 
 	const handleSaveMilestones = useCallback(
-		async (goalId: string, entries: MilestoneEntry[]) => {
+		async (goalId: string, entries: MilestoneEntry[]): Promise<boolean> => {
+			// 送信entriesに含まれない既存マイルストーンは削除される（サーバ側の差分同期）。
+			// 削除対象に紐づくTODOがあれば、紐付けが解除される旨を確認する。
+			const goal = goalsWithTodos.find((g) => g.goalId === goalId);
+			const keptIds = new Set(entries.map((e) => e.id).filter(Boolean));
+			const existingMilestones = milestonesMap[goalId] ?? [];
+			const deletedIds = new Set(
+				existingMilestones.filter((m) => !keptIds.has(m.id)).map((m) => m.id),
+			);
+			const hasLinkedTodos = [...(goal?.aiGeneratedTodos ?? []), ...(goal?.myTodos ?? [])].some(
+				(t) => t.milestoneId && deletedIds.has(t.milestoneId),
+			);
+			if (
+				hasLinkedTodos &&
+				!window.confirm(
+					"削除するマイルストーンに紐付いたTODOがあります。紐付けは解除されますが、TODO自体は削除されません。よろしいですか？",
+				)
+			) {
+				return false;
+			}
+
 			const payload = entries.map((entry, idx) => ({
 				id: entry.id,
 				title: entry.title,
@@ -128,8 +148,13 @@ export default function TodosPage() {
 			}));
 			await apiClient.put(`/goals/${goalId}/milestones`, payload);
 			await revalidateByPrefix("/milestones");
+			// 削除されたマイルストーンに紐づくtodoはサーバでmilestoneIdが解除されるため再検証する
+			if (deletedIds.size > 0) {
+				await revalidateByPrefix("/todos");
+			}
+			return true;
 		},
-		[apiClient],
+		[apiClient, goalsWithTodos, milestonesMap],
 	);
 
 	const isLoading = todosLoading || milestonesLoading;
