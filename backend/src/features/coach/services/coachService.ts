@@ -9,7 +9,9 @@ import { MilestoneRepository } from "../../../common/repositories/milestoneRepos
 import { TodoLogRepository } from "../../../common/repositories/todoLogRepository";
 import { TodoRepository } from "../../../common/repositories/todoRepository";
 import type { Database } from "../../../db";
+import type { CoachEvaluationHistoryItem } from "../../../types/api";
 import type { Bindings } from "../../../types/env";
+import { mapCoachEvaluationToHistoryItem } from "../helpers/coachEvaluationMapper.helper";
 import { buildUserPrompt } from "../helpers/coachPrompt.helper";
 import { buildGoalSnapshot } from "../helpers/goalSnapshot.helper";
 import { createCoachModel, evaluate } from "../lib/coachModel";
@@ -113,5 +115,19 @@ export class CoachService {
 		);
 
 		return result;
+	}
+
+	async getEvaluationHistory(
+		userId: string,
+		goalId: string,
+		limit: number,
+	): Promise<CoachEvaluationHistoryItem[]> {
+		const goal = await this.goalRepo.findByIdAndUserId(goalId, userId);
+		if (!goal) {
+			throw new GoalNotFoundError(goalId);
+		}
+
+		const evaluations = await this.coachEvaluationRepo.findRecentByGoalId(goal.id, limit);
+		return evaluations.map(mapCoachEvaluationToHistoryItem);
 	}
 }

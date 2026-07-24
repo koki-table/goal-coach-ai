@@ -9,7 +9,6 @@ import { categoryLabels } from "../types";
 
 type GoalCardProps = {
 	goal: Goal;
-	achievementProbability?: number;
 	progressPercent?: number;
 	onClick?: () => void;
 	isSelected?: boolean;
@@ -17,7 +16,6 @@ type GoalCardProps = {
 
 export function GoalCard({
 	goal,
-	achievementProbability,
 	progressPercent = 0,
 	onClick,
 	isSelected = false,
@@ -26,13 +24,6 @@ export function GoalCard({
 	const daysRemaining = Math.ceil(
 		(new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
 	);
-
-	// 達成確率に応じた色を返す
-	const getProbabilityColor = (probability: number) => {
-		if (probability >= 70) return "text-success";
-		if (probability >= 40) return "text-warning";
-		return "text-destructive";
-	};
 
 	return (
 		<Card
@@ -60,16 +51,8 @@ export function GoalCard({
 					<ProgressValue />
 				</Progress>
 
-				{/* 達成確率と期限 */}
-				<div className="flex items-center justify-between text-sm">
-					{achievementProbability !== undefined && (
-						<div className="flex items-center gap-1.5">
-							<span className="text-muted-foreground">達成確率:</span>
-							<span className={cn("font-semibold", getProbabilityColor(achievementProbability))}>
-								{achievementProbability}%
-							</span>
-						</div>
-					)}
+				{/* 期限 */}
+				<div className="flex items-center justify-end text-sm">
 					<div className="flex items-center gap-1.5">
 						<span className="text-muted-foreground">期限:</span>
 						<span

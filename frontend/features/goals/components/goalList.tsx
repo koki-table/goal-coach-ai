@@ -14,8 +14,7 @@ type GoalListProps = {
 	onSelectGoal: (goalId: string) => void;
 	onCreateGoal: (data: GoalInput) => Promise<void>;
 	isLoading?: boolean;
-	// 各目標の達成確率と進捗率（goalId -> 値 のマッピング）
-	probabilityMap?: Record<string, number>;
+	// 各目標の進捗率（goalId -> 値 のマッピング）
 	progressMap?: Record<string, number>;
 };
 
@@ -25,7 +24,6 @@ export function GoalList({
 	onSelectGoal,
 	onCreateGoal,
 	isLoading = false,
-	probabilityMap = {},
 	progressMap = {},
 }: GoalListProps) {
 	const [showCreateForm, setShowCreateForm] = useState(false);
@@ -67,7 +65,6 @@ export function GoalList({
 						<GoalCard
 							key={goal.id}
 							goal={goal}
-							achievementProbability={probabilityMap[goal.id]}
 							progressPercent={progressMap[goal.id]}
 							onClick={() => onSelectGoal(goal.id)}
 							isSelected={selectedGoalId === goal.id}

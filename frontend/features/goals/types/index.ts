@@ -20,12 +20,9 @@ export type Task = TaskInput & {
 	createdAt: string;
 };
 
-// 目標に紐づくステータス情報
+// 目標に紐づくステータス情報（進捗率・メモ・障害事項の現状入力）
 export type GoalStatus = GoalStatusInput & {
 	goalId: string;
-	achievementProbability: number;
-	coachFeedback: string;
-	velocity: number; // タスク消化速度（タスク/日）
 };
 
 // AI生成タスクとマイTODOを含むボード状態

@@ -7,6 +7,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Check, Clock, DotsSixVertical, PencilSimple, Trash } from "@phosphor-icons/react";
 import type { Milestone, Todo } from "../types";
+import { TodoAiGeneratedBadge } from "./todoAiGeneratedBadge";
 import { TodoPriorityBadge } from "./todoPriorityBadge";
 import { TodoTaskTypeBadge } from "./todoTaskTypeBadge";
 
@@ -104,6 +105,8 @@ export function TodoItem({
 					</p>
 					{/* タスク種別バッジ（dailyのみ表示） */}
 					<TodoTaskTypeBadge taskType={todo.taskType} />
+					{/* AI提案バッジ（isAiGeneratedのみ表示） */}
+					<TodoAiGeneratedBadge isAiGenerated={todo.isAiGenerated} />
 					{/* 優先度バッジ */}
 					{todo.priority && <TodoPriorityBadge priority={todo.priority} />}
 					{/* 完了回数バッジ */}

@@ -33,6 +33,17 @@ jobs:
           workingDirectory: backend
           wranglerVersion: "4.96.0"
           command: deploy
+      - name: Set GEMINI_API_KEY secret
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: backend
+          wranglerVersion: "4.96.0"
+          secrets: |
+            GEMINI_API_KEY
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
   deploy-frontend:
     runs-on: ubuntu-latest

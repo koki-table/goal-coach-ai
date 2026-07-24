@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/atom/card";
 import { Skeleton } from "@/components/atom/skeleton";
 import { GoalForm, GoalStatusForm } from "@/features/goals/components/goalForm";
 import { GoalList } from "@/features/goals/components/goalList";
-// import { ProbabilityReview } from "@/features/goals/components/probabilityReview";
 import { calculateGoalProgress } from "@/features/goals/helpers/goalProgress.helper";
 import { useGoalStatus } from "@/features/goals/hooks/useGoalStatus";
 import { useGoals } from "@/features/goals/hooks/useGoals";
@@ -30,7 +29,6 @@ export default function GoalsPage() {
 		data: goalStatus,
 		isLoading: statusLoading,
 		updateStatus,
-		requestAiReview,
 	} = useGoalStatus(selectedGoalId ?? "");
 
 	// 選択中の目標
@@ -59,10 +57,6 @@ export default function GoalsPage() {
 
 	const handleUpdateStatus = async (data: GoalStatusInput) => {
 		await updateStatus(data);
-	};
-
-	const handleRequestReview = async () => {
-		await requestAiReview();
 	};
 
 	// 進捗率を実データから算出
@@ -131,15 +125,6 @@ export default function GoalsPage() {
 							onDelete={handleDeleteGoal}
 						/>
 					)}
-
-					{/* 達成確率レビュー */}
-					{/* {goalStatus && (
-						<ProbabilityReview
-							status={goalStatus}
-							onRequestReview={handleRequestReview}
-							isLoading={statusLoading}
-						/>
-					)} */}
 
 					{/* 現状ステータス更新フォーム */}
 					{goalStatus && (

@@ -4,7 +4,7 @@ import type { Bindings } from "../../../types/env";
 import { coachEvaluationSchema } from "../prompts/coachPrompts";
 import type { CoachEvaluationResult } from "../prompts/coachPrompts";
 
-const MODEL_ID = "gemini-2.5-flash-lite";
+const MODEL_ID = "gemini-3.5-flash-lite";
 
 // AI_GATEWAY_ACCOUNT_ID/NAMEが両方揃えばCloudflare AI Gateway経由、無ければ既定のgoogleapisへ直叩き。
 function buildBaseURL(env: Bindings): string | undefined {
