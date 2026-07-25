@@ -17,6 +17,7 @@ import type { Database } from "../../../db";
 import type { Bindings } from "../../../types/env";
 import { MilestoneService } from "../../milestones/services/milestoneService";
 import { TodoService } from "../../todos/services/todoService";
+import type { CoachChatPromptMessage } from "../helpers/coachChatPrompt.helper";
 import { buildChatUserPrompt } from "../helpers/coachChatPrompt.helper";
 import { buildGoalSnapshot } from "../helpers/goalSnapshot.helper";
 import { chat, createCoachModel } from "../lib/coachModel";
@@ -94,20 +95,24 @@ export class CoachChatService {
 			conversationId,
 			CHAT_HISTORY_LIMIT,
 		);
+		const history = recentMessages.map(toPromptMessage);
 
 		const goal = conversation.goalId
 			? await this.goalRepo.findByIdAndUserId(conversation.goalId, userId)
 			: undefined;
 
-		const prompt =
+		const { prompt, existingMilestoneTitles } =
 			conversation.goalId && goal
-				? await this.buildLivingGoalPrompt(goal, recentMessages)
-				: buildChatUserPrompt({
-						goalTitle: conversation.goalTitleSnapshot,
-						goalDeadline: conversation.goalDeadlineSnapshot,
-						goalDeleted: true,
-						history: recentMessages.map((m) => ({ role: m.role, content: m.content })),
-					});
+				? await this.buildLivingGoalPrompt(goal, history)
+				: {
+						prompt: buildChatUserPrompt({
+							goalTitle: conversation.goalTitleSnapshot,
+							goalDeadline: conversation.goalDeadlineSnapshot,
+							goalDeleted: true,
+							history,
+						}),
+						existingMilestoneTitles: [] as string[],
+					};
 
 		const model = createCoachModel(env);
 		const result = await chat({
@@ -117,7 +122,7 @@ export class CoachChatService {
 		});
 
 		const proposal: PlanProposalPayload | null = result.planProposal
-			? toProposalPayload(result.planProposal)
+			? toProposalPayload(result.planProposal, existingMilestoneTitles)
 			: null;
 
 		const assistantMessage = await this.messageRepo.create({
@@ -213,8 +218,8 @@ export class CoachChatService {
 
 	private async buildLivingGoalPrompt(
 		goal: { title: string; dueDate: string | null; id: string },
-		recentMessages: { role: "user" | "assistant"; content: string }[],
-	) {
+		history: CoachChatPromptMessage[],
+	): Promise<{ prompt: string; existingMilestoneTitles: string[] }> {
 		const [milestones, todos] = await Promise.all([
 			this.milestoneRepo.findAllByGoalId(goal.id),
 			this.todoRepo.findAllByGoalId(goal.id),
@@ -223,22 +228,59 @@ export class CoachChatService {
 
 		const snapshot = buildGoalSnapshot(todos, milestones, todoLogs, new Date());
 
-		return buildChatUserPrompt({
+		const prompt = buildChatUserPrompt({
 			goalTitle: goal.title,
 			goalDeadline: goal.dueDate,
 			goalDeleted: false,
 			snapshot,
 			milestones: milestones.map((m) => ({ title: m.title, isCompleted: m.isCompleted === 1 })),
-			history: recentMessages.map((m) => ({ role: m.role, content: m.content })),
+			history,
 		});
+
+		return { prompt, existingMilestoneTitles: milestones.map((m) => m.title) };
 	}
 }
 
-function toProposalPayload(planProposal: PlanProposal): PlanProposalPayload {
+// メッセージ履歴をプロンプト用の形式に変換する。assistantメッセージのproposalは
+// AIが既提案・採用済み項目を認識し重複提案を避けられるよう、採用状態を明示した形で渡す。
+function toPromptMessage(message: {
+	role: string;
+	content: string;
+	proposal: string | null;
+}): CoachChatPromptMessage {
+	const role = message.role === "user" ? "user" : "assistant";
+	if (!message.proposal) {
+		return { role, content: message.content };
+	}
+
+	const parsed = JSON.parse(message.proposal) as PlanProposalPayload;
 	return {
-		milestone: planProposal.milestoneTitle
-			? { title: planProposal.milestoneTitle, adopted: false }
-			: null,
+		role,
+		content: message.content,
+		proposal: {
+			milestone: parsed.milestone
+				? { title: parsed.milestone.title, adopted: parsed.milestone.adopted }
+				: null,
+			todos: parsed.todos.map((t) => ({ title: t.title, adopted: t.adopted })),
+		},
+	};
+}
+
+// プロンプトの指示だけに頼らず、既存マイルストーンと完全一致するタイトルが返ってきた場合は
+// サーバー側で確実に除外する(会話履歴のウィンドウ外でも重複作成を防ぐ安全策)。
+function toProposalPayload(
+	planProposal: PlanProposal,
+	existingMilestoneTitles: string[],
+): PlanProposalPayload {
+	const isDuplicateMilestone =
+		planProposal.milestoneTitle !== null &&
+		existingMilestoneTitles.some((title) => title.trim() === planProposal.milestoneTitle?.trim());
+
+	return {
+		milestone:
+			planProposal.milestoneTitle && !isDuplicateMilestone
+				? { title: planProposal.milestoneTitle, adopted: false }
+				: null,
 		todos: planProposal.todos.map((t) => ({
 			title: t.title,
 			taskType: t.taskType,

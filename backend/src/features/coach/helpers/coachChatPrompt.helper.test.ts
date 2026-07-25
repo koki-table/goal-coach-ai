@@ -51,4 +51,41 @@ describe("buildChatUserPrompt", () => {
 
 		expect(prompt).toContain("(マイルストーンなし)");
 	});
+
+	it("notes that existing milestones are already confirmed and should not be re-proposed", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			milestones: [{ title: "文法基礎を固める", isCompleted: false }],
+			history: [],
+		});
+
+		expect(prompt).toContain("既に確定済みです");
+		expect(prompt).toContain("新規マイルストーンとして提案しないでください");
+	});
+
+	it("annotates past assistant proposals with their adoption state", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			milestones: [],
+			history: [
+				{
+					role: "assistant",
+					content: "次のマイルストーンを提案します。",
+					proposal: {
+						milestone: { title: "基礎文法を習得する", adopted: true },
+						todos: [
+							{ title: "毎日30分学習する", adopted: true },
+							{ title: "参考書を1冊読み終える", adopted: false },
+						],
+					},
+				},
+			],
+		});
+
+		expect(prompt).toContain("マイルストーン『基礎文法を習得する』(採用済み)");
+		expect(prompt).toContain("TODO『毎日30分学習する』(採用済み)");
+		expect(prompt).toContain("TODO『参考書を1冊読み終える』(未採用)");
+	});
 });

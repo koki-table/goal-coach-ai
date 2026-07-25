@@ -43,12 +43,14 @@ export default function TodosPage() {
 	// 新規追加対象のゴールID
 	const [addingGoalId, setAddingGoalId] = useState<string | null>(null);
 
-	// 目標ごとのTODOグループを構築（マイルストーンを含む）
+	// 目標ごとのTODOグループを構築（マイルストーンを含む）。
+	// AIコーチ経由で採用されたTODOはisAiGenerated:trueでaiGeneratedTodos側に分類されるため、
+	// 表示上はmyTodosと結合して単一のリストとして扱う（ボード自体にAI/自分の区分UIは無い）。
 	const groups = goalsWithTodos.map((g) => ({
 		goalId: g.goalId,
 		goalTitle: g.goalTitle,
 		milestones: milestonesMap[g.goalId] ?? [],
-		myTodos: g.myTodos,
+		myTodos: [...g.aiGeneratedTodos, ...g.myTodos],
 	}));
 
 	// 編集中のTodoが属するゴールのマイルストーン
