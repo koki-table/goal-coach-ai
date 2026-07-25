@@ -18,3 +18,45 @@ export class TodoNotFoundError extends Error {
 		this.name = "TodoNotFoundError";
 	}
 }
+
+export class CoachNotConfiguredError extends Error {
+	constructor() {
+		super("Coach chat is not configured: GEMINI_API_KEY is missing");
+		this.name = "CoachNotConfiguredError";
+	}
+}
+
+export class CoachConversationNotFoundError extends Error {
+	constructor(id: string) {
+		super(`Coach conversation not found: ${id}`);
+		this.name = "CoachConversationNotFoundError";
+	}
+}
+
+export class PlanItemNotFoundError extends Error {
+	constructor(messageId: number) {
+		super(`Plan item not found for message: ${messageId}`);
+		this.name = "PlanItemNotFoundError";
+	}
+}
+
+export class PlanItemAlreadyAdoptedError extends Error {
+	constructor(messageId: number) {
+		super(`Plan item already adopted for message: ${messageId}`);
+		this.name = "PlanItemAlreadyAdoptedError";
+	}
+}
+
+export class MilestoneNotAdoptedYetError extends Error {
+	constructor(messageId: number) {
+		super(`Milestone must be adopted before its todos for message: ${messageId}`);
+		this.name = "MilestoneNotAdoptedYetError";
+	}
+}
+
+export class CoachChatRateLimitError extends Error {
+	constructor(userId: string) {
+		super(`Coach chat rate limit exceeded for user: ${userId}`);
+		this.name = "CoachChatRateLimitError";
+	}
+}

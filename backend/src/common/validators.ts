@@ -60,3 +60,16 @@ export const todoReorderSchema = z.array(
 		sortOrder: z.number().int().min(0),
 	}),
 );
+
+export const coachConversationCreateSchema = z.object({
+	goalId: z.string().min(1),
+});
+
+export const coachMessageCreateSchema = z.object({
+	content: z.string().min(1).max(1000),
+});
+
+export const coachAdoptPlanItemSchema = z.union([
+	z.object({ target: z.literal("milestone") }),
+	z.object({ target: z.literal("todo"), todoIndex: z.number().int().min(0) }),
+]);

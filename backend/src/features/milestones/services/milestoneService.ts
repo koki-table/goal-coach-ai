@@ -103,6 +103,17 @@ export class MilestoneService {
 		return refreshed.sort((a, b) => a.sortOrder - b.sortOrder).map(mapMilestoneToResponse);
 	}
 
+	// チャット提案の採用フロー専用の単体作成。既存createBatchは全件差分同期用でこのユースケースには不向き
+	async createOne(userId: string, goalId: string, title: string): Promise<MilestoneResponse> {
+		await this.verifyGoalOwnership(userId, goalId);
+
+		const existing = await this.milestoneRepo.findAllByGoalId(goalId);
+		const sortOrder = existing.length;
+
+		const created = await this.milestoneRepo.create({ goalId, title, sortOrder });
+		return mapMilestoneToResponse(created);
+	}
+
 	async update(
 		userId: string,
 		milestoneId: string,

@@ -18,6 +18,10 @@ export class MilestoneRepository {
 		return this.db.select().from(milestones).where(eq(milestones.id, id)).get();
 	}
 
+	async create(data: { goalId: string; title: string; sortOrder: number }) {
+		return this.db.insert(milestones).values(data).returning().get();
+	}
+
 	async update(
 		id: string,
 		data: Partial<{

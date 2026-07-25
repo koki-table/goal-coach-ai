@@ -90,3 +90,52 @@ export type GoalWithTodosResponse = {
 	aiGeneratedTodos: TodoResponse[];
 	myTodos: TodoResponse[];
 };
+
+export type CoachConversationResponse = {
+	id: string;
+	goalId?: string;
+	goalTitleSnapshot: string;
+	goalDeadlineSnapshot?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type PlanProposalTodoPayload = {
+	title: string;
+	taskType: TaskTypeValue;
+	adopted: boolean;
+	createdTodoId?: string;
+};
+
+export type PlanProposalMilestonePayload = {
+	title: string;
+	adopted: boolean;
+	createdMilestoneId?: string;
+};
+
+export type PlanProposalPayload = {
+	milestone: PlanProposalMilestonePayload | null;
+	todos: PlanProposalTodoPayload[];
+};
+
+export type CoachMessageRoleValue = "user" | "assistant";
+
+export type CoachMessageResponse = {
+	id: number;
+	conversationId: string;
+	role: CoachMessageRoleValue;
+	content: string;
+	proposal?: PlanProposalPayload;
+	createdAt: string;
+};
+
+export type CoachMessagePageResponse = {
+	messages: CoachMessageResponse[];
+	nextCursor?: number;
+};
+
+export type AdoptPlanItemResponse = {
+	proposal: PlanProposalPayload;
+	milestone?: MilestoneResponse;
+	todo?: TodoResponse;
+};

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { coachRoute } from "../features/coach/routes/coachRoute";
 import { goalsRoute } from "../features/goals/routes/goalsRoute";
 import { milestonesRoute } from "../features/milestones/routes/milestonesRoute";
 import { todosRoute } from "../features/todos/routes/todosRoute";
@@ -27,6 +28,9 @@ protectedRoutes.route("/milestones", milestonesRoute);
 
 // Top-level todos routes (/todos, /todos/:id, /todos/:id/toggle)
 protectedRoutes.route("/todos", todosRoute);
+
+// AIコーチとのチャット (/coach/conversations, /coach/messages/:id/adopt-plan-item)
+protectedRoutes.route("/coach", coachRoute);
 
 routes.route("/", protectedRoutes);
 
