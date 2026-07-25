@@ -1,5 +1,17 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787/api";
 
+export class ApiClientError extends Error {
+	status: number;
+	info?: unknown;
+
+	constructor(status: number, message: string, info?: unknown) {
+		super(message);
+		this.name = "ApiClientError";
+		this.status = status;
+		this.info = info;
+	}
+}
+
 export function createApiClient(getToken: () => Promise<string | null>) {
 	async function request<T>(path: string, options: RequestInit): Promise<T> {
 		const url = path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
@@ -25,7 +37,7 @@ export function createApiClient(getToken: () => Promise<string | null>) {
 				body && typeof body === "object" && "message" in body
 					? String((body as { message: unknown }).message)
 					: `Request failed with status ${res.status}`;
-			throw new Error(message);
+			throw new ApiClientError(res.status, message, body);
 		}
 
 		const text = await res.text();

@@ -2,6 +2,7 @@
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/atom/sheet";
 import { APP_NAME } from "@/lib/constants";
+import Image from "next/image";
 import { useState } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
@@ -21,7 +22,13 @@ export function AppShell({ children }: AppShellProps) {
 				className={`hidden md:flex md:flex-col md:border-r bg-sidebar overflow-hidden transition-all duration-300 ${sidebarOpen ? "md:w-60" : "md:w-0 md:border-r-0"}`}
 			>
 				<div className="flex h-14 items-center border-b px-4 min-w-60">
-					<span className="text-lg">⚔️</span>
+					<Image
+						src="/penguin-icon.png"
+						alt={APP_NAME}
+						width={28}
+						height={28}
+						className="rounded-full"
+					/>
 					<span className="ml-2 font-bold text-sidebar-foreground">{APP_NAME}</span>
 				</div>
 				<Sidebar />
@@ -31,7 +38,13 @@ export function AppShell({ children }: AppShellProps) {
 			<Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
 				<SheetContent side="left" className="w-60 bg-sidebar p-0">
 					<SheetTitle className="flex h-14 items-center border-b px-4">
-						<span className="text-lg">⚔️</span>
+						<Image
+							src="/penguin-icon.png"
+							alt={APP_NAME}
+							width={28}
+							height={28}
+							className="rounded-full"
+						/>
 						<span className="ml-2 font-bold text-sidebar-foreground">{APP_NAME}</span>
 					</SheetTitle>
 					<Sidebar onNavigate={() => setMobileOpen(false)} />

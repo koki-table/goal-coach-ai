@@ -17,6 +17,7 @@ import { createDb } from "../../../db";
 import type { Variables } from "../../../types/context";
 import type { Bindings } from "../../../types/env";
 import { mapConversationToResponse, mapMessageToResponse } from "../helpers/coachChatMapper.helper";
+import { CoachModelError } from "../lib/coachModel";
 import { CoachChatService } from "../services/coachChatService";
 
 export const coachRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -91,6 +92,9 @@ coachRoute.post("/conversations/:id/messages", async (c) => {
 		}
 		if (e instanceof CoachNotConfiguredError) {
 			return c.json({ message: "Coach chat is not configured" }, 503);
+		}
+		if (e instanceof CoachModelError) {
+			return c.json({ message: "Coach model request failed" }, 502);
 		}
 		throw e;
 	}
