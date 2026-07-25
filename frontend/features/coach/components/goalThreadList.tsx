@@ -51,7 +51,6 @@ export function GoalThreadList({
 				disabled={isLoading}
 				onChange={(e) => onSelectGoal(e.target.value)}
 				className="h-12"
-				style={{ fontSize: "1.125rem" }}
 			>
 				<option value="" disabled style={{ fontSize: "1.125rem" }}>
 					目標を選択してください

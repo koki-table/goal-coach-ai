@@ -123,4 +123,17 @@ export class TodoRepository {
 			.set({ milestoneId: null, updatedAt: new Date().toISOString() })
 			.where(eq(todos.goalId, goalId));
 	}
+
+	// db.batch() 用のステートメント（実行しない）。マイルストーンの完了トグルに連動して
+	// 紐づくTODOの完了状態を一括で揃える（todo_logsへの記録は行わない）
+	updateCompletionByMilestoneIdStmt(milestoneId: string, isCompleted: boolean) {
+		return this.db
+			.update(todos)
+			.set({
+				isCompleted: isCompleted ? 1 : 0,
+				completedAt: isCompleted ? new Date().toISOString() : null,
+				updatedAt: new Date().toISOString(),
+			})
+			.where(eq(todos.milestoneId, milestoneId));
+	}
 }

@@ -119,7 +119,9 @@ export default function TodosPage() {
 			await apiClient.patch(`/milestones/${milestoneId}`, {
 				isCompleted: !current.isCompleted,
 			});
-			await revalidateByPrefix("/milestones");
+			// マイルストーン完了に連動して紐づくTODOの完了状態もサーバー側で更新されるため、
+			// TODO一覧のキャッシュも合わせて再検証する
+			await Promise.all([revalidateByPrefix("/milestones"), revalidateByPrefix("/todos")]);
 		},
 		[apiClient, milestonesMap],
 	);

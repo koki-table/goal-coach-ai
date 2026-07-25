@@ -142,6 +142,21 @@ export class MilestoneService {
 			updateData.completedAt = data.isCompleted ? new Date().toISOString() : null;
 		}
 
+		// isCompletedの変更時は、紐づくTODOの完了状態もマイルストーンに合わせて一括で揃える
+		// （完了トグルはtodo_logsへの記録を行わない一括反映であり、個別完了とは区別する）
+		if (data.isCompleted !== undefined) {
+			await this.db.batch([
+				this.milestoneRepo.updateStmt(milestoneId, updateData),
+				this.todoRepo.updateCompletionByMilestoneIdStmt(milestoneId, data.isCompleted),
+			]);
+
+			const updated = await this.milestoneRepo.findById(milestoneId);
+			if (!updated) {
+				throw new MilestoneNotFoundError(milestoneId);
+			}
+			return mapMilestoneToResponse(updated);
+		}
+
 		const updated = await this.milestoneRepo.update(milestoneId, updateData);
 		if (!updated) {
 			throw new MilestoneNotFoundError(milestoneId);

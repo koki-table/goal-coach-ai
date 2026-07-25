@@ -81,7 +81,8 @@ function CoachPageContent() {
 					</div>
 				) : (
 					<div className="flex min-h-0 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
-						左の一覧から目標を選択してください
+						<span className="md:hidden">上の一覧から目標を選択してください</span>
+						<span className="hidden md:inline">左の一覧から目標を選択してください</span>
 					</div>
 				)}
 			</div>
