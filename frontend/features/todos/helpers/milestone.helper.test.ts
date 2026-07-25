@@ -79,7 +79,7 @@ describe("validateMilestoneEntries", () => {
 	it("空配列の場合、エラーを返す", () => {
 		const errors = validateMilestoneEntries([]);
 		expect(errors.length).toBe(1);
-		expect(errors[0].message).toBe("最低1つのマイルストーンが必要です");
+		expect(errors[0].message).toBe("主要な成果（Key Results）は最低1つ必要です");
 	});
 
 	it("上限超過の場合、エラーを返す", () => {

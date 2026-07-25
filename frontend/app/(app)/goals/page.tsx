@@ -49,7 +49,9 @@ export default function GoalsPage() {
 	const handleDeleteGoal = async () => {
 		if (!selectedGoal) return;
 		if (
-			!window.confirm("この目標を削除しますか？関連するTODO・マイルストーンもすべて削除されます。")
+			!window.confirm(
+				"この目標を削除しますか？関連するTODO・主要な成果（Key Results）もすべて削除されます。",
+			)
 		) {
 			return;
 		}
@@ -164,7 +166,7 @@ export default function GoalsPage() {
 								<div>
 									<p className="font-medium">タスク管理</p>
 									<p className="text-sm text-muted-foreground">
-										目標ごとのTODOとマイルストーンを管理
+										目標ごとのTODOと主要な成果（Key Results）を管理
 									</p>
 								</div>
 							</div>

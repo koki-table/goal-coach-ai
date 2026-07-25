@@ -206,7 +206,7 @@ export function TodoEditForm(props: TodoEditFormProps) {
 
 				{/* マイルストーン */}
 				<div className="space-y-1.5">
-					<Label htmlFor="todo-milestone">マイルストーン</Label>
+					<Label htmlFor="todo-milestone">主要な成果（Key Results）</Label>
 					<Select
 						id="todo-milestone"
 						value={milestoneId}

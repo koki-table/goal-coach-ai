@@ -31,7 +31,9 @@ export function MilestoneProgress({
 					className,
 				)}
 			>
-				<p className="text-sm text-muted-foreground">マイルストーンが設定されていません</p>
+				<p className="text-sm text-muted-foreground">
+					主要な成果（Key Results）が設定されていません
+				</p>
 				{onEdit && (
 					<button
 						type="button"

@@ -142,7 +142,7 @@ export default function TodosPage() {
 			if (
 				hasLinkedTodos &&
 				!window.confirm(
-					"削除するマイルストーンに紐付いたTODOがあります。紐付けは解除されますが、TODO自体は削除されません。よろしいですか？",
+					"削除する主要な成果（Key Results）に紐付いたTODOがあります。紐付けは解除されますが、TODO自体は削除されません。よろしいですか？",
 				)
 			) {
 				return false;

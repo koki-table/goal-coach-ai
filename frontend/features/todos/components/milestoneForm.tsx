@@ -70,6 +70,11 @@ export function MilestoneForm({ milestones, onSave, onCancel, className }: Miles
 
 	return (
 		<form onSubmit={handleSubmit} className={cn("space-y-4", className)}>
+			{/* OKRの「KR（Key Results）」の考え方をユーザーに補足する */}
+			<p className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+				主要な成果（Key Results）は、目標の達成度を測る<strong>定量的で測定可能な指標</strong>
+				です。1つの目標につき2〜3個、達成できるか少し背伸びが必要なくらいのストレッチな水準で設定しましょう。
+			</p>
 			<div className="space-y-3">
 				{entries.map((entry, index) => (
 					<div key={index} className="flex items-start gap-2">
@@ -91,7 +96,7 @@ export function MilestoneForm({ milestones, onSave, onCancel, className }: Miles
 						<Input
 							value={entry.label}
 							onChange={(e) => handleEntryChange(index, "label", e.target.value)}
-							placeholder="ラベル（例: 短期目標）"
+							placeholder="ラベル（例: 学習成果）"
 							className="w-28 shrink-0 text-sm"
 							maxLength={30}
 						/>
@@ -100,7 +105,7 @@ export function MilestoneForm({ milestones, onSave, onCancel, className }: Miles
 						<Input
 							value={entry.title}
 							onChange={(e) => handleEntryChange(index, "title", e.target.value)}
-							placeholder="目標内容を入力"
+							placeholder="例: 模試で900点を取る（測定可能な成果）"
 							className="flex-1 text-sm"
 							maxLength={100}
 						/>
@@ -133,7 +138,7 @@ export function MilestoneForm({ milestones, onSave, onCancel, className }: Miles
 				)}
 			>
 				<Plus weight="bold" className="size-4" />
-				ステップを追加
+				主要な成果を追加
 			</button>
 
 			<div className="flex justify-end gap-2">

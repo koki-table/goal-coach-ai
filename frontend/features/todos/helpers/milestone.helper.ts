@@ -31,7 +31,11 @@ export function validateMilestoneEntries(entries: MilestoneEntry[]): MilestoneVa
 	const errors: MilestoneValidationError[] = [];
 
 	if (entries.length === 0) {
-		errors.push({ index: 0, field: "label", message: "最低1つのマイルストーンが必要です" });
+		errors.push({
+			index: 0,
+			field: "label",
+			message: "主要な成果（Key Results）は最低1つ必要です",
+		});
 		return errors;
 	}
 
@@ -39,7 +43,7 @@ export function validateMilestoneEntries(entries: MilestoneEntry[]): MilestoneVa
 		errors.push({
 			index: entries.length - 1,
 			field: "label",
-			message: `マイルストーンは${MAX_MILESTONES_PER_GOAL}個以内です`,
+			message: `主要な成果（Key Results）は${MAX_MILESTONES_PER_GOAL}個以内です`,
 		});
 	}
 

@@ -20,7 +20,7 @@ describe("PlanProposalWidget", () => {
 			/>,
 		);
 
-		const todoButton = screen.getByRole("button", { name: /マイルストーン採用後/ });
+		const todoButton = screen.getByRole("button", { name: /主要な成果の採用後/ });
 		expect(todoButton).toBeDisabled();
 	});
 

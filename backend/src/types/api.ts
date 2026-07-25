@@ -4,6 +4,7 @@ export type GoalResponse = {
 	description?: string;
 	deadline: string;
 	category: GoalCategoryType;
+	status: string;
 	createdAt: string;
 	updatedAt: string;
 };

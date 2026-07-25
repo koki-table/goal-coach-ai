@@ -32,6 +32,7 @@ export function mapGoalToResponse(
 		title: string;
 		description: string | null;
 		dueDate: string | null;
+		status: string;
 		createdAt: string;
 		updatedAt: string;
 	},
@@ -43,6 +44,7 @@ export function mapGoalToResponse(
 		description: goal.description ?? undefined,
 		deadline: goal.dueDate ?? "",
 		category: categoryName ? getCategoryKeyFromName(categoryName) : ("other" as GoalCategoryType),
+		status: goal.status,
 		createdAt: goal.createdAt,
 		updatedAt: goal.updatedAt,
 	};

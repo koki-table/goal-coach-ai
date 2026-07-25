@@ -115,7 +115,7 @@ export function TodoGroupByGoal({
 									<div className="mb-3 flex items-center justify-between">
 										<CardTitle className="flex items-center gap-2 text-sm">
 											<Flag weight="fill" className="size-4 text-primary" />
-											マイルストーン
+											主要な成果（Key Results）
 										</CardTitle>
 										{editingGoalId !== group.goalId && (
 											<button

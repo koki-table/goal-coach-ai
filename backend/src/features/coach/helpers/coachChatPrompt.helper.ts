@@ -66,7 +66,7 @@ function buildProposalNote(proposal: CoachChatPromptProposal | undefined): strin
 	const parts: string[] = [];
 	if (proposal.milestone) {
 		parts.push(
-			`マイルストーン『${proposal.milestone.title}』(${adoptedLabel(proposal.milestone.adopted)})`,
+			`主要な成果(Key Result)『${proposal.milestone.title}』(${adoptedLabel(proposal.milestone.adopted)})`,
 		);
 	}
 	for (const todo of proposal.todos) {
@@ -87,25 +87,25 @@ function buildLivingGoalDataText(input: CoachChatPromptInput): string {
 	const milestonesText =
 		milestones.length > 0
 			? milestones.map((m) => `  * [${m.isCompleted ? "完了" : "未完了"}] ${m.title}`).join("\n")
-			: "  (マイルストーンなし)";
+			: "  (主要な成果なし)";
 	const milestonesNote =
 		milestones.length > 0
-			? "\n- 注記: 上記のマイルストーンは既に確定済みです。同一タイトルまたは類似内容を新規マイルストーンとして提案しないでください。"
+			? "\n- 注記: 上記の主要な成果(Key Results)は既に確定済みです。同一タイトルまたは類似内容を新規の主要な成果として提案しないでください。"
 			: "";
 
 	if (!snapshot) {
 		return `- 目標タイトル: ${input.goalTitle}
 - 達成期限: ${input.goalDeadline ?? "未設定"}
-- マイルストーン状態:
+- 主要な成果(Key Results)の状態:
 ${milestonesText}${milestonesNote}`;
 	}
 
 	return `- 目標タイトル: ${input.goalTitle}
 - 達成期限: ${input.goalDeadline ?? "未設定"}
-- 実データに基づく進捗率: ${snapshot.realProgressPercent}%（TODO ${snapshot.completedTodos}/${snapshot.totalTodos}件・マイルストーン ${snapshot.completedMilestones}/${snapshot.totalMilestones}件）
+- 実データに基づく進捗率: ${snapshot.realProgressPercent}%（TODO ${snapshot.completedTodos}/${snapshot.totalTodos}件・主要な成果 ${snapshot.completedMilestones}/${snapshot.totalMilestones}件）
 - 期限超過中のTODO数: ${snapshot.overdueTodosCount}件
 - 最終活動日時: ${snapshot.lastActivityAt ?? "活動記録なし"}
 - 直近7日間の完了数: ${snapshot.completedLast7Days}件 / 作業時間: ${snapshot.minutesSpentLast7Days}分
-- マイルストーン状態:
+- 主要な成果(Key Results)の状態:
 ${milestonesText}${milestonesNote}`;
 }

@@ -29,7 +29,7 @@ export function PlanProposalWidget({
 			{proposal.milestone && (
 				<div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
 					<div className="space-y-1">
-						<Badge variant="secondary">マイルストーン</Badge>
+						<Badge variant="secondary">主要な成果（Key Results）</Badge>
 						<p className="text-sm font-medium">{proposal.milestone.title}</p>
 					</div>
 					<Button
@@ -87,7 +87,7 @@ export function PlanProposalWidget({
 									) : adoptingKey === todoKey ? (
 										"採用中..."
 									) : disabledByMilestone ? (
-										"マイルストーン採用後"
+										"主要な成果の採用後"
 									) : (
 										"採用する"
 									)}

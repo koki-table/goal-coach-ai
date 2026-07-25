@@ -49,7 +49,7 @@ describe("buildChatUserPrompt", () => {
 			history: [],
 		});
 
-		expect(prompt).toContain("(マイルストーンなし)");
+		expect(prompt).toContain("(主要な成果なし)");
 	});
 
 	it("notes that existing milestones are already confirmed and should not be re-proposed", () => {
@@ -61,7 +61,7 @@ describe("buildChatUserPrompt", () => {
 		});
 
 		expect(prompt).toContain("既に確定済みです");
-		expect(prompt).toContain("新規マイルストーンとして提案しないでください");
+		expect(prompt).toContain("新規の主要な成果として提案しないでください");
 	});
 
 	it("annotates past assistant proposals with their adoption state", () => {
@@ -84,7 +84,7 @@ describe("buildChatUserPrompt", () => {
 			],
 		});
 
-		expect(prompt).toContain("マイルストーン『基礎文法を習得する』(採用済み)");
+		expect(prompt).toContain("主要な成果(Key Result)『基礎文法を習得する』(採用済み)");
 		expect(prompt).toContain("TODO『毎日30分学習する』(採用済み)");
 		expect(prompt).toContain("TODO『参考書を1冊読み終える』(未採用)");
 	});
