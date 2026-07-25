@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { AUTO_SCROLL_THRESHOLD_PX } from "../config/coachConfig";
 import type { CoachMessage } from "../types";
 import { ChatMessageBubble } from "./chatMessageBubble";
-
-// この距離(px)以内に居る場合のみ、新規メッセージ到達時に自動スクロールする
-// (過去ログを読んでいる最中に強制的に最下部へ飛ばさないための閾値)
-const AUTO_SCROLL_THRESHOLD_PX = 100;
 
 type ChatMessageListProps = {
 	messages: CoachMessage[];

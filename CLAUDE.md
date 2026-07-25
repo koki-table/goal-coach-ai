@@ -32,9 +32,18 @@ features/{name}/
 └── types/         # 型定義
 ```
 
+## バックエンド設計（クリーンアーキテクチャ）
+- レイヤ責務: `route`（入出力変換のみ）→ `service`（方針・オーケストレーション）→ `common/repositories`（共有データアクセス）
+- **他featureのサービス層（`features/*/services`）を別featureから呼ばない** — feature間結合のアンチパターン。越境が必要なデータ操作は共有の `common/repositories` を使う
+- ドメイン固有ルール（採番・所有権検証・バリデーション等）はコンシューマ側で再実装しない。所属する層に置く
+- 既定値・クランプ・ページング等の方針は `service` が持つ。`route` に数値方針を書かない
+- data（定数）はそれを使うクラスに `static readonly` で同居させる（module scopeに散らさない）
+- 複数書き込みの原子性は D1 の `db.batch()`（`transaction()` 非対応）
+
 ## テスト
 - テストフレームワーク: Vitest
 - helpers は必ずテストを書く（`xxx.helper.test.ts`）
+- サービス層の非自明なロジック（採用・状態遷移・分岐）にもテストを書く
 - コンポーネントテストは @testing-library/react
 
 ## スタイリング
@@ -104,3 +113,5 @@ features/{name}/
 
 ## コーディング規約
 - `let` は使わない — 変数は `const` で宣言する。条件分岐で値が変わる場合は三項演算子や関数抽出で `const` に収める
+- **マジックナンバー禁止** — リテラルは命名付き定数へ。backend=クラスの `static readonly`（または適切なmodule const）、frontend=`config/xxxConfig.ts` に切り出して複数箇所から参照。HTTPステータス等の慣習値は例外
+- **useEffect衛生** — 次のuseEffectは書かない: (a) renderで計算できる派生state、(b) props→stateの同期、(c) イベントハンドラでやるべき処理。残すeffectはdepsを正確に・cleanupを付ける

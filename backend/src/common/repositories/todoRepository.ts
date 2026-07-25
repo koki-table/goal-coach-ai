@@ -96,6 +96,18 @@ export class TodoRepository {
 		return this.db.delete(todos).where(eq(todos.id, id)).returning().get();
 	}
 
+	// db.batch() 用のステートメント（実行しない）。idはアトミック採用のため呼び出し側で採番する
+	insertStmt(data: {
+		id: string;
+		goalId: string;
+		title: string;
+		milestoneId?: string;
+		taskType?: TaskType;
+		isAiGenerated?: number;
+	}) {
+		return this.db.insert(todos).values(data);
+	}
+
 	// db.batch() 用のステートメント（実行しない）
 	unlinkByMilestoneIdsStmt(milestoneIds: string[]) {
 		return this.db

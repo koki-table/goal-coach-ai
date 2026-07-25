@@ -67,6 +67,21 @@ export class CoachMessageRepository {
 			.get();
 	}
 
+	// db.batch() 用のステートメント（実行しない）
+	insertStmt(data: {
+		conversationId: string;
+		role: CoachMessageRole;
+		content: string;
+		proposal?: string | null;
+	}) {
+		return this.db.insert(coachMessages).values(data);
+	}
+
+	// db.batch() 用のステートメント（実行しない）
+	updateProposalStmt(id: number, proposal: string) {
+		return this.db.update(coachMessages).set({ proposal }).where(eq(coachMessages.id, id));
+	}
+
 	// レート制限用: userロールメッセージ数を期間内カウント（coachConversationsとJOINして所有者を判定）
 	async countUserMessagesByUserIdSince(userId: string, isoSince: string): Promise<number> {
 		const result = await this.db

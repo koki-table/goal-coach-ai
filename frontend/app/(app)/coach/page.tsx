@@ -14,17 +14,21 @@ function CoachPageContent() {
 		goalsLoading,
 		selectedGoalId,
 		selectGoal,
+		conversationError,
 		messages,
 		isLoadingInitial,
 		isLoadingMore,
 		hasMore,
 		loadMore,
+		messagesError,
 		sendMessage,
 		isSending,
 		adoptMilestone,
 		adoptTodo,
 		adoptingKey,
 	} = useCoachContext();
+
+	const threadError = conversationError ?? messagesError;
 
 	if (goalsLoading) {
 		return (
@@ -38,9 +42,9 @@ function CoachPageContent() {
 	return (
 		<div className="flex h-full flex-col space-y-4">
 			<div className="space-y-1">
-				<h2 className="text-2xl font-bold tracking-tight">AIコーチ</h2>
+				<h2 className="text-2xl font-bold tracking-tight">AIコーチ ペンタ君</h2>
 				<p className="text-muted-foreground">
-					目標について、AIコーチと対話しながら計画を立てられます。
+					目標について、AIコーチ ペンタ君と対話しながら計画を立てられます。
 				</p>
 			</div>
 
@@ -53,6 +57,11 @@ function CoachPageContent() {
 
 				{selectedGoalId ? (
 					<div className="flex min-h-0 flex-col rounded-xl border">
+						{threadError ? (
+							<p className="border-b bg-destructive/10 px-4 py-2 text-sm text-destructive">
+								{threadError.message}
+							</p>
+						) : null}
 						{isLoadingInitial ? (
 							<div className="flex-1 p-4">
 								<Skeleton className="h-full w-full" />

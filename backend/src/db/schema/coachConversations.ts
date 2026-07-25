@@ -1,4 +1,4 @@
-import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { goals } from "./goals";
 import { users } from "./users";
 
@@ -26,6 +26,8 @@ export const coachConversations = sqliteTable(
 	},
 	(table) => [
 		index("idx_coach_conversations_user_id").on(table.userId),
-		index("idx_coach_conversations_goal_id").on(table.goalId),
+		// goalIdごとに1スレッドをDBレベルで保証（check-then-insertの競合対策）。
+		// goalIdはnullableで、SQLiteはNULL同士を区別するため、goal削除後の会話は複数残せる。
+		uniqueIndex("idx_coach_conversations_user_goal_id").on(table.userId, table.goalId),
 	],
 );

@@ -9,6 +9,10 @@ import { mapMilestoneToResponse } from "../helpers/milestoneMapper.helper";
 import { calculateMilestoneSync } from "../helpers/milestoneSync.helper";
 
 export class MilestoneService {
+	// AIコーチ提案の採用フロー(createOne)で使う既定label。手動作成(createBatch)はlabel必須のため、
+	// AI提案由来と分かるよう固定文言を付与する
+	private static readonly AI_PROPOSED_LABEL = "AI提案";
+
 	private db: Database;
 	private milestoneRepo: MilestoneRepository;
 	private goalRepo: GoalRepository;
@@ -107,10 +111,14 @@ export class MilestoneService {
 	async createOne(userId: string, goalId: string, title: string): Promise<MilestoneResponse> {
 		await this.verifyGoalOwnership(userId, goalId);
 
-		const existing = await this.milestoneRepo.findAllByGoalId(goalId);
-		const sortOrder = existing.length;
+		const sortOrder = await this.milestoneRepo.nextSortOrder(goalId);
 
-		const created = await this.milestoneRepo.create({ goalId, title, sortOrder });
+		const created = await this.milestoneRepo.create({
+			goalId,
+			title,
+			label: MilestoneService.AI_PROPOSED_LABEL,
+			sortOrder,
+		});
 		return mapMilestoneToResponse(created);
 	}
 

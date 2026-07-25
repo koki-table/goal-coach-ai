@@ -1,6 +1,7 @@
 const TODO_WEIGHT = 0.7;
 const MILESTONE_WEIGHT = 0.3;
 const RECENT_ACTIVITY_DAYS = 7;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function ratio(completed: number, total: number): number {
 	if (total <= 0) return 0;
@@ -68,9 +69,7 @@ export function buildGoalSnapshot(
 	const lastActivityAt =
 		activityTimestamps.length > 0 ? (activityTimestamps.sort().at(-1) ?? null) : null;
 
-	const recentThreshold = new Date(
-		now.getTime() - RECENT_ACTIVITY_DAYS * 24 * 60 * 60 * 1000,
-	).toISOString();
+	const recentThreshold = new Date(now.getTime() - RECENT_ACTIVITY_DAYS * MS_PER_DAY).toISOString();
 	const recentCompletedLogs = todoLogs.filter(
 		(l) => l.type === "completed" && l.createdAt >= recentThreshold,
 	);

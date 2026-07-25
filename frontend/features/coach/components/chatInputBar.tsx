@@ -3,9 +3,11 @@
 import { Button } from "@/components/atom/button";
 import { Textarea } from "@/components/atom/textarea";
 import { useState } from "react";
+import { MESSAGE_MAX_LENGTH } from "../config/coachConfig";
+import { coachMessageInputSchema } from "../schemas/coachSchema";
 
 type ChatInputBarProps = {
-	onSend: (content: string) => Promise<void>;
+	onSend: (content: string) => Promise<boolean>;
 	disabled?: boolean;
 };
 
@@ -14,9 +16,12 @@ export function ChatInputBar({ onSend, disabled = false }: ChatInputBarProps) {
 
 	const handleSend = async () => {
 		const content = value.trim();
-		if (!content) return;
+		// 送信前にサーバーと同じ制約（1〜1000文字）でクライアント側バリデーションする
+		if (!coachMessageInputSchema.safeParse({ content }).success) return;
 		setValue("");
-		await onSend(content);
+		// 送信失敗時は入力内容を失わないよう復元する
+		const ok = await onSend(content);
+		if (!ok) setValue(content);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -35,6 +40,7 @@ export function ChatInputBar({ onSend, disabled = false }: ChatInputBarProps) {
 				onKeyDown={handleKeyDown}
 				placeholder="コーチにメッセージを送る"
 				disabled={disabled}
+				maxLength={MESSAGE_MAX_LENGTH}
 				className="min-h-[44px] resize-none"
 			/>
 			<Button type="button" onClick={handleSend} disabled={disabled || value.trim().length === 0}>

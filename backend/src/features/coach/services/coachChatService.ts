@@ -15,35 +15,35 @@ import { TodoLogRepository } from "../../../common/repositories/todoLogRepositor
 import { TodoRepository } from "../../../common/repositories/todoRepository";
 import type { Database } from "../../../db";
 import type { Bindings } from "../../../types/env";
-import { MilestoneService } from "../../milestones/services/milestoneService";
-import { TodoService } from "../../todos/services/todoService";
+import { mapMilestoneToResponse } from "../../milestones/helpers/milestoneMapper.helper";
+import { mapTodoToResponse } from "../../todos/helpers/todoMapper.helper";
 import type { CoachChatPromptMessage } from "../helpers/coachChatPrompt.helper";
 import { buildChatUserPrompt } from "../helpers/coachChatPrompt.helper";
+import type { PlanProposalPayload } from "../helpers/coachProposal.helper";
+import { toPromptMessage, toProposalPayload } from "../helpers/coachProposal.helper";
 import { buildGoalSnapshot } from "../helpers/goalSnapshot.helper";
 import { chat, createCoachModel } from "../lib/coachModel";
 import { getChatSystemInstruction } from "../prompts/coachPrompts";
-import type { PlanProposal } from "../prompts/coachPrompts";
-
-const CHAT_HISTORY_LIMIT = 20;
-const CHAT_DAILY_MESSAGE_LIMIT = 50;
-const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-type PlanProposalPayload = {
-	milestone: { title: string; adopted: boolean; createdMilestoneId?: string } | null;
-	todos: { title: string; taskType: "daily" | "once"; adopted: boolean; createdTodoId?: string }[];
-};
 
 export type AdoptPlanItemTarget = { type: "milestone" } | { type: "todo"; todoIndex: number };
 
 export class CoachChatService {
+	// プロンプトに渡す直近履歴の件数
+	private static readonly CHAT_HISTORY_LIMIT = 20;
+	// 24時間あたりのユーザーメッセージ上限
+	private static readonly CHAT_DAILY_MESSAGE_LIMIT = 50;
+	private static readonly RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+	// メッセージ取得のページサイズ方針（コントローラではなくドメインが持つ）
+	private static readonly DEFAULT_MESSAGE_PAGE_SIZE = 30;
+	private static readonly MIN_MESSAGE_PAGE_SIZE = 1;
+	private static readonly MAX_MESSAGE_PAGE_SIZE = 100;
+
 	private conversationRepo: CoachConversationRepository;
 	private messageRepo: CoachMessageRepository;
 	private goalRepo: GoalRepository;
 	private milestoneRepo: MilestoneRepository;
 	private todoRepo: TodoRepository;
 	private todoLogRepo: TodoLogRepository;
-	private milestoneService: MilestoneService;
-	private todoService: TodoService;
 
 	constructor(private db: Database) {
 		this.conversationRepo = new CoachConversationRepository(db);
@@ -52,8 +52,6 @@ export class CoachChatService {
 		this.milestoneRepo = new MilestoneRepository(db);
 		this.todoRepo = new TodoRepository(db);
 		this.todoLogRepo = new TodoLogRepository(db);
-		this.milestoneService = new MilestoneService(db);
-		this.todoService = new TodoService(db);
 	}
 
 	async startOrGetConversation(userId: string, goalId: string) {
@@ -65,12 +63,20 @@ export class CoachChatService {
 			throw new GoalNotFoundError(goalId);
 		}
 
-		return this.conversationRepo.create({
-			userId,
-			goalId,
-			goalTitleSnapshot: goal.title,
-			goalDeadlineSnapshot: goal.dueDate ?? undefined,
-		});
+		try {
+			return await this.conversationRepo.create({
+				userId,
+				goalId,
+				goalTitleSnapshot: goal.title,
+				goalDeadlineSnapshot: goal.dueDate ?? undefined,
+			});
+		} catch (e) {
+			// (userId, goalId) のunique制約により、並行リクエストで先に作られていた場合は
+			// insertが失敗する。その場合は既存スレッドを返し「goalごとに1スレッド」を保つ。
+			const raced = await this.conversationRepo.findByGoalId(userId, goalId);
+			if (raced) return raced;
+			throw e;
+		}
 	}
 
 	async sendMessage(userId: string, conversationId: string, content: string, env: Bindings) {
@@ -83,19 +89,22 @@ export class CoachChatService {
 			throw new CoachConversationNotFoundError(conversationId);
 		}
 
-		const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+		const since = new Date(Date.now() - CoachChatService.RATE_LIMIT_WINDOW_MS).toISOString();
 		const recentCount = await this.messageRepo.countUserMessagesByUserIdSince(userId, since);
-		if (recentCount >= CHAT_DAILY_MESSAGE_LIMIT) {
+		if (recentCount >= CoachChatService.CHAT_DAILY_MESSAGE_LIMIT) {
 			throw new CoachChatRateLimitError(userId);
 		}
 
-		await this.messageRepo.create({ conversationId, role: "user", content });
-
+		// ユーザーメッセージはまだ永続化しない。LLM呼び出しが失敗しても孤立したuser行が
+		// 残らないよう、履歴には今回の発言をインメモリで追加してプロンプトを組む。
 		const recentMessages = await this.messageRepo.findRecentByConversationId(
 			conversationId,
-			CHAT_HISTORY_LIMIT,
+			CoachChatService.CHAT_HISTORY_LIMIT,
 		);
-		const history = recentMessages.map(toPromptMessage);
+		const history: CoachChatPromptMessage[] = [
+			...recentMessages.map(toPromptMessage),
+			{ role: "user", content },
+		];
 
 		const goal = conversation.goalId
 			? await this.goalRepo.findByIdAndUserId(conversation.goalId, userId)
@@ -125,14 +134,19 @@ export class CoachChatService {
 			? toProposalPayload(result.planProposal, existingMilestoneTitles)
 			: null;
 
-		const assistantMessage = await this.messageRepo.create({
-			conversationId,
-			role: "assistant",
-			content: result.reply,
-			proposal: proposal ? JSON.stringify(proposal) : null,
-		});
-
-		await this.conversationRepo.touchUpdatedAt(conversationId);
+		// LLM成功後にuser・assistantの2メッセージとupdatedAt更新をアトミックに書き込む。
+		const [, [assistantMessage]] = await this.db.batch([
+			this.messageRepo.insertStmt({ conversationId, role: "user", content }),
+			this.messageRepo
+				.insertStmt({
+					conversationId,
+					role: "assistant",
+					content: result.reply,
+					proposal: proposal ? JSON.stringify(proposal) : null,
+				})
+				.returning(),
+			this.conversationRepo.touchStmt(conversationId),
+		]);
 
 		return assistantMessage;
 	}
@@ -141,13 +155,28 @@ export class CoachChatService {
 		userId: string,
 		conversationId: string,
 		cursor: number | undefined,
-		limit: number,
+		limit: number | undefined,
 	) {
 		const conversation = await this.conversationRepo.findByIdAndUserId(conversationId, userId);
 		if (!conversation) {
 			throw new CoachConversationNotFoundError(conversationId);
 		}
-		return this.messageRepo.findPageByConversationId(conversationId, cursor, limit);
+		return this.messageRepo.findPageByConversationId(
+			conversationId,
+			cursor,
+			CoachChatService.clampPageSize(limit),
+		);
+	}
+
+	// ページサイズの正規化。不正値/未指定は既定にフォールバックし、MIN〜MAXにクランプする
+	private static clampPageSize(limit: number | undefined): number {
+		if (limit === undefined || !Number.isFinite(limit)) {
+			return CoachChatService.DEFAULT_MESSAGE_PAGE_SIZE;
+		}
+		return Math.min(
+			Math.max(Math.trunc(limit), CoachChatService.MIN_MESSAGE_PAGE_SIZE),
+			CoachChatService.MAX_MESSAGE_PAGE_SIZE,
+		);
 	}
 
 	async adoptPlanItem(userId: string, messageId: number, target: AdoptPlanItemTarget) {
@@ -175,16 +204,25 @@ export class CoachChatService {
 				throw new PlanItemAlreadyAdoptedError(messageId);
 			}
 
-			const created = await this.milestoneService.createOne(
-				userId,
-				goalId,
-				proposal.milestone.title,
-			);
+			// idを先に採番することで、milestone作成とproposal更新を1つのbatchで
+			// アトミックに実行できる。片方だけ成功して二重採用が起きる状態を防ぐ。
+			// sortOrderの採番ルールは共有リポジトリに委譲し、coachにドメインロジックを持ち込まない。
+			const milestoneId = crypto.randomUUID();
+			const sortOrder = await this.milestoneRepo.nextSortOrder(goalId);
+			proposal.milestone = {
+				...proposal.milestone,
+				adopted: true,
+				createdMilestoneId: milestoneId,
+			};
 
-			proposal.milestone = { ...proposal.milestone, adopted: true, createdMilestoneId: created.id };
-			await this.messageRepo.updateProposal(messageId, JSON.stringify(proposal));
+			const [[createdMilestone]] = await this.db.batch([
+				this.milestoneRepo
+					.insertStmt({ id: milestoneId, goalId, title: proposal.milestone.title, sortOrder })
+					.returning(),
+				this.messageRepo.updateProposalStmt(messageId, JSON.stringify(proposal)),
+			]);
 
-			return { proposal, milestone: created };
+			return { proposal, milestone: mapMilestoneToResponse(createdMilestone) };
 		}
 
 		const targetTodo = proposal.todos[target.todoIndex];
@@ -198,22 +236,25 @@ export class CoachChatService {
 			throw new MilestoneNotAdoptedYetError(messageId);
 		}
 
+		const todoId = crypto.randomUUID();
 		const milestoneId = proposal.milestone?.createdMilestoneId;
-		const created = await this.todoService.create(userId, goalId, {
-			title: targetTodo.title,
-			taskType: targetTodo.taskType,
-			milestoneId,
-			isAiGenerated: true,
-		});
+		proposal.todos[target.todoIndex] = { ...targetTodo, adopted: true, createdTodoId: todoId };
 
-		proposal.todos[target.todoIndex] = {
-			...targetTodo,
-			adopted: true,
-			createdTodoId: created.id,
-		};
-		await this.messageRepo.updateProposal(messageId, JSON.stringify(proposal));
+		const [[createdTodo]] = await this.db.batch([
+			this.todoRepo
+				.insertStmt({
+					id: todoId,
+					goalId,
+					title: targetTodo.title,
+					taskType: targetTodo.taskType,
+					milestoneId,
+					isAiGenerated: 1,
+				})
+				.returning(),
+			this.messageRepo.updateProposalStmt(messageId, JSON.stringify(proposal)),
+		]);
 
-		return { proposal, todo: created };
+		return { proposal, todo: mapTodoToResponse(createdTodo, 0) };
 	}
 
 	private async buildLivingGoalPrompt(
@@ -239,52 +280,4 @@ export class CoachChatService {
 
 		return { prompt, existingMilestoneTitles: milestones.map((m) => m.title) };
 	}
-}
-
-// メッセージ履歴をプロンプト用の形式に変換する。assistantメッセージのproposalは
-// AIが既提案・採用済み項目を認識し重複提案を避けられるよう、採用状態を明示した形で渡す。
-function toPromptMessage(message: {
-	role: string;
-	content: string;
-	proposal: string | null;
-}): CoachChatPromptMessage {
-	const role = message.role === "user" ? "user" : "assistant";
-	if (!message.proposal) {
-		return { role, content: message.content };
-	}
-
-	const parsed = JSON.parse(message.proposal) as PlanProposalPayload;
-	return {
-		role,
-		content: message.content,
-		proposal: {
-			milestone: parsed.milestone
-				? { title: parsed.milestone.title, adopted: parsed.milestone.adopted }
-				: null,
-			todos: parsed.todos.map((t) => ({ title: t.title, adopted: t.adopted })),
-		},
-	};
-}
-
-// プロンプトの指示だけに頼らず、既存マイルストーンと完全一致するタイトルが返ってきた場合は
-// サーバー側で確実に除外する(会話履歴のウィンドウ外でも重複作成を防ぐ安全策)。
-function toProposalPayload(
-	planProposal: PlanProposal,
-	existingMilestoneTitles: string[],
-): PlanProposalPayload {
-	const isDuplicateMilestone =
-		planProposal.milestoneTitle !== null &&
-		existingMilestoneTitles.some((title) => title.trim() === planProposal.milestoneTitle?.trim());
-
-	return {
-		milestone:
-			planProposal.milestoneTitle && !isDuplicateMilestone
-				? { title: planProposal.milestoneTitle, adopted: false }
-				: null,
-		todos: planProposal.todos.map((t) => ({
-			title: t.title,
-			taskType: t.taskType,
-			adopted: false,
-		})),
-	};
 }

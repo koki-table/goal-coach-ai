@@ -31,11 +31,11 @@ export class CoachConversationRepository {
 		return this.db.insert(coachConversations).values(data).returning().get();
 	}
 
-	async touchUpdatedAt(id: string) {
-		await this.db
+	// db.batch() 用のステートメント（実行しない）
+	touchStmt(id: string) {
+		return this.db
 			.update(coachConversations)
 			.set({ updatedAt: new Date().toISOString() })
-			.where(eq(coachConversations.id, id))
-			.run();
+			.where(eq(coachConversations.id, id));
 	}
 }

@@ -12,7 +12,8 @@ export type UseCoachMessagesReturn = {
 	isLoadingMore: boolean;
 	hasMore: boolean;
 	loadMore: () => void;
-	sendMessage: (content: string) => Promise<void>;
+	messagesError: CoachErrorInfo | undefined;
+	sendMessage: (content: string) => Promise<boolean>;
 	isSending: boolean;
 	sendError: CoachErrorInfo | undefined;
 	refresh: () => Promise<void>;
@@ -30,10 +31,10 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 		return `/coach/conversations/${conversationId}/messages${cursor ? `?cursor=${cursor}` : ""}`;
 	};
 
-	const { data, size, setSize, isLoading, isValidating, mutate } = useSWRInfinite<CoachMessagePage>(
-		getKey,
-		{ revalidateFirstPage: false },
-	);
+	const { data, size, setSize, isLoading, isValidating, mutate, error } =
+		useSWRInfinite<CoachMessagePage>(getKey, { revalidateFirstPage: false });
+
+	const messagesError = error ? mapCoachError(error) : undefined;
 
 	// pagesは新しい順→古い順に並ぶため、表示は逆順に結合して古い→新しいにする
 	const messages = useMemo(
@@ -48,15 +49,17 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 	const [sendError, setSendError] = useState<CoachErrorInfo | undefined>(undefined);
 
 	const sendMessage = useCallback(
-		async (content: string): Promise<void> => {
-			if (!conversationId) return;
+		async (content: string): Promise<boolean> => {
+			if (!conversationId) return false;
 			setIsSending(true);
 			setSendError(undefined);
 			try {
 				await apiClient.post(`/coach/conversations/${conversationId}/messages`, { content });
 				await mutate();
+				return true;
 			} catch (e) {
 				setSendError(mapCoachError(e));
+				return false;
 			} finally {
 				setIsSending(false);
 			}
@@ -74,6 +77,7 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 		isLoadingMore: isValidating,
 		hasMore,
 		loadMore,
+		messagesError,
 		sendMessage,
 		isSending,
 		sendError,

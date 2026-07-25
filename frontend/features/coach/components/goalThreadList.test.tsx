@@ -28,4 +28,27 @@ describe("GoalThreadList", () => {
 		expect(screen.getByText(/相談できる目標がありません/)).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "目標を作成する" })).toBeInTheDocument();
 	});
+
+	it("renders a dropdown instead of the nav list on mobile widths", () => {
+		vi.spyOn(window, "matchMedia").mockReturnValue({
+			matches: true,
+			media: "(max-width: 767px)",
+			onchange: null,
+			addListener: () => {},
+			removeListener: () => {},
+			addEventListener: () => {},
+			removeEventListener: () => {},
+			dispatchEvent: () => false,
+		} as unknown as MediaQueryList);
+
+		const onSelectGoal = vi.fn();
+		render(<GoalThreadList goals={GOALS} selectedGoalId="goal-2" onSelectGoal={onSelectGoal} />);
+
+		const select = screen.getByRole("combobox", { name: "目標一覧" });
+		expect(select).toHaveValue("goal-2");
+		expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+
+		fireEvent.change(select, { target: { value: "goal-1" } });
+		expect(onSelectGoal).toHaveBeenCalledWith("goal-1");
+	});
 });

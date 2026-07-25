@@ -48,9 +48,13 @@ coachRoute.post("/conversations", async (c) => {
 coachRoute.get("/conversations/:id/messages", async (c) => {
 	const userId = c.get("dbUserId");
 	const conversationId = c.req.param("id");
+	// コントローラはクエリを数値へ変換するのみ。既定値・クランプ等の方針はサービスが持つ
 	const cursorParam = c.req.query("cursor");
-	const cursor = cursorParam ? Number(cursorParam) : undefined;
-	const limit = Number(c.req.query("limit") ?? 30);
+	const parsedCursor = cursorParam ? Number(cursorParam) : undefined;
+	const cursor =
+		parsedCursor !== undefined && Number.isFinite(parsedCursor) ? parsedCursor : undefined;
+	const limitParam = c.req.query("limit");
+	const limit = limitParam !== undefined ? Number(limitParam) : undefined;
 	const db = createDb(c.env.DB);
 	const service = new CoachChatService(db);
 

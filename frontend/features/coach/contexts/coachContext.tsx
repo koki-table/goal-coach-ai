@@ -20,7 +20,8 @@ type CoachContextValue = {
 	isLoadingMore: boolean;
 	hasMore: boolean;
 	loadMore: () => void;
-	sendMessage: (content: string) => Promise<void>;
+	messagesError: CoachErrorInfo | undefined;
+	sendMessage: (content: string) => Promise<boolean>;
 	isSending: boolean;
 	sendError: CoachErrorInfo | undefined;
 	adoptMilestone: (messageId: number) => Promise<void>;
@@ -53,6 +54,7 @@ export function CoachProvider({ children, selectedGoalId, onSelectGoal }: CoachP
 		isLoadingMore,
 		hasMore,
 		loadMore,
+		messagesError,
 		sendMessage,
 		isSending,
 		sendError,
@@ -86,6 +88,7 @@ export function CoachProvider({ children, selectedGoalId, onSelectGoal }: CoachP
 		isLoadingMore,
 		hasMore,
 		loadMore,
+		messagesError,
 		sendMessage,
 		isSending,
 		sendError,
