@@ -7,8 +7,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-	title: "Goal Coach AI",
-	description: "AIコーチがあなたの目標達成を支援します",
+	title: "AIコーチ ペンタ君",
+	description: "AIコーチ ペンタ君があなたの目標達成を支援します",
 };
 
 const localization = {
@@ -17,14 +17,14 @@ const localization = {
 		...jaJP.signIn,
 		start: {
 			...jaJP.signIn?.start,
-			title: "Goal Coach AI にログイン",
+			title: "AIコーチ ペンタ君 にログイン",
 		},
 	},
 	signUp: {
 		...jaJP.signUp,
 		start: {
 			...jaJP.signUp?.start,
-			title: "Goal Coach AI に登録",
+			title: "AIコーチ ペンタ君 に登録",
 		},
 	},
 };

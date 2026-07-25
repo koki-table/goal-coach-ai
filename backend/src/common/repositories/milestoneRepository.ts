@@ -18,6 +18,21 @@ export class MilestoneRepository {
 		return this.db.select().from(milestones).where(eq(milestones.id, id)).get();
 	}
 
+	async create(data: { goalId: string; title: string; label?: string; sortOrder: number }) {
+		return this.db.insert(milestones).values(data).returning().get();
+	}
+
+	// 末尾に追加する際のsortOrder（milestone固有の採番ルールを共有層に集約）
+	async nextSortOrder(goalId: string): Promise<number> {
+		const existing = await this.findAllByGoalId(goalId);
+		return existing.length;
+	}
+
+	// db.batch() 用のステートメント（実行しない）。idはアトミック採用のため呼び出し側で採番する
+	insertStmt(data: { id: string; goalId: string; title: string; sortOrder: number }) {
+		return this.db.insert(milestones).values(data);
+	}
+
 	async update(
 		id: string,
 		data: Partial<{

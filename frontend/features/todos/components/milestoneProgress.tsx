@@ -81,31 +81,23 @@ export function MilestoneProgress({
 								/>
 							)}
 
-							{/* 丸 */}
+							{/* 完了チェックボックス（todoItemと同じ角丸四角のチェックボックス見た目・サイズに統一） */}
 							<button
 								type="button"
 								onClick={() => onToggleComplete?.(milestone.id)}
 								disabled={!onToggleComplete}
+								aria-label={milestone.isCompleted ? "完了を取り消す" : "完了にする"}
 								className={cn(
-									"flex shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-									isCompact ? "size-6" : "size-8",
+									"flex shrink-0 items-center justify-center rounded border-2 transition-colors",
+									isCompact ? "size-4" : "size-5",
 									milestone.isCompleted
 										? "border-primary bg-primary text-primary-foreground"
-										: "border-muted-foreground/30 bg-background",
-									onToggleComplete && "cursor-pointer hover:border-primary/50",
+										: "border-muted-foreground/40 bg-background",
+									onToggleComplete && "cursor-pointer hover:border-primary",
 								)}
 							>
-								{milestone.isCompleted ? (
-									<Check weight="bold" className={isCompact ? "size-3" : "size-4"} />
-								) : (
-									<span
-										className={cn(
-											"font-medium text-muted-foreground",
-											isCompact ? "text-[10px]" : "text-xs",
-										)}
-									>
-										{index + 1}
-									</span>
+								{milestone.isCompleted && (
+									<Check weight="bold" className={isCompact ? "size-2.5" : "size-3"} />
 								)}
 							</button>
 

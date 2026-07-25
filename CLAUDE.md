@@ -32,6 +32,11 @@ features/{name}/
 └── types/         # 型定義
 ```
 
+## 実装ルール（`.claude/rules/`・該当ファイル編集時に自動ロード）
+詳細な実装チェックリストは以下に集約。CLAUDE.mdには重複させない。
+- バックエンド（レイヤ責務・他featureサービス越境禁止・パフォーマンス・セキュリティ/IDOR・DB正規化・テスト・定数）→ [.claude/rules/backend.md](.claude/rules/backend.md)
+- フロントエンド（useEffect衛生・helper切り出し+テスト・config定数・デザイントークン）→ [.claude/rules/frontend.md](.claude/rules/frontend.md)
+
 ## テスト
 - テストフレームワーク: Vitest
 - helpers は必ずテストを書く（`xxx.helper.test.ts`）
@@ -104,3 +109,4 @@ features/{name}/
 
 ## コーディング規約
 - `let` は使わない — 変数は `const` で宣言する。条件分岐で値が変わる場合は三項演算子や関数抽出で `const` に収める
+- マジックナンバー・useEffect衛生などの詳細は `.claude/rules/` を参照

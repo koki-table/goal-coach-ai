@@ -82,43 +82,27 @@ export function useTodos(): UseTodosReturn {
 			destinationIndex: number,
 			goalId: string,
 		): Promise<void> => {
-			// 楽観更新: ローカルで並び替えを反映
+			// 画面上はaiGeneratedTodos+myTodosを結合した単一リストとして表示しているため、
+			// 並び替えも結合リストに対して行う（sourceList/destinationList引数は使わない）。
 			const currentData = data ? [...data] : [];
 			const goalGroup = currentData.find((g) => g.goalId === goalId);
 			if (!goalGroup) return;
 
-			const sourceArr =
-				_sourceList === "aiTodos" ? [...goalGroup.aiGeneratedTodos] : [...goalGroup.myTodos];
-			const [movedTodo] = sourceArr.splice(sourceIndex, 1);
+			const combined = [...goalGroup.aiGeneratedTodos, ...goalGroup.myTodos];
+			const [movedTodo] = combined.splice(sourceIndex, 1);
 			if (!movedTodo) return;
-
-			const srcKey = _sourceList === "aiTodos" ? "aiGeneratedTodos" : "myTodos";
-			const dstKey = _destinationList === "aiTodos" ? "aiGeneratedTodos" : "myTodos";
-			const sameList = _sourceList === _destinationList;
-
-			const destArr = sameList
-				? sourceArr
-				: _destinationList === "aiTodos"
-					? [...goalGroup.aiGeneratedTodos]
-					: [...goalGroup.myTodos];
-
-			destArr.splice(
-				destinationIndex,
-				0,
-				sameList ? movedTodo : { ...movedTodo, isAiGenerated: _destinationList === "aiTodos" },
-			);
+			combined.splice(destinationIndex, 0, movedTodo);
 
 			const updatedGroup: GoalWithTodos = {
 				...goalGroup,
-				[srcKey]: sourceArr,
-				[dstKey]: destArr,
+				aiGeneratedTodos: combined.filter((t) => t.isAiGenerated),
+				myTodos: combined.filter((t) => !t.isAiGenerated),
 			};
 			const optimistic = currentData.map((g) => (g.goalId === goalId ? updatedGroup : g));
 			mutate(optimistic, false);
 
 			// API にリオーダーを送信（楽観更新後の並びを永続化する）
-			const newAll = [...updatedGroup.aiGeneratedTodos, ...updatedGroup.myTodos];
-			const entries = newAll.map((t, idx) => ({
+			const entries = combined.map((t, idx) => ({
 				id: t.id,
 				sortOrder: idx + 1,
 			}));

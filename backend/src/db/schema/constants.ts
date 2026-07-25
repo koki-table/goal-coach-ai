@@ -12,3 +12,6 @@ export type TodoLogType = (typeof todoLogTypes)[number];
 
 export const taskTypes = ["daily", "once"] as const;
 export type TaskType = (typeof taskTypes)[number];
+
+export const coachMessageRoles = ["user", "assistant"] as const;
+export type CoachMessageRole = (typeof coachMessageRoles)[number];

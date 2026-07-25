@@ -96,6 +96,18 @@ export class TodoRepository {
 		return this.db.delete(todos).where(eq(todos.id, id)).returning().get();
 	}
 
+	// db.batch() 用のステートメント（実行しない）。idはアトミック採用のため呼び出し側で採番する
+	insertStmt(data: {
+		id: string;
+		goalId: string;
+		title: string;
+		milestoneId?: string;
+		taskType?: TaskType;
+		isAiGenerated?: number;
+	}) {
+		return this.db.insert(todos).values(data);
+	}
+
 	// db.batch() 用のステートメント（実行しない）
 	unlinkByMilestoneIdsStmt(milestoneIds: string[]) {
 		return this.db
@@ -110,5 +122,18 @@ export class TodoRepository {
 			.update(todos)
 			.set({ milestoneId: null, updatedAt: new Date().toISOString() })
 			.where(eq(todos.goalId, goalId));
+	}
+
+	// db.batch() 用のステートメント（実行しない）。マイルストーンの完了トグルに連動して
+	// 紐づくTODOの完了状態を一括で揃える（todo_logsへの記録は行わない）
+	updateCompletionByMilestoneIdStmt(milestoneId: string, isCompleted: boolean) {
+		return this.db
+			.update(todos)
+			.set({
+				isCompleted: isCompleted ? 1 : 0,
+				completedAt: isCompleted ? new Date().toISOString() : null,
+				updatedAt: new Date().toISOString(),
+			})
+			.where(eq(todos.milestoneId, milestoneId));
 	}
 }

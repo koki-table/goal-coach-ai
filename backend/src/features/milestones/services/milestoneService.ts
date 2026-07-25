@@ -9,6 +9,10 @@ import { mapMilestoneToResponse } from "../helpers/milestoneMapper.helper";
 import { calculateMilestoneSync } from "../helpers/milestoneSync.helper";
 
 export class MilestoneService {
+	// AIコーチ提案の採用フロー(createOne)で使う既定label。手動作成(createBatch)はlabel必須のため、
+	// AI提案由来と分かるよう固定文言を付与する
+	private static readonly AI_PROPOSED_LABEL = "AI提案";
+
 	private db: Database;
 	private milestoneRepo: MilestoneRepository;
 	private goalRepo: GoalRepository;
@@ -103,6 +107,21 @@ export class MilestoneService {
 		return refreshed.sort((a, b) => a.sortOrder - b.sortOrder).map(mapMilestoneToResponse);
 	}
 
+	// チャット提案の採用フロー専用の単体作成。既存createBatchは全件差分同期用でこのユースケースには不向き
+	async createOne(userId: string, goalId: string, title: string): Promise<MilestoneResponse> {
+		await this.verifyGoalOwnership(userId, goalId);
+
+		const sortOrder = await this.milestoneRepo.nextSortOrder(goalId);
+
+		const created = await this.milestoneRepo.create({
+			goalId,
+			title,
+			label: MilestoneService.AI_PROPOSED_LABEL,
+			sortOrder,
+		});
+		return mapMilestoneToResponse(created);
+	}
+
 	async update(
 		userId: string,
 		milestoneId: string,
@@ -121,6 +140,21 @@ export class MilestoneService {
 		if (data.isCompleted !== undefined) {
 			updateData.isCompleted = data.isCompleted ? 1 : 0;
 			updateData.completedAt = data.isCompleted ? new Date().toISOString() : null;
+		}
+
+		// isCompletedの変更時は、紐づくTODOの完了状態もマイルストーンに合わせて一括で揃える
+		// （完了トグルはtodo_logsへの記録を行わない一括反映であり、個別完了とは区別する）
+		if (data.isCompleted !== undefined) {
+			await this.db.batch([
+				this.milestoneRepo.updateStmt(milestoneId, updateData),
+				this.todoRepo.updateCompletionByMilestoneIdStmt(milestoneId, data.isCompleted),
+			]);
+
+			const updated = await this.milestoneRepo.findById(milestoneId);
+			if (!updated) {
+				throw new MilestoneNotFoundError(milestoneId);
+			}
+			return mapMilestoneToResponse(updated);
 		}
 
 		const updated = await this.milestoneRepo.update(milestoneId, updateData);
