@@ -5,14 +5,10 @@ paths:
 
 # フロントエンド実装ルール（Goal Coach AI）
 
-実装中は以下を常に満たすこと。詳細は `CLAUDE.md` の「アーキテクチャ: Context + Props Drilling」も参照。
+実装中は以下を常に満たすこと。
 
 ## Context + Props 構成
-- データフロー: `page.tsx`(Provider設置) → `Context`(hooks呼び出し・状態管理) → `Component`(propsで受け取り表示のみ)。
-- **hooksはcontexts内でのみ呼ぶ** — コンポーネントからデータ/SWRフックを直接呼ばない。
-- **Providerはpage.tsxで配置** し、ツリーをラップする。
-- **propsバケツリレー** — contextの値はpropsで子に渡す。子は `useContext` に直接触らない。
-- **コンポーネントはpure** — propsのみ依存・副作用なし（ローカルなUI stateは可）。
+- **`CLAUDE.md` の「アーキテクチャ: Context + Props Drilling」に従う**（hooksはcontext内のみ・Providerはpage・propsバケツリレー・pure component）。ここでは重複記載しない。
 
 ## useEffect衛生
 - 次のuseEffectは書かない: (a) renderで計算できる派生state、(b) props→stateの同期、(c) イベントハンドラでやるべき処理。
