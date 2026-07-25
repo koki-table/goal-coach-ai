@@ -1,4 +1,4 @@
-export const APP_NAME = "Goal Coach AI";
+export const APP_NAME = "AIコーチ ペンタ君";
 
 export const NAV_ITEMS = [
 	{ label: "ダッシュボード", href: "/", icon: "SquaresFour" },
