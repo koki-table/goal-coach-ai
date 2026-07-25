@@ -36,7 +36,7 @@ function CoachPageContent() {
 	}
 
 	return (
-		<div className="space-y-4">
+		<div className="flex h-full flex-col space-y-4">
 			<div className="space-y-1">
 				<h2 className="text-2xl font-bold tracking-tight">AIコーチ</h2>
 				<p className="text-muted-foreground">
@@ -44,7 +44,7 @@ function CoachPageContent() {
 				</p>
 			</div>
 
-			<div className="grid gap-4 md:grid-cols-[240px_1fr]">
+			<div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[240px_1fr]">
 				<GoalThreadList
 					goals={goals.map((g) => ({ id: g.id, title: g.title }))}
 					selectedGoalId={selectedGoalId}
@@ -52,7 +52,7 @@ function CoachPageContent() {
 				/>
 
 				{selectedGoalId ? (
-					<div className="flex h-[600px] flex-col rounded-xl border">
+					<div className="flex min-h-0 flex-col rounded-xl border">
 						{isLoadingInitial ? (
 							<div className="flex-1 p-4">
 								<Skeleton className="h-full w-full" />
@@ -71,7 +71,7 @@ function CoachPageContent() {
 						<ChatInputBar onSend={sendMessage} disabled={isSending} />
 					</div>
 				) : (
-					<div className="flex h-[600px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+					<div className="flex min-h-0 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
 						左の一覧から目標を選択してください
 					</div>
 				)}

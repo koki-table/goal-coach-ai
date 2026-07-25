@@ -4,6 +4,10 @@ import { useEffect, useRef } from "react";
 import type { CoachMessage } from "../types";
 import { ChatMessageBubble } from "./chatMessageBubble";
 
+// この距離(px)以内に居る場合のみ、新規メッセージ到達時に自動スクロールする
+// (過去ログを読んでいる最中に強制的に最下部へ飛ばさないための閾値)
+const AUTO_SCROLL_THRESHOLD_PX = 100;
+
 type ChatMessageListProps = {
 	messages: CoachMessage[];
 	hasMore: boolean;
@@ -24,6 +28,11 @@ export function ChatMessageList({
 	adoptingKey,
 }: ChatMessageListProps) {
 	const topSentinelRef = useRef<HTMLDivElement>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const bottomRef = useRef<HTMLDivElement>(null);
+	const isNearBottomRef = useRef(true);
+	const prevLengthRef = useRef(0);
+	const lastMessageIdRef = useRef<number | undefined>(undefined);
 
 	useEffect(() => {
 		const sentinel = topSentinelRef.current;
@@ -41,8 +50,43 @@ export function ChatMessageList({
 		return () => observer.disconnect();
 	}, [hasMore, isLoadingMore, onLoadMore]);
 
+	const handleScroll = () => {
+		const el = containerRef.current;
+		if (!el) return;
+		const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+		isNearBottomRef.current = distanceFromBottom <= AUTO_SCROLL_THRESHOLD_PX;
+	};
+
+	// 初期表示(会話切替時含む)では即座に最下部へ、新規メッセージ到達時は
+	// ユーザーが最下部付近にいる場合のみスムーズスクロールする。
+	// 過去ログの追加読み込み(先頭に古いメッセージが挿入される)では末尾idが変わらないため発火しない。
+	useEffect(() => {
+		if (messages.length === 0) {
+			prevLengthRef.current = 0;
+			lastMessageIdRef.current = undefined;
+			return;
+		}
+
+		const lastMessage = messages[messages.length - 1];
+		const wasEmpty = prevLengthRef.current === 0;
+		const isNewLastMessage = lastMessageIdRef.current !== lastMessage.id;
+
+		if (wasEmpty) {
+			bottomRef.current?.scrollIntoView({ behavior: "auto" });
+		} else if (isNewLastMessage && isNearBottomRef.current) {
+			bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+		}
+
+		prevLengthRef.current = messages.length;
+		lastMessageIdRef.current = lastMessage.id;
+	}, [messages]);
+
 	return (
-		<div className="flex flex-col gap-3 overflow-y-auto p-4">
+		<div
+			ref={containerRef}
+			onScroll={handleScroll}
+			className="flex flex-1 flex-col gap-3 overflow-y-auto p-4"
+		>
 			{hasMore && (
 				<div ref={topSentinelRef} className="py-2 text-center text-xs text-muted-foreground">
 					{isLoadingMore ? "読み込み中..." : ""}
@@ -62,6 +106,7 @@ export function ChatMessageList({
 					adoptingKey={adoptingKey}
 				/>
 			))}
+			<div ref={bottomRef} />
 		</div>
 	);
 }
