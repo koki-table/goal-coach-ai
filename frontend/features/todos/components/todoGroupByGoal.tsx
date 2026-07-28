@@ -31,7 +31,7 @@ type TodoGroupByGoalProps = {
 		destinationIndex: number,
 		goalId: string,
 	) => void;
-	onToggleMilestoneComplete: (goalId: string, milestoneId: string) => void;
+	onUpdateMilestoneProgress: (goalId: string, milestoneId: string, currentValue: number) => void;
 	onSaveMilestones: (goalId: string, data: MilestoneEntry[]) => Promise<boolean>;
 };
 
@@ -42,7 +42,7 @@ export function TodoGroupByGoal({
 	onAddTodo,
 	onEditTodo,
 	onReorderTodos,
-	onToggleMilestoneComplete,
+	onUpdateMilestoneProgress,
 	onSaveMilestones,
 }: TodoGroupByGoalProps) {
 	const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -115,7 +115,7 @@ export function TodoGroupByGoal({
 									<div className="mb-3 flex items-center justify-between">
 										<CardTitle className="flex items-center gap-2 text-sm">
 											<Flag weight="fill" className="size-4 text-primary" />
-											マイルストーン
+											主要な成果（Key Results）
 										</CardTitle>
 										{editingGoalId !== group.goalId && (
 											<button
@@ -142,8 +142,9 @@ export function TodoGroupByGoal({
 									) : (
 										<MilestoneProgress
 											milestones={group.milestones}
-											onToggleComplete={(milestoneId) =>
-												onToggleMilestoneComplete(group.goalId, milestoneId)
+											onEdit={() => setEditingGoalId(group.goalId)}
+											onUpdateProgress={(milestoneId, currentValue) =>
+												onUpdateMilestoneProgress(group.goalId, milestoneId, currentValue)
 											}
 										/>
 									)}

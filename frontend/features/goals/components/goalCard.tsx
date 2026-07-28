@@ -4,6 +4,7 @@ import { Badge } from "@/components/atom/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/atom/card";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/atom/progress";
 import { cn } from "@/lib/utils";
+import { computeDaysRemaining } from "../helpers/goalDeadline.helper";
 import type { Goal } from "../types";
 import { categoryLabels } from "../types";
 
@@ -22,10 +23,8 @@ export function GoalCard({
 	onClick,
 	isSelected = false,
 }: GoalCardProps) {
-	// 期限までの残り日数を計算
-	const daysRemaining = Math.ceil(
-		(new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
-	);
+	// 期限までの残り日数を計算（時刻を無視した日付ベースの差分。当日は0）
+	const daysRemaining = computeDaysRemaining(goal.deadline, new Date());
 
 	// 達成確率に応じた色を返す
 	const getProbabilityColor = (probability: number) => {
@@ -79,7 +78,7 @@ export function GoalCard({
 								daysRemaining <= 7 && "text-destructive",
 							)}
 						>
-							{daysRemaining > 0 ? `残り${daysRemaining}日` : "期限切れ"}
+							{daysRemaining >= 0 ? `残り${daysRemaining}日` : "期限切れ"}
 						</span>
 					</div>
 				</div>

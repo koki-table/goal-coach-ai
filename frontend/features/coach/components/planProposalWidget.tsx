@@ -24,13 +24,22 @@ export function PlanProposalWidget({
 	const milestoneKey = `${messageId}:milestone`;
 	const milestoneBlocksTodos = proposal.milestone !== null && !proposal.milestone.adopted;
 
+	// 新規提案が無い(milestone/todosともに空)場合は、空の枠だけのカードを表示しない
+	if (!proposal.milestone && proposal.todos.length === 0) {
+		return null;
+	}
+
 	return (
 		<div className="mt-2 space-y-3 rounded-lg border bg-muted/30 p-3">
 			{proposal.milestone && (
 				<div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
 					<div className="space-y-1">
-						<Badge variant="secondary">マイルストーン</Badge>
+						<Badge variant="secondary">主要な成果（Key Results）</Badge>
 						<p className="text-sm font-medium">{proposal.milestone.title}</p>
+						<p className="text-xs tabular-nums text-muted-foreground">
+							目標: {proposal.milestone.targetValue}
+							{proposal.milestone.unit && <span className="ml-0.5">{proposal.milestone.unit}</span>}
+						</p>
 					</div>
 					<Button
 						type="button"
@@ -87,7 +96,7 @@ export function PlanProposalWidget({
 									) : adoptingKey === todoKey ? (
 										"採用中..."
 									) : disabledByMilestone ? (
-										"マイルストーン採用後"
+										"主要な成果の採用後"
 									) : (
 										"採用する"
 									)}

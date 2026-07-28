@@ -5,6 +5,13 @@ export class GoalNotFoundError extends Error {
 	}
 }
 
+export class GoalLimitExceededError extends Error {
+	constructor(max: number) {
+		super(`Active goal limit exceeded: max ${max}`);
+		this.name = "GoalLimitExceededError";
+	}
+}
+
 export class MilestoneNotFoundError extends Error {
 	constructor(id: string) {
 		super(`Milestone not found: ${id}`);

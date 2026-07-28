@@ -51,15 +51,35 @@ describe("toPromptMessage", () => {
 describe("toProposalPayload", () => {
 	const base: PlanProposal = {
 		milestoneTitle: "新しいマイルストーン",
+		milestoneTargetValue: 900,
+		milestoneUnit: "点",
 		todos: [
 			{ title: "TODO A", taskType: "daily" },
 			{ title: "TODO B", taskType: "once" },
 		],
 	};
 
-	it("既存に無いマイルストーンはadopted=falseで含める", () => {
+	it("既存に無いマイルストーンはadopted=falseで定量目標付きで含める", () => {
 		const result = toProposalPayload(base, ["別のマイルストーン"]);
-		expect(result.milestone).toEqual({ title: "新しいマイルストーン", adopted: false });
+		expect(result.milestone).toEqual({
+			title: "新しいマイルストーン",
+			targetValue: 900,
+			unit: "点",
+			adopted: false,
+		});
+	});
+
+	it("定量目標がnullなら0〜100%スケール(目標100/単位%)にフォールバックする", () => {
+		const result = toProposalPayload(
+			{ ...base, milestoneTargetValue: null, milestoneUnit: null },
+			[],
+		);
+		expect(result.milestone).toEqual({
+			title: "新しいマイルストーン",
+			targetValue: 100,
+			unit: "%",
+			adopted: false,
+		});
 	});
 
 	it("既存タイトルと完全一致するマイルストーンは除外する(前後空白は無視)", () => {

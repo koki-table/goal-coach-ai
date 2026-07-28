@@ -4,6 +4,7 @@ export type GoalResponse = {
 	description?: string;
 	deadline: string;
 	category: GoalCategoryType;
+	status: string;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -26,6 +27,10 @@ export type MilestoneResponse = {
 	label: string;
 	order: number;
 	isCompleted: boolean;
+	startValue: number;
+	currentValue: number;
+	targetValue: number;
+	unit: string;
 	createdAt: string;
 };
 
@@ -35,12 +40,20 @@ export type MilestoneCreateRequest = {
 	label: string;
 	order: number;
 	isCompleted?: boolean;
+	startValue?: number;
+	currentValue?: number;
+	targetValue?: number;
+	unit?: string;
 };
 
 export type MilestoneUpdateRequest = {
 	title?: string;
 	label?: string;
 	isCompleted?: boolean;
+	startValue?: number;
+	currentValue?: number;
+	targetValue?: number;
+	unit?: string;
 };
 
 export type TaskTypeValue = "daily" | "once";
@@ -109,6 +122,8 @@ export type PlanProposalTodoPayload = {
 
 export type PlanProposalMilestonePayload = {
 	title: string;
+	targetValue: number;
+	unit: string;
 	adopted: boolean;
 	createdMilestoneId?: string;
 };

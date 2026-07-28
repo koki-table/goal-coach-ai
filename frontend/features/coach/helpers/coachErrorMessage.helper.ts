@@ -28,7 +28,7 @@ const STATUS_MESSAGES: Record<number, CoachErrorInfo> = {
 	},
 	409: {
 		kind: "alreadyAdopted",
-		message: "既に採用済み、またはマイルストーンを先に採用する必要があります。",
+		message: "既に採用済み、または主要な成果（Key Results）を先に採用する必要があります。",
 	},
 	429: {
 		kind: "rateLimit",

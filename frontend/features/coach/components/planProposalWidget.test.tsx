@@ -4,11 +4,26 @@ import type { PlanProposal } from "../types";
 import { PlanProposalWidget } from "./planProposalWidget";
 
 const PROPOSAL_WITH_MILESTONE: PlanProposal = {
-	milestone: { title: "基礎文法を習得する", adopted: false },
+	milestone: { title: "基礎文法を習得する", targetValue: 300, unit: "問", adopted: false },
 	todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
 };
 
 describe("PlanProposalWidget", () => {
+	it("renders nothing when milestone and todos are both empty", () => {
+		const proposal: PlanProposal = { milestone: null, todos: [] };
+		const { container } = render(
+			<PlanProposalWidget
+				proposal={proposal}
+				messageId={1}
+				adoptingKey={undefined}
+				onAdoptMilestone={vi.fn()}
+				onAdoptTodo={vi.fn()}
+			/>,
+		);
+
+		expect(container).toBeEmptyDOMElement();
+	});
+
 	it("disables todo adoption until the milestone is adopted", () => {
 		render(
 			<PlanProposalWidget
@@ -20,13 +35,19 @@ describe("PlanProposalWidget", () => {
 			/>,
 		);
 
-		const todoButton = screen.getByRole("button", { name: /マイルストーン採用後/ });
+		const todoButton = screen.getByRole("button", { name: /主要な成果の採用後/ });
 		expect(todoButton).toBeDisabled();
 	});
 
 	it("enables todo adoption once the milestone is adopted", () => {
 		const proposal: PlanProposal = {
-			milestone: { title: "基礎文法を習得する", adopted: true, createdMilestoneId: "m-1" },
+			milestone: {
+				title: "基礎文法を習得する",
+				targetValue: 300,
+				unit: "問",
+				adopted: true,
+				createdMilestoneId: "m-1",
+			},
 			todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
 		};
 
@@ -62,7 +83,13 @@ describe("PlanProposalWidget", () => {
 
 	it("shows adopted badge for already adopted items", () => {
 		const proposal: PlanProposal = {
-			milestone: { title: "基礎文法を習得する", adopted: true, createdMilestoneId: "m-1" },
+			milestone: {
+				title: "基礎文法を習得する",
+				targetValue: 300,
+				unit: "問",
+				adopted: true,
+				createdMilestoneId: "m-1",
+			},
 			todos: [
 				{ title: "毎日30分学習する", taskType: "daily", adopted: true, createdTodoId: "t-1" },
 			],

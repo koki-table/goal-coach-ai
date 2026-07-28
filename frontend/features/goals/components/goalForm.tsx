@@ -64,11 +64,13 @@ export function GoalForm({
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>{mode === "edit" ? "目標を編集する" : "目標を設定する"}</CardTitle>
+				<CardTitle>
+					{mode === "edit" ? "目標（Objective）を編集する" : "目標（Objective）を設定する"}
+				</CardTitle>
 				<CardDescription>
 					{mode === "edit"
 						? "目標の内容を変更できます"
-						: "半年〜1年で達成したい大きな目標を設定しましょう"}
+						: "OKRの「O（Objective）」＝ワクワクする方向性を設定しよう。数字ではなく、達成したい状態を言葉で表現します（例: 英語で臆せず議論できる自分になる）。意識を分散させないため、まずは1つに集中するのがおすすめです。"}
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
@@ -79,7 +81,7 @@ export function GoalForm({
 						</Label>
 						<Input
 							id="title"
-							placeholder="例: TOEIC 900点を取得する"
+							placeholder="例: 英語で臆せず議論できる自分になる"
 							value={formData.title}
 							onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
 							aria-invalid={!!errors.title}

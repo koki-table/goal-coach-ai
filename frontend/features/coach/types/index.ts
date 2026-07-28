@@ -11,6 +11,8 @@ export type CoachConversation = {
 
 export type PlanProposalMilestone = {
 	title: string;
+	targetValue: number;
+	unit: string;
 	adopted: boolean;
 	createdMilestoneId?: string;
 };

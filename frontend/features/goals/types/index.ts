@@ -8,6 +8,8 @@ import type {
 // 目標の型定義
 export type Goal = GoalInput & {
 	id: string;
+	// 目標の状態（"active" | "completed" など）。未完了(active)の目標数の上限判定に使う。
+	status: string;
 	createdAt: string;
 	updatedAt: string;
 };

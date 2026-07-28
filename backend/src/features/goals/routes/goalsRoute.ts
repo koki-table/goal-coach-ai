@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { GoalNotFoundError } from "../../../common/errors";
+import { GoalLimitExceededError, GoalNotFoundError } from "../../../common/errors";
 import {
 	goalCreateSchema,
 	goalUpdateSchema,
@@ -37,8 +37,18 @@ goalsRoute.post("/", async (c) => {
 		return c.json({ message: "Validation error", errors: parsed.error.flatten().fieldErrors }, 400);
 	}
 
-	const goal = await service.create(userId, parsed.data);
-	return c.json(goal, 201);
+	try {
+		const goal = await service.create(userId, parsed.data);
+		return c.json(goal, 201);
+	} catch (e) {
+		if (e instanceof GoalLimitExceededError) {
+			return c.json(
+				{ message: "目標は同時に2件までしか設定できません。まず1件に集中しましょう。" },
+				409,
+			);
+		}
+		throw e;
+	}
 });
 
 // PUT /goals/:id

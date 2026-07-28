@@ -22,6 +22,11 @@ export const milestoneCreateSchema = z.object({
 	label: z.string().max(100),
 	order: z.number().int().min(0),
 	isCompleted: z.boolean().optional(),
+	// 定量KRの測定値。startは省略時0、targetは達成水準(>0)、currentは省略時0、unitは単位表示
+	startValue: z.number().nonnegative().optional(),
+	currentValue: z.number().nonnegative().optional(),
+	targetValue: z.number().positive().optional(),
+	unit: z.string().max(10).optional(),
 });
 
 export const milestoneCreateBatchSchema = z.array(milestoneCreateSchema);
@@ -30,6 +35,11 @@ export const milestoneUpdateSchema = z.object({
 	title: z.string().min(1).max(200).optional(),
 	label: z.string().max(100).optional(),
 	isCompleted: z.boolean().optional(),
+	// 現在値更新(＋更新)・目標/単位の編集で使用。currentValue更新時はisCompletedをサーバで再計算する
+	startValue: z.number().nonnegative().optional(),
+	currentValue: z.number().nonnegative().optional(),
+	targetValue: z.number().positive().optional(),
+	unit: z.string().max(10).optional(),
 });
 
 export const todoCreateSchema = z.object({

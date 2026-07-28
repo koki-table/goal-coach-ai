@@ -5,16 +5,19 @@ import useSWR from "swr";
 import type { MilestoneEntry } from "../schemas/todoSchema";
 import type { Milestone } from "../types";
 
+// 更新可能なフィールド（title/label/測定値）。isCompletedは測定値から導出されるため直接更新しない。
+type MilestoneUpdatableFields = Partial<
+	Pick<Milestone, "title" | "label" | "startValue" | "currentValue" | "targetValue" | "unit">
+>;
+
 type UseMilestonesReturn = {
 	milestones: Milestone[] | undefined;
 	isLoading: boolean;
 	error: Error | undefined;
-	updateMilestone: (
-		milestoneId: string,
-		updates: Partial<Pick<Milestone, "title" | "isCompleted">>,
-	) => Promise<Milestone>;
+	updateMilestone: (milestoneId: string, updates: MilestoneUpdatableFields) => Promise<Milestone>;
 	createMilestones: (goalId: string, entries: MilestoneEntry[]) => Promise<Milestone[]>;
-	toggleMilestoneComplete: (milestoneId: string) => Promise<void>;
+	// 現在値を手動更新する（＋更新ボタン）。完了状態はサーバがcurrent>=targetから再計算する。
+	updateMilestoneProgress: (milestoneId: string, currentValue: number) => Promise<Milestone>;
 };
 
 export function useMilestones(goalId: string): UseMilestonesReturn {
@@ -29,10 +32,7 @@ export function useMilestones(goalId: string): UseMilestonesReturn {
 	} = useSWR<Milestone[]>(isLoaded && isSignedIn && goalId ? `/goals/${goalId}/milestones` : null);
 
 	const updateMilestone = useCallback(
-		async (
-			milestoneId: string,
-			updates: Partial<Pick<Milestone, "title" | "isCompleted">>,
-		): Promise<Milestone> => {
+		async (milestoneId: string, updates: MilestoneUpdatableFields): Promise<Milestone> => {
 			const updated = await apiClient.patch<Milestone>(`/milestones/${milestoneId}`, updates);
 			await mutate();
 			return updated;
@@ -43,10 +43,14 @@ export function useMilestones(goalId: string): UseMilestonesReturn {
 	const createMilestones = useCallback(
 		async (targetGoalId: string, entries: MilestoneEntry[]): Promise<Milestone[]> => {
 			const payload = entries.map((entry, idx) => ({
+				id: entry.id,
 				title: entry.title,
 				label: entry.label,
 				order: idx + 1,
-				isCompleted: entry.isCompleted,
+				targetValue: entry.targetValue,
+				unit: entry.unit,
+				currentValue: entry.currentValue,
+				startValue: entry.startValue,
 			}));
 			const created = await apiClient.put<Milestone[]>(
 				`/goals/${targetGoalId}/milestones`,
@@ -58,17 +62,15 @@ export function useMilestones(goalId: string): UseMilestonesReturn {
 		[apiClient, mutate],
 	);
 
-	const toggleMilestoneComplete = useCallback(
-		async (milestoneId: string): Promise<void> => {
-			const current = milestones?.find((m) => m.id === milestoneId);
-			if (!current) return;
-
-			await apiClient.patch(`/milestones/${milestoneId}`, {
-				isCompleted: !current.isCompleted,
+	const updateMilestoneProgress = useCallback(
+		async (milestoneId: string, currentValue: number): Promise<Milestone> => {
+			const updated = await apiClient.patch<Milestone>(`/milestones/${milestoneId}`, {
+				currentValue,
 			});
 			await mutate();
+			return updated;
 		},
-		[apiClient, milestones, mutate],
+		[apiClient, mutate],
 	);
 
 	return {
@@ -77,7 +79,7 @@ export function useMilestones(goalId: string): UseMilestonesReturn {
 		error,
 		updateMilestone,
 		createMilestones,
-		toggleMilestoneComplete,
+		updateMilestoneProgress,
 	};
 }
 

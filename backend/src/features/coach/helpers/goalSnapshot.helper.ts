@@ -58,8 +58,10 @@ export function buildGoalSnapshot(
 		milestoneProgress,
 	);
 
+	// dueDateはカレンダー日として扱う。タイムスタンプ全体で比較すると当日中に期限切れになるため、日付部分のみ比較する
+	const today = now.toISOString().slice(0, 10);
 	const overdueTodosCount = todos.filter(
-		(t) => t.isCompleted === 0 && t.dueDate !== null && t.dueDate < now.toISOString(),
+		(t) => t.isCompleted === 0 && t.dueDate !== null && t.dueDate.slice(0, 10) < today,
 	).length;
 
 	const activityTimestamps = [

@@ -53,6 +53,7 @@ describe("categoryMapping helper", () => {
 				title: "Learn TypeScript",
 				description: "Study advanced TS",
 				dueDate: "2026-12-01",
+				status: "active",
 				createdAt: "2026-01-01T00:00:00.000Z",
 				updatedAt: "2026-01-01T00:00:00.000Z",
 			};
@@ -65,6 +66,7 @@ describe("categoryMapping helper", () => {
 				description: "Study advanced TS",
 				deadline: "2026-12-01",
 				category: "study",
+				status: "active",
 				createdAt: "2026-01-01T00:00:00.000Z",
 				updatedAt: "2026-01-01T00:00:00.000Z",
 			});
@@ -76,6 +78,7 @@ describe("categoryMapping helper", () => {
 				title: "Test",
 				description: null,
 				dueDate: "2026-12-01",
+				status: "active",
 				createdAt: "2026-01-01T00:00:00.000Z",
 				updatedAt: "2026-01-01T00:00:00.000Z",
 			};
@@ -90,6 +93,7 @@ describe("categoryMapping helper", () => {
 				title: "Test",
 				description: null,
 				dueDate: null,
+				status: "active",
 				createdAt: "2026-01-01T00:00:00.000Z",
 				updatedAt: "2026-01-01T00:00:00.000Z",
 			};

@@ -1,10 +1,21 @@
 import type { PlanProposal } from "../prompts/coachPrompts";
 import type { CoachChatPromptMessage } from "./coachChatPrompt.helper";
 
+// 定量目標値の既定値。LLMがmilestoneTargetValueをnullで返した場合の代替。
+// 数値目標が無いKRは 0〜100% スケールで扱う（目標100・単位%）。
+const DEFAULT_MILESTONE_TARGET_VALUE = 100;
+const DEFAULT_MILESTONE_UNIT = "%";
+
 // coach_messages.proposal に保存する提案ペイロード。採用済みかどうかと、採用時に
 // 作成したエンティティのidを保持し、二重採用の判定と表示に使う。
 export type PlanProposalPayload = {
-	milestone: { title: string; adopted: boolean; createdMilestoneId?: string } | null;
+	milestone: {
+		title: string;
+		targetValue: number;
+		unit: string;
+		adopted: boolean;
+		createdMilestoneId?: string;
+	} | null;
 	todos: { title: string; taskType: "daily" | "once"; adopted: boolean; createdTodoId?: string }[];
 };
 
@@ -46,7 +57,12 @@ export function toProposalPayload(
 	return {
 		milestone:
 			planProposal.milestoneTitle && !isDuplicateMilestone
-				? { title: planProposal.milestoneTitle, adopted: false }
+				? {
+						title: planProposal.milestoneTitle,
+						targetValue: planProposal.milestoneTargetValue ?? DEFAULT_MILESTONE_TARGET_VALUE,
+						unit: planProposal.milestoneUnit ?? DEFAULT_MILESTONE_UNIT,
+						adopted: false,
+					}
 				: null,
 		todos: planProposal.todos.map((t) => ({
 			title: t.title,
