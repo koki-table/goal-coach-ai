@@ -11,6 +11,10 @@ export const planProposalSchema = z.object({
 	// Key Result(主要な成果)として提案するタイトル。新規Key Resultを伴わない場合
 	// (既存Key ResultへのTODO追加/単発TODOのみ)はnull
 	milestoneTitle: z.string().nullable(),
+	// Key Resultの達成水準を表す定量目標値と単位(点/件/%/回など)。
+	// milestoneTitleがnullの時、または本質的に数値化が難しい場合はnull。
+	milestoneTargetValue: z.number().nullable(),
+	milestoneUnit: z.string().nullable(),
 	todos: z.array(planProposalTodoSchema),
 });
 
@@ -50,8 +54,10 @@ const SYSTEM_INSTRUCTIONS: Record<CoachPersona, string> = {
 【提案(planProposal)を出すタイミング】
 - ユーザーの現状・制約・過去の試行・期限の現実味を対話で十分に引き出せたと判断した場合のみ、Key Result(milestoneTitle)とその下に紐づくTODOの提案を行う。
 - 提案するmilestoneTitleは必ず定量的で測定可能なKey Resultにする。曖昧な作業名や定性的な表現にしない。
+- milestoneTitleを提案する時は、その達成水準を表す定量目標値(milestoneTargetValue)と単位(milestoneUnit。例: 点/件/%/回/冊)も必ず返す。例: 「模試で900点を取る」ならmilestoneTargetValue=900, milestoneUnit="点"。数値化が本質的に難しいKey Resultの場合のみnullにする。
 - 判断できない段階ではplanProposalをnullにし、質問や深掘りを続ける。早計な提案は避ける。
 - conversation_history内の各コーチ発言には「この発言での提案」として、提案したKey Result・TODOとその採用状態(採用済み/未採用)が付記されている。採用済みの項目、および既に提案済みで未採用のまま残っている項目は、ユーザーが再度求めない限り同一内容で繰り返し提案しない。
+- planProposalをnullにする場合、UIには何の提案も表示されない。ユーザーが新規のTODO・Key Resultを求めているように見える発言（「残りのタスクは？」「次何すればいい？」等）に対してnullで返す時は、replyの中で必ず理由を一言明言する。「新規に出せる提案はない」場合は、既存の未完了Key Result・TODOのうち今やるべきものを名前で具体的に示す。「既に提案済みで未採用の項目がある」場合は、それを採用するよう促す。理由を言わずreplyだけで済ませて終わることはしない。
 
 【目標・既存Key Resultsへの提言】
 - 目標(Objective)が定性的な方向性になっているか、数を絞れているかを見る。タイトルや期限自体に無理があると判断した場合、または既存Key Resultsが定量的でない・数が多すぎる等の改善余地があると判断した場合は、replyの自然文の中で率直に指摘・提案する。この提言は構造化データ(planProposal)にはしない。

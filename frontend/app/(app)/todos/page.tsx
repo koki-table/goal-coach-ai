@@ -110,20 +110,14 @@ export default function TodosPage() {
 		[reorderTodos],
 	);
 
-	const handleToggleMilestoneComplete = useCallback(
-		async (_goalId: string, milestoneId: string) => {
-			const milestones = milestonesMap[_goalId] ?? [];
-			const current = milestones.find((m) => m.id === milestoneId);
-			if (!current) return;
-
-			await apiClient.patch(`/milestones/${milestoneId}`, {
-				isCompleted: !current.isCompleted,
-			});
-			// マイルストーン完了に連動して紐づくTODOの完了状態もサーバー側で更新されるため、
-			// TODO一覧のキャッシュも合わせて再検証する
-			await Promise.all([revalidateByPrefix("/milestones"), revalidateByPrefix("/todos")]);
+	const handleUpdateMilestoneProgress = useCallback(
+		async (_goalId: string, milestoneId: string, currentValue: number) => {
+			// 現在値を更新する。完了状態(isCompleted)は current >= target からサーバが再計算する。
+			// KRとTODOは独立に扱うため、TODO一覧の再検証は不要（マイルストーン一覧のみ再検証）。
+			await apiClient.patch(`/milestones/${milestoneId}`, { currentValue });
+			await revalidateByPrefix("/milestones");
 		},
-		[apiClient, milestonesMap],
+		[apiClient],
 	);
 
 	const handleSaveMilestones = useCallback(
@@ -153,7 +147,10 @@ export default function TodosPage() {
 				title: entry.title,
 				label: entry.label,
 				order: idx + 1,
-				isCompleted: entry.isCompleted,
+				targetValue: entry.targetValue,
+				unit: entry.unit,
+				currentValue: entry.currentValue,
+				startValue: entry.startValue,
 			}));
 			await apiClient.put(`/goals/${goalId}/milestones`, payload);
 			await revalidateByPrefix("/milestones");
@@ -192,7 +189,7 @@ export default function TodosPage() {
 				onAddTodo={handleAddTodo}
 				onEditTodo={handleEditTodo}
 				onReorderTodos={handleReorderTodos}
-				onToggleMilestoneComplete={handleToggleMilestoneComplete}
+				onUpdateMilestoneProgress={handleUpdateMilestoneProgress}
 				onSaveMilestones={handleSaveMilestones}
 			/>
 

@@ -51,6 +51,14 @@ describe("goalSnapshot helper", () => {
 			expect(result.overdueTodosCount).toBe(1);
 		});
 
+		it("does not count a todo due today as overdue", () => {
+			const todos = [{ isCompleted: 0, completedAt: null, dueDate: "2026-07-22T00:00:00.000Z" }];
+
+			const result = buildGoalSnapshot(todos, [], [], NOW);
+
+			expect(result.overdueTodosCount).toBe(0);
+		});
+
 		it("derives lastActivityAt from the most recent log or todo completion", () => {
 			const todos = [{ isCompleted: 1, completedAt: "2026-07-21T00:00:00.000Z", dueDate: null }];
 			const todoLogs = [

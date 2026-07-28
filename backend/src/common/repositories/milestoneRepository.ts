@@ -18,10 +18,6 @@ export class MilestoneRepository {
 		return this.db.select().from(milestones).where(eq(milestones.id, id)).get();
 	}
 
-	async create(data: { goalId: string; title: string; label?: string; sortOrder: number }) {
-		return this.db.insert(milestones).values(data).returning().get();
-	}
-
 	// 末尾に追加する際のsortOrder（milestone固有の採番ルールを共有層に集約）
 	async nextSortOrder(goalId: string): Promise<number> {
 		const existing = await this.findAllByGoalId(goalId);
@@ -29,7 +25,17 @@ export class MilestoneRepository {
 	}
 
 	// db.batch() 用のステートメント（実行しない）。idはアトミック採用のため呼び出し側で採番する
-	insertStmt(data: { id: string; goalId: string; title: string; sortOrder: number }) {
+	insertStmt(data: {
+		id: string;
+		goalId: string;
+		title: string;
+		sortOrder: number;
+		label?: string;
+		startValue?: number;
+		currentValue?: number;
+		targetValue?: number;
+		unit?: string;
+	}) {
 		return this.db.insert(milestones).values(data);
 	}
 
@@ -41,6 +47,10 @@ export class MilestoneRepository {
 			isCompleted: number;
 			completedAt: string | null;
 			sortOrder: number;
+			startValue: number;
+			currentValue: number;
+			targetValue: number;
+			unit: string;
 		}>,
 	) {
 		return this.db
@@ -65,6 +75,10 @@ export class MilestoneRepository {
 			sortOrder: number;
 			isCompleted: number;
 			completedAt: string | null;
+			startValue: number;
+			currentValue: number;
+			targetValue: number;
+			unit: string;
 		}>,
 	) {
 		return this.db
@@ -82,6 +96,10 @@ export class MilestoneRepository {
 			sortOrder: number;
 			isCompleted?: number;
 			completedAt?: string;
+			startValue?: number;
+			currentValue?: number;
+			targetValue?: number;
+			unit?: string;
 		}[],
 	) {
 		return this.db.insert(milestones).values(entries);

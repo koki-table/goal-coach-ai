@@ -40,6 +40,8 @@ describe("coachModel", () => {
 					reply: "では、次のマイルストーンを提案します。",
 					planProposal: {
 						milestoneTitle: "基礎文法を習得する",
+						milestoneTargetValue: 300,
+						milestoneUnit: "問",
 						todos: [
 							{ title: "毎日30分学習する", taskType: "daily" },
 							{ title: "参考書を1冊読み終える", taskType: "once" },
@@ -52,6 +54,8 @@ describe("coachModel", () => {
 
 			expect(result.planProposal).toEqual({
 				milestoneTitle: "基礎文法を習得する",
+				milestoneTargetValue: 300,
+				milestoneUnit: "問",
 				todos: [
 					{ title: "毎日30分学習する", taskType: "daily" },
 					{ title: "参考書を1冊読み終える", taskType: "once" },

@@ -3,7 +3,7 @@ import { mapMilestoneToResponse } from "./milestoneMapper.helper";
 
 describe("milestoneMapper helper", () => {
 	describe("mapMilestoneToResponse", () => {
-		it("maps DB milestone to response with boolean isCompleted", () => {
+		it("maps DB milestone to response with boolean isCompleted and measurable fields", () => {
 			const milestone = {
 				id: "ms-1",
 				goalId: "goal-1",
@@ -11,6 +11,10 @@ describe("milestoneMapper helper", () => {
 				label: "短期目標",
 				sortOrder: 1,
 				isCompleted: 0,
+				startValue: 0,
+				currentValue: 720,
+				targetValue: 900,
+				unit: "点",
 				createdAt: "2026-01-01T00:00:00.000Z",
 			};
 
@@ -23,6 +27,10 @@ describe("milestoneMapper helper", () => {
 				label: "短期目標",
 				order: 1,
 				isCompleted: false,
+				startValue: 0,
+				currentValue: 720,
+				targetValue: 900,
+				unit: "点",
 				createdAt: "2026-01-01T00:00:00.000Z",
 			});
 		});
@@ -35,6 +43,10 @@ describe("milestoneMapper helper", () => {
 				label: null,
 				sortOrder: 2,
 				isCompleted: 1,
+				startValue: 0,
+				currentValue: 5,
+				targetValue: 5,
+				unit: "件",
 				createdAt: "2026-01-01T00:00:00.000Z",
 			};
 
@@ -52,6 +64,10 @@ describe("milestoneMapper helper", () => {
 				label: "中期目標",
 				sortOrder: 5,
 				isCompleted: 0,
+				startValue: 0,
+				currentValue: 0,
+				targetValue: 1,
+				unit: "",
 				createdAt: "2026-01-01T00:00:00.000Z",
 			};
 

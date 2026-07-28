@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { goals } from "./goals";
 
 export const milestones = sqliteTable(
@@ -14,6 +14,13 @@ export const milestones = sqliteTable(
 		description: text("description"),
 		label: text("label"),
 		dueDate: text("dueDate"),
+		// 定量KR(Key Results)の測定値。進捗% = (current - start) / (target - start)。
+		// startは通常0、targetは達成水準、unitは点/件/%等の単位表示用。
+		startValue: real("startValue").notNull().default(0),
+		currentValue: real("currentValue").notNull().default(0),
+		targetValue: real("targetValue").notNull().default(1),
+		unit: text("unit").notNull().default(""),
+		// isCompletedは currentValue >= targetValue から導出して同期する（真偽の実体は測定値側）
 		isCompleted: integer("isCompleted").notNull().default(0),
 		completedAt: text("completedAt"),
 		sortOrder: integer("sortOrder").notNull().default(0),

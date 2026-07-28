@@ -3,8 +3,13 @@ import { z } from "zod";
 // マイルストーン上限
 export const MAX_MILESTONES_PER_GOAL = 10;
 
+// 単位の最大文字数（点/件/%/回など短い単位を想定）
+export const MILESTONE_UNIT_MAX_LENGTH = 10;
+
 // マイルストーンエントリスキーマ（フォーム用）
 // idあり=既存マイルストーン（バックエンドで更新）、idなし=新規（作成）
+// isCompletedは持たない（currentValue >= targetValue からサーバで導出するため）。
+// currentValueは編集フォームでは変更せず、既存値を保持して往復させる（進捗は＋更新で更新する）。
 export const milestoneEntrySchema = z.object({
 	id: z.string().optional(),
 	label: z.string().min(1, "ラベルは必須です").max(30, "ラベルは30文字以内で入力してください"),
@@ -12,7 +17,10 @@ export const milestoneEntrySchema = z.object({
 		.string()
 		.min(1, "タイトルは必須です")
 		.max(100, "タイトルは100文字以内で入力してください"),
-	isCompleted: z.boolean(),
+	targetValue: z.number().positive("目標値は0より大きい値を入力してください"),
+	unit: z.string().max(MILESTONE_UNIT_MAX_LENGTH, "単位は10文字以内で入力してください"),
+	currentValue: z.number().nonnegative(),
+	startValue: z.number().nonnegative(),
 });
 
 export type MilestoneEntry = z.infer<typeof milestoneEntrySchema>;
@@ -24,7 +32,7 @@ export const milestoneInputSchema = z.object({
 		.min(1, "タイトルは必須です")
 		.max(100, "タイトルは100文字以内で入力してください"),
 	label: z.string().min(1, "ラベルは必須です").max(30, "ラベルは30文字以内で入力してください"),
-	order: z.number().int().min(1).max(10),
+	order: z.number().int().min(1).max(MAX_MILESTONES_PER_GOAL),
 });
 
 export type MilestoneInput = z.infer<typeof milestoneInputSchema>;

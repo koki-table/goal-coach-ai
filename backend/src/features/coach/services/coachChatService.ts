@@ -217,7 +217,15 @@ export class CoachChatService {
 
 			const [[createdMilestone]] = await this.db.batch([
 				this.milestoneRepo
-					.insertStmt({ id: milestoneId, goalId, title: proposal.milestone.title, sortOrder })
+					.insertStmt({
+						id: milestoneId,
+						goalId,
+						title: proposal.milestone.title,
+						sortOrder,
+						// 提案の定量目標を引き継ぐ。現在値は0開始（採用後に＋更新で進捗を入れる）
+						targetValue: proposal.milestone.targetValue,
+						unit: proposal.milestone.unit,
+					})
 					.returning(),
 				this.messageRepo.updateProposalStmt(messageId, JSON.stringify(proposal)),
 			]);

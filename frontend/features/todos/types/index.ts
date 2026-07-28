@@ -6,11 +6,17 @@ export type TodoPriority = "low" | "medium" | "high";
 // タスク種別の型定義（daily=毎日リセット / once=一回のみ）
 export type TaskType = "daily" | "once";
 
-// マイルストーンの型定義
+// マイルストーン（定量Key Results）の型定義
+// 進捗は startValue→targetValue に対する currentValue の到達度で表す（単位=unit）。
+// isCompleted は currentValue >= targetValue から導出される（サーバで同期）。
 export type Milestone = MilestoneInput & {
 	id: string;
 	goalId: string;
 	isCompleted: boolean;
+	startValue: number;
+	currentValue: number;
+	targetValue: number;
+	unit: string;
 	createdAt: string;
 };
 
