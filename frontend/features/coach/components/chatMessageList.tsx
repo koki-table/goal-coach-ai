@@ -108,7 +108,7 @@ export function ChatMessageList({
 				/>
 			))}
 			{isSending && (
-				<div className="flex items-start gap-2">
+				<div className="flex items-center gap-2">
 					<Avatar size="lg" className="shrink-0">
 						<AvatarImage src="/penguin-talk.png" alt="AIコーチ" />
 					</Avatar>
