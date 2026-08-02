@@ -16,6 +16,7 @@
 		"upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
 	},
 	"dependencies": {
+		"@ai-sdk/react": "^4.0.51",
 		"@base-ui/react": "^1.5.0",
 		"@clerk/localizations": "^4.6.8",
 		"@clerk/nextjs": "^7.4.1",
@@ -25,6 +26,7 @@
 		"@dnd-kit/utilities": "^3.2.2",
 		"@opennextjs/cloudflare": "^1.19.11",
 		"@phosphor-icons/react": "^2.1.7",
+		"ai": "^7.0.48",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"next": "16.2.6",

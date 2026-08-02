@@ -1,32 +1,52 @@
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
-import { chat } from "./coachModel";
+import { streamChat } from "./coachModel";
 
-function mockModelReturning(objectText: string) {
+// MockLanguageModelV4は文字列をそのまま返せないため、objectTextを
+// 1つのtext-deltaチャンクとして流すストリームを組み立てる。
+function mockStreamModelReturning(objectText: string) {
 	return new MockLanguageModelV4({
-		doGenerate: async () => ({
-			content: [{ type: "text" as const, text: objectText }],
-			finishReason: { unified: "stop" as const, raw: undefined },
-			usage: {
-				inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
-				outputTokens: { total: 10, text: 10, reasoning: undefined },
-			},
-			warnings: [],
+		doStream: async () => ({
+			stream: new ReadableStream({
+				start(controller) {
+					controller.enqueue({ type: "text-start", id: "1" });
+					controller.enqueue({ type: "text-delta", id: "1", delta: objectText });
+					controller.enqueue({ type: "text-end", id: "1" });
+					controller.enqueue({
+						type: "finish",
+						finishReason: { unified: "stop", raw: undefined },
+						usage: {
+							inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+							outputTokens: { total: 10, text: 10, reasoning: undefined },
+						},
+					});
+					controller.close();
+				},
+			}),
 		}),
 	});
 }
 
+async function collectReplyDeltas(model: MockLanguageModelV4) {
+	const deltas: string[] = [];
+	const result = await streamChat(
+		{ model, system: "calm mentor persona", prompt: "goal data" },
+		(delta) => deltas.push(delta),
+	);
+	return { result, deltas };
+}
+
 describe("coachModel", () => {
-	describe("chat", () => {
+	describe("streamChat", () => {
 		it("returns a parsed reply without a proposal when the model has not decided to propose yet", async () => {
-			const model = mockModelReturning(
+			const model = mockStreamModelReturning(
 				JSON.stringify({
 					reply: "現在の状況について、もう少し詳しく教えていただけますか。",
 					planProposal: null,
 				}),
 			);
 
-			const result = await chat({ model, system: "calm mentor persona", prompt: "goal data" });
+			const { result } = await collectReplyDeltas(model);
 
 			expect(result).toEqual({
 				reply: "現在の状況について、もう少し詳しく教えていただけますか。",
@@ -35,7 +55,7 @@ describe("coachModel", () => {
 		});
 
 		it("returns a parsed reply with a hierarchical plan proposal", async () => {
-			const model = mockModelReturning(
+			const model = mockStreamModelReturning(
 				JSON.stringify({
 					reply: "では、次のマイルストーンを提案します。",
 					planProposal: {
@@ -50,7 +70,7 @@ describe("coachModel", () => {
 				}),
 			);
 
-			const result = await chat({ model, system: "calm mentor persona", prompt: "goal data" });
+			const { result } = await collectReplyDeltas(model);
 
 			expect(result.planProposal).toEqual({
 				milestoneTitle: "基礎文法を習得する",
@@ -63,12 +83,22 @@ describe("coachModel", () => {
 			});
 		});
 
-		it("throws CoachModelError when the model output does not match the schema", async () => {
-			const model = mockModelReturning(JSON.stringify({ unexpected: "shape" }));
+		it("emits reply text incrementally via onReplyDelta before the object resolves", async () => {
+			const model = mockStreamModelReturning(
+				JSON.stringify({ reply: "こんにちは、元気ですか。", planProposal: null }),
+			);
 
-			await expect(
-				chat({ model, system: "calm mentor persona", prompt: "goal data" }),
-			).rejects.toThrow("Coach chat model failed");
+			const { deltas } = await collectReplyDeltas(model);
+
+			// 部分文字列の増分を連結すると最終的なreplyと一致する
+			expect(deltas.join("")).toBe("こんにちは、元気ですか。");
+			expect(deltas.length).toBeGreaterThan(0);
+		});
+
+		it("throws CoachModelError when the model output does not match the schema", async () => {
+			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
+
+			await expect(collectReplyDeltas(model)).rejects.toThrow("Coach chat model failed");
 		});
 	});
 });

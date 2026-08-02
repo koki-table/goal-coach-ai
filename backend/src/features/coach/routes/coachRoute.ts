@@ -1,3 +1,4 @@
+import { createUIMessageStreamResponse } from "ai";
 import { Hono } from "hono";
 import {
 	CoachChatRateLimitError,
@@ -73,6 +74,12 @@ coachRoute.get("/conversations/:id/messages", async (c) => {
 });
 
 // POST /coach/conversations/:id/messages
+// AIの返信をSSE(text-delta)としてストリーミングし、末尾でdata-proposalを送る。
+// runCoachTurn()内のexecute()はクライアントの読み取り状況と無関係に自走して
+// controllerへenqueueするため、永続化(persistTurn)はレスポンス返却をブロックせず
+// waitUntilで実行できる。クライアント切断後も確実に完了させるためここに置く。
+// エラーはUIMessageStream内でerrorチャンクとして表現されるため、ここでは
+// 事前検証(会話の存在・レート制限・API未設定)のみ同期的にハンドリングする。
 coachRoute.post("/conversations/:id/messages", async (c) => {
 	const userId = c.get("dbUserId");
 	const conversationId = c.req.param("id");
@@ -85,8 +92,18 @@ coachRoute.post("/conversations/:id/messages", async (c) => {
 	}
 
 	try {
-		const message = await service.sendMessage(userId, conversationId, parsed.data.content, c.env);
-		return c.json(mapMessageToResponse(message), 201);
+		const { uiStream, persistTurn } = await service.startMessageStream(
+			userId,
+			conversationId,
+			parsed.data.content,
+			c.env,
+		);
+
+		// turnResultがreject(CoachModelError等)した場合は保存しない。
+		// クライアントにはUIMessageStream内のerrorチャンクとして既に伝わっている。
+		c.executionCtx.waitUntil(persistTurn().catch(() => undefined));
+
+		return createUIMessageStreamResponse({ stream: uiStream });
 	} catch (e) {
 		if (e instanceof CoachConversationNotFoundError) {
 			return c.json({ message: "Conversation not found" }, 404);
