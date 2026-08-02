@@ -1,14 +1,17 @@
 "use client";
 
+import { Avatar, AvatarImage } from "@/components/atom/avatar";
 import { useEffect, useRef } from "react";
 import { AUTO_SCROLL_THRESHOLD_PX } from "../config/coachConfig";
 import type { CoachMessage } from "../types";
 import { ChatMessageBubble } from "./chatMessageBubble";
+import { TypingIndicator } from "./typingIndicator";
 
 type ChatMessageListProps = {
 	messages: CoachMessage[];
 	hasMore: boolean;
 	isLoadingMore: boolean;
+	isSending: boolean;
 	onLoadMore: () => void;
 	onAdoptMilestone: (messageId: number) => Promise<void>;
 	onAdoptTodo: (messageId: number, todoIndex: number) => Promise<void>;
@@ -19,6 +22,7 @@ export function ChatMessageList({
 	messages,
 	hasMore,
 	isLoadingMore,
+	isSending,
 	onLoadMore,
 	onAdoptMilestone,
 	onAdoptTodo,
@@ -103,6 +107,16 @@ export function ChatMessageList({
 					adoptingKey={adoptingKey}
 				/>
 			))}
+			{isSending && (
+				<div className="flex items-start gap-2">
+					<Avatar size="lg" className="shrink-0">
+						<AvatarImage src="/penguin-talk.png" alt="AIコーチ" />
+					</Avatar>
+					<div className="rounded-xl bg-muted px-4 py-2">
+						<TypingIndicator />
+					</div>
+				</div>
+			)}
 			<div ref={bottomRef} />
 		</div>
 	);

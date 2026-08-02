@@ -45,4 +45,10 @@ export type CoachMessagePage = {
 	nextCursor?: number;
 };
 
+// 送信中に表示するローカル専用のメッセージ。baselineCountは送信直前の確定件数で、
+// 確定データがこれを超えたら永続化完了とみなし、mergeOptimisticMessageで除外する。
+export type OptimisticCoachMessage = CoachMessage & {
+	baselineCount: number;
+};
+
 export type AdoptPlanItemTarget = { target: "milestone" } | { target: "todo"; todoIndex: number };

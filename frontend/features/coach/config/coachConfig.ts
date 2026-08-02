@@ -9,3 +9,6 @@ export const AUTO_SCROLL_THRESHOLD_PX = 100;
 
 // このpx以下をモバイル表示として扱う
 export const MOBILE_BREAKPOINT_PX = 767;
+
+// 考え中インジケータのドットごとのアニメーション開始遅延
+export const TYPING_INDICATOR_DOT_DELAYS_MS = [0, 150, 300] as const;

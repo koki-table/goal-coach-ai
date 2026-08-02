@@ -1,10 +1,14 @@
 import { createApiClient } from "@/lib/swr/apiClient";
 import { useAuth } from "@clerk/nextjs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import useSWRInfinite from "swr/infinite";
 import type { CoachErrorInfo } from "../helpers/coachErrorMessage.helper";
 import { mapCoachError } from "../helpers/coachErrorMessage.helper";
-import type { CoachMessage, CoachMessagePage } from "../types";
+import {
+	createOptimisticMessage,
+	mergeOptimisticMessage,
+} from "../helpers/mergeOptimisticMessage.helper";
+import type { CoachMessage, CoachMessagePage, OptimisticCoachMessage } from "../types";
 
 export type UseCoachMessagesReturn = {
 	messages: CoachMessage[];
@@ -37,9 +41,20 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 	const messagesError = error ? mapCoachError(error) : undefined;
 
 	// pagesは新しい順→古い順に並ぶため、表示は逆順に結合して古い→新しいにする
-	const messages = useMemo(
+	const confirmedMessages = useMemo(
 		() => (data ? [...data].reverse().flatMap((page) => page.messages) : []),
 		[data],
+	);
+
+	const [optimisticMessage, setOptimisticMessage] = useState<OptimisticCoachMessage | undefined>(
+		undefined,
+	);
+	// サーバー発行id(正の整数)と衝突しない一時idを発行する
+	const tempIdCounterRef = useRef(0);
+
+	const messages = useMemo(
+		() => mergeOptimisticMessage(confirmedMessages, optimisticMessage, conversationId),
+		[confirmedMessages, optimisticMessage, conversationId],
 	);
 
 	const hasMore = data ? !!data[data.length - 1]?.nextCursor : true;
@@ -51,6 +66,16 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 	const sendMessage = useCallback(
 		async (content: string): Promise<boolean> => {
 			if (!conversationId) return false;
+			tempIdCounterRef.current -= 1;
+			setOptimisticMessage(
+				createOptimisticMessage({
+					tempId: tempIdCounterRef.current,
+					conversationId,
+					content,
+					baselineCount: confirmedMessages.length,
+					createdAt: new Date().toISOString(),
+				}),
+			);
 			setIsSending(true);
 			setSendError(undefined);
 			try {
@@ -62,9 +87,10 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 				return false;
 			} finally {
 				setIsSending(false);
+				setOptimisticMessage(undefined);
 			}
 		},
-		[apiClient, conversationId, mutate],
+		[apiClient, conversationId, mutate, confirmedMessages.length],
 	);
 
 	const refresh = useCallback(async () => {

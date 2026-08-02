@@ -71,6 +71,7 @@ function CoachPageContent() {
 								messages={messages}
 								hasMore={hasMore}
 								isLoadingMore={isLoadingMore}
+								isSending={isSending}
 								onLoadMore={loadMore}
 								onAdoptMilestone={adoptMilestone}
 								onAdoptTodo={adoptTodo}
