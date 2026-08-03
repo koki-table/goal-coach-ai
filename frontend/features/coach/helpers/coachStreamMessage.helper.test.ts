@@ -4,10 +4,23 @@ import { toStreamingDisplayMessage } from "./coachStreamMessage.helper";
 
 describe("coachStreamMessage.helper", () => {
 	describe("toStreamingDisplayMessage", () => {
-		it("returns undefined for a user message", () => {
+		it("converts a user message so it can be shown optimistically before the server confirms it", () => {
 			const message = {
 				id: "1",
 				role: "user",
+				parts: [{ type: "text", text: "hello" }],
+			} as UIMessage;
+
+			const result = toStreamingDisplayMessage(message, "conv-1");
+
+			expect(result?.role).toBe("user");
+			expect(result?.content).toBe("hello");
+		});
+
+		it("returns undefined for a system message", () => {
+			const message = {
+				id: "1",
+				role: "system",
 				parts: [{ type: "text", text: "hello" }],
 			} as UIMessage;
 

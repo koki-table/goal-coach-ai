@@ -9,14 +9,16 @@ function isProposalDataPart(part: UIMessage["parts"][number]): part is ProposalD
 	return part.type === "data-proposal";
 }
 
-// useChatが積む進行中のUIMessage(streaming中のassistant応答)を、確定履歴と同じ
-// CoachMessage形式に変換する。まだproposalが届いていない間はundefinedのまま。
+// useChatが積む進行中のUIMessage(送信直後のuserメッセージ、streaming中のassistant応答)を
+// 確定履歴と同じCoachMessage形式に変換する。useChatのsendMessage()は呼び出し時点で
+// 同期的にuserメッセージを内部stateにpushするため、これをそのまま楽観的表示に使う。
+// まだproposalが届いていない間はundefinedのまま。
 // idはサーバー確定前の一時値なので、確定履歴側のidと衝突しない接頭辞を付ける。
 export function toStreamingDisplayMessage(
 	message: UIMessage,
 	conversationId: string,
 ): CoachMessage | undefined {
-	if (message.role !== "assistant") return undefined;
+	if (message.role !== "assistant" && message.role !== "user") return undefined;
 
 	const content = message.parts
 		.filter((part) => part.type === "text")
@@ -28,7 +30,7 @@ export function toStreamingDisplayMessage(
 	return {
 		id: streamingMessageId(message.id),
 		conversationId,
-		role: "assistant",
+		role: message.role,
 		content,
 		proposal: proposalPart?.data,
 		createdAt: new Date().toISOString(),

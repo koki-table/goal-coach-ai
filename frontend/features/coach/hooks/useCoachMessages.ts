@@ -123,8 +123,6 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 		},
 	});
 
-	const isSending = status === "submitted" || status === "streaming";
-
 	const sendMessage = useCallback(
 		async (content: string): Promise<boolean> => {
 			if (!conversationId || !transport) return false;
@@ -146,15 +144,28 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 		[conversationId, transport, sendChatMessage, mutate, setStreamMessages],
 	);
 
-	// streaming中のassistant応答を確定履歴の末尾に一時的に重ねて表示する。
+	// streaming中のuser/assistantメッセージを確定履歴の末尾に一時的に重ねて表示する。
 	// 完了後はsendMessage内でsetStreamMessages([])しているため、ここには残らない。
-	const messages = useMemo(() => {
-		if (!conversationId || streamMessages.length === 0) return confirmedMessages;
-		const streamingDisplayMessages = streamMessages
+	// assistantの最初のトークンが届くまでcontentが空文字列になる（Gemini実測で約1秒）ため、
+	// 空のバブルを出さず、その間はisSendingでTypingIndicatorのみ表示する。
+	const streamingDisplayMessages = useMemo(() => {
+		if (!conversationId) return [];
+		return streamMessages
 			.map((m) => toStreamingDisplayMessage(m, conversationId))
-			.filter((m): m is CoachMessage => m !== undefined);
-		return [...confirmedMessages, ...streamingDisplayMessages];
-	}, [confirmedMessages, streamMessages, conversationId]);
+			.filter((m): m is CoachMessage => m !== undefined && m.content.length > 0);
+	}, [streamMessages, conversationId]);
+
+	// text-startチャンク到着時点でtype:"text"のpartが空文字列で作られるため、
+	// partの有無ではなくstreamingDisplayMessages（content非空でフィルタ済み）の
+	// 有無で「最初のトークンがまだ届いていない」状態を判定する。
+	const isSending =
+		status === "submitted" ||
+		(status === "streaming" && !streamingDisplayMessages.some((m) => m.role === "assistant"));
+
+	const messages = useMemo(
+		() => [...confirmedMessages, ...streamingDisplayMessages],
+		[confirmedMessages, streamingDisplayMessages],
+	);
 
 	const refresh = useCallback(async () => {
 		await mutate();
