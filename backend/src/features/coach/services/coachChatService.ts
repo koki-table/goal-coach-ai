@@ -20,9 +20,11 @@ import { mapTodoToResponse } from "../../todos/helpers/todoMapper.helper";
 import type { CoachChatPromptMessage } from "../helpers/coachChatPrompt.helper";
 import { buildChatUserPrompt } from "../helpers/coachChatPrompt.helper";
 import type { PlanProposalPayload } from "../helpers/coachProposal.helper";
-import { toPromptMessage, toProposalPayload } from "../helpers/coachProposal.helper";
+import { toPromptMessage } from "../helpers/coachProposal.helper";
 import { buildGoalSnapshot } from "../helpers/goalSnapshot.helper";
-import { chat, createCoachModel } from "../lib/coachModel";
+import { createCoachModel } from "../lib/coachModel";
+import type { CoachTurnResult } from "../lib/coachOrchestrator";
+import { runCoachTurn } from "../lib/coachOrchestrator";
 import { getChatSystemInstruction } from "../prompts/coachPrompts";
 
 export type AdoptPlanItemTarget = { type: "milestone" } | { type: "todo"; todoIndex: number };
@@ -79,7 +81,12 @@ export class CoachChatService {
 		}
 	}
 
-	async sendMessage(userId: string, conversationId: string, content: string, env: Bindings) {
+	// ストリーミング応答を開始する。呼び出し側はuiStreamをHTTPレスポンスとして
+	// クライアントへ流し、ストリーム終端後にpersistTurn()を呼んでuser・assistant
+	// メッセージを永続化する。db.batch()はLLM呼び出しの結果が確定してからでないと
+	// 組めないため、「アトミックな2メッセージ書き込み」自体はストリーム完了後に行う
+	// （ユーザー入力とLLM結果が両方揃うまで書き込みを遅らせる点は元の実装を維持）。
+	async startMessageStream(userId: string, conversationId: string, content: string, env: Bindings) {
 		if (!env.GEMINI_API_KEY) {
 			throw new CoachNotConfiguredError();
 		}
@@ -124,24 +131,34 @@ export class CoachChatService {
 					};
 
 		const model = createCoachModel(env);
-		const result = await chat({
+		const { uiStream, turnResult } = runCoachTurn({
 			model,
 			system: getChatSystemInstruction("calmMentor"),
 			prompt,
+			existingMilestoneTitles,
 		});
 
-		const proposal: PlanProposalPayload | null = result.planProposal
-			? toProposalPayload(result.planProposal, existingMilestoneTitles)
-			: null;
+		const persistTurn = () => this.persistCompletedTurn(conversationId, content, turnResult);
 
-		// LLM成功後にuser・assistantの2メッセージとupdatedAt更新をアトミックに書き込む。
+		return { uiStream, persistTurn };
+	}
+
+	// ストリーム完了後にuser・assistantの2メッセージとupdatedAt更新をアトミックに
+	// 書き込む。LLM呼び出しがエラーで終わった場合はuser行も書き込まず、孤立行を残さない。
+	private async persistCompletedTurn(
+		conversationId: string,
+		userContent: string,
+		turnResult: CoachTurnResult["turnResult"],
+	) {
+		const { reply, proposal } = await turnResult;
+
 		const [, [assistantMessage]] = await this.db.batch([
-			this.messageRepo.insertStmt({ conversationId, role: "user", content }),
+			this.messageRepo.insertStmt({ conversationId, role: "user", content: userContent }),
 			this.messageRepo
 				.insertStmt({
 					conversationId,
 					role: "assistant",
-					content: result.reply,
+					content: reply,
 					proposal: proposal ? JSON.stringify(proposal) : null,
 				})
 				.returning(),

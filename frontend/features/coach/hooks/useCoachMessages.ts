@@ -1,14 +1,15 @@
-import { createApiClient } from "@/lib/swr/apiClient";
+import { ApiClientError } from "@/lib/swr/apiClient";
+import { useChat } from "@ai-sdk/react";
 import { useAuth } from "@clerk/nextjs";
+import { DefaultChatTransport } from "ai";
 import { useCallback, useMemo, useRef, useState } from "react";
 import useSWRInfinite from "swr/infinite";
 import type { CoachErrorInfo } from "../helpers/coachErrorMessage.helper";
 import { mapCoachError } from "../helpers/coachErrorMessage.helper";
-import {
-	createOptimisticMessage,
-	mergeOptimisticMessage,
-} from "../helpers/mergeOptimisticMessage.helper";
-import type { CoachMessage, CoachMessagePage, OptimisticCoachMessage } from "../types";
+import { toStreamingDisplayMessage } from "../helpers/coachStreamMessage.helper";
+import type { CoachMessage, CoachMessagePage } from "../types";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787/api";
 
 export type UseCoachMessagesReturn = {
 	messages: CoachMessage[];
@@ -23,10 +24,34 @@ export type UseCoachMessagesReturn = {
 	refresh: () => Promise<void>;
 };
 
+// useChatのDefaultChatTransportはfetchがres.ok===falseでも素のErrorしかthrowしないため、
+// ステータスコード別の文言（429/502/503等）をmapCoachErrorで出し分けられない。
+// レスポンスボディを読んでApiClientErrorに変換してからthrowし直す。
+async function fetchAndThrowApiClientError(
+	input: RequestInfo | URL,
+	init?: RequestInit,
+): Promise<Response> {
+	const res = await fetch(input, init);
+	if (res.ok) return res;
+
+	let body: unknown;
+	try {
+		body = await res.clone().json();
+	} catch {
+		body = await res
+			.clone()
+			.text()
+			.catch(() => null);
+	}
+	const message =
+		body && typeof body === "object" && "message" in body
+			? String((body as { message: unknown }).message)
+			: `Request failed with status ${res.status}`;
+	throw new ApiClientError(res.status, message, body);
+}
+
 export function useCoachMessages(conversationId: string | undefined): UseCoachMessagesReturn {
 	const { getToken, isLoaded, isSignedIn } = useAuth();
-	// apiClientの参照を安定させ、これに依存するuseCallbackが毎レンダリング再生成されるのを防ぐ
-	const apiClient = useMemo(() => createApiClient(getToken), [getToken]);
 
 	const getKey = (pageIndex: number, previousPageData: CoachMessagePage | null) => {
 		if (!isLoaded || !isSignedIn || !conversationId) return null;
@@ -46,51 +71,100 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 		[data],
 	);
 
-	const [optimisticMessage, setOptimisticMessage] = useState<OptimisticCoachMessage | undefined>(
-		undefined,
-	);
-	// サーバー発行id(正の整数)と衝突しない一時idを発行する
-	const tempIdCounterRef = useRef(0);
-
-	const messages = useMemo(
-		() => mergeOptimisticMessage(confirmedMessages, optimisticMessage, conversationId),
-		[confirmedMessages, optimisticMessage, conversationId],
-	);
-
 	const hasMore = data ? !!data[data.length - 1]?.nextCursor : true;
 	const loadMore = useCallback(() => setSize(size + 1), [size, setSize]);
 
-	const [isSending, setIsSending] = useState(false);
 	const [sendError, setSendError] = useState<CoachErrorInfo | undefined>(undefined);
+
+	// sendMessage()呼び出しごとに、対応するonFinish/onErrorの発火を待つためのresolver。
+	// useChatのsendMessage自体は失敗時もrejectしない（内部でcatchしてstatus:"error"に
+	// するだけ）ため、コールバック経由で完了・失敗を判定する。
+	const pendingTurnRef = useRef<{
+		resolve: (ok: boolean) => void;
+	} | null>(null);
+
+	// transportはconversationIdが変わるごとに作り直す。認証ヘッダーはリクエストごとに
+	// getTokenで解決するresolvable形式（Resolvable<Record<string,string>>）を使う。
+	const transport = useMemo(() => {
+		if (!conversationId) return undefined;
+		return new DefaultChatTransport({
+			api: `${API_BASE_URL}/coach/conversations/${conversationId}/messages`,
+			fetch: fetchAndThrowApiClientError,
+			headers: async (): Promise<Record<string, string>> => {
+				const token = await getToken();
+				return token ? { Authorization: `Bearer ${token}` } : {};
+			},
+			// useChatのsendMessage({text})はUIMessage形式のbodyを組むが、
+			// バックエンドはcoachMessageCreateSchemaの{content}を期待するため変換する。
+			prepareSendMessagesRequest: ({ messages, api, headers, credentials }) => {
+				const lastUserMessage = messages[messages.length - 1];
+				const content = lastUserMessage?.parts
+					.filter((part) => part.type === "text")
+					.map((part) => (part as { type: "text"; text: string }).text)
+					.join("");
+				return { api, headers, credentials, body: { content } };
+			},
+		});
+	}, [conversationId, getToken]);
+
+	const {
+		messages: streamMessages,
+		sendMessage: sendChatMessage,
+		status,
+		setMessages: setStreamMessages,
+	} = useChat({
+		transport,
+		onFinish: ({ isError }) => {
+			pendingTurnRef.current?.resolve(!isError);
+			pendingTurnRef.current = null;
+		},
+		onError: (chatError) => {
+			setSendError(mapCoachError(chatError));
+		},
+	});
 
 	const sendMessage = useCallback(
 		async (content: string): Promise<boolean> => {
-			if (!conversationId) return false;
-			tempIdCounterRef.current -= 1;
-			setOptimisticMessage(
-				createOptimisticMessage({
-					tempId: tempIdCounterRef.current,
-					conversationId,
-					content,
-					baselineCount: confirmedMessages.length,
-					createdAt: new Date().toISOString(),
-				}),
-			);
-			setIsSending(true);
+			if (!conversationId || !transport) return false;
 			setSendError(undefined);
-			try {
-				await apiClient.post(`/coach/conversations/${conversationId}/messages`, { content });
+
+			const turnCompleted = new Promise<boolean>((resolve) => {
+				pendingTurnRef.current = { resolve };
+			});
+			await sendChatMessage({ text: content });
+			const ok = await turnCompleted;
+
+			if (ok) {
+				// ストリーム完了後に確定履歴を再取得し、streaming用の一時メッセージを消す。
 				await mutate();
-				return true;
-			} catch (e) {
-				setSendError(mapCoachError(e));
-				return false;
-			} finally {
-				setIsSending(false);
-				setOptimisticMessage(undefined);
+				setStreamMessages([]);
 			}
+			return ok;
 		},
-		[apiClient, conversationId, mutate, confirmedMessages.length],
+		[conversationId, transport, sendChatMessage, mutate, setStreamMessages],
+	);
+
+	// streaming中のuser/assistantメッセージを確定履歴の末尾に一時的に重ねて表示する。
+	// 完了後はsendMessage内でsetStreamMessages([])しているため、ここには残らない。
+	// assistantの最初のトークンが届くまでcontentが空文字列になる（Gemini実測で約1秒）ため、
+	// 空のバブルを出さず、その間はisSendingでTypingIndicatorのみ表示する。
+	const streamingDisplayMessages = useMemo(() => {
+		if (!conversationId) return [];
+		return streamMessages
+			.map((m) => toStreamingDisplayMessage(m, conversationId))
+			.filter((m): m is CoachMessage => m !== undefined && m.content.length > 0);
+	}, [streamMessages, conversationId]);
+
+	// text-startチャンク到着時点でtype:"text"のpartが空文字列で作られるため、
+	// partの有無ではなくstreamingDisplayMessages（content非空でフィルタ済み）の
+	// 有無で「最初のトークンがまだ届いていない」状態を判定する。
+	const isSending =
+		status === "submitted" ||
+		(status === "streaming" && !streamingDisplayMessages.some((m) => m.role === "assistant"));
+
+	const messages = useMemo(
+		() => [...confirmedMessages, ...streamingDisplayMessages],
+		[confirmedMessages, streamingDisplayMessages],
 	);
 
 	const refresh = useCallback(async () => {

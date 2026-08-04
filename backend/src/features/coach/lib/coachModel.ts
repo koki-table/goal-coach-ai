@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateObject } from "ai";
+import { streamObject } from "ai";
 import type { Bindings } from "../../../types/env";
 import { coachChatReplySchema } from "../prompts/coachPrompts";
 import type { CoachChatReplyResult } from "../prompts/coachPrompts";
@@ -27,20 +27,42 @@ export function createCoachModel(env: Bindings) {
 	return google(MODEL_ID);
 }
 
-export async function chat(params: {
-	model: ReturnType<typeof createCoachModel>;
-	system: string;
-	prompt: string;
-}): Promise<CoachChatReplyResult> {
+// generateObjectの1発生成ではreply全体が確定するまでユーザーが無言待ちになるため、
+// streamObjectでreplyフィールドの部分文字列を先行して取り出せる形にしている。
+// tool callベースの構成(生成させてから関数呼び出しで提案を受け取る形)はGeminiで
+// 「テキストのみ返してtool callを実行しない」「toolChoice:requiredでは同一提案を
+// 複数回重複生成する」という不整合が実測で確認されたため採用していない。
+//
+// streamObjectの`object`promiseは`partialObjectStream`を最後まで消費しないと
+// 解決しない（内部で同じbaseStreamを共有しているため）。呼び出し側が両者を
+// 別々に受け取ると消費順序を誤ってハングし得るので、コールバック形式にして
+// 「必ずstreamを読み切ってからresultを返す」流れをこの関数内に閉じ込める。
+export async function streamChat(
+	params: {
+		model: ReturnType<typeof createCoachModel>;
+		system: string;
+		prompt: string;
+	},
+	onReplyDelta: (delta: string) => void,
+): Promise<CoachChatReplyResult> {
+	const stream = streamObject({
+		model: params.model,
+		system: params.system,
+		prompt: params.prompt,
+		schema: coachChatReplySchema,
+		temperature: 0.7,
+	});
+
 	try {
-		const { object } = await generateObject({
-			model: params.model,
-			system: params.system,
-			prompt: params.prompt,
-			schema: coachChatReplySchema,
-			temperature: 0.7,
-		});
-		return object;
+		let prevLength = 0;
+		for await (const partial of stream.partialObjectStream) {
+			const reply = partial.reply ?? "";
+			if (reply.length > prevLength) {
+				onReplyDelta(reply.slice(prevLength));
+				prevLength = reply.length;
+			}
+		}
+		return await stream.object;
 	} catch (error) {
 		throw new CoachModelError(error);
 	}
