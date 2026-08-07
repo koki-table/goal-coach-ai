@@ -3,20 +3,27 @@
 import { Avatar, AvatarImage } from "@/components/atom/avatar";
 import { cn } from "@/lib/utils";
 import type { CoachMessage } from "../types";
+import { ObjectiveProposalWidget } from "./objectiveProposalWidget";
 import { PlanProposalWidget } from "./planProposalWidget";
 
 type ChatMessageBubbleProps = {
 	message: CoachMessage;
-	onAdoptMilestone: (messageId: number) => Promise<void>;
+	onAdoptKeyResult: (messageId: number, keyResultIndex: number) => Promise<void>;
 	onAdoptTodo: (messageId: number, todoIndex: number) => Promise<void>;
+	onAdoptObjective: (messageId: number) => Promise<void>;
 	adoptingKey: string | undefined;
+	isAdoptingObjective: boolean;
+	isGoalLimitReached: boolean;
 };
 
 export function ChatMessageBubble({
 	message,
-	onAdoptMilestone,
+	onAdoptKeyResult,
 	onAdoptTodo,
+	onAdoptObjective,
 	adoptingKey,
+	isAdoptingObjective,
+	isGoalLimitReached,
 }: ChatMessageBubbleProps) {
 	const isUser = message.role === "user";
 
@@ -36,12 +43,21 @@ export function ChatMessageBubble({
 				>
 					{message.content}
 				</div>
-				{message.proposal && (
+				{message.proposal?.objective && (
+					<ObjectiveProposalWidget
+						objective={message.proposal.objective}
+						keyResults={message.proposal.keyResults}
+						onAdopt={() => onAdoptObjective(message.id)}
+						isAdopting={isAdoptingObjective}
+						isGoalLimitReached={isGoalLimitReached}
+					/>
+				)}
+				{message.proposal && !message.proposal.objective && (
 					<PlanProposalWidget
 						proposal={message.proposal}
 						messageId={message.id}
 						adoptingKey={adoptingKey}
-						onAdoptMilestone={() => onAdoptMilestone(message.id)}
+						onAdoptKeyResult={(keyResultIndex) => onAdoptKeyResult(message.id, keyResultIndex)}
 						onAdoptTodo={(todoIndex) => onAdoptTodo(message.id, todoIndex)}
 					/>
 				)}

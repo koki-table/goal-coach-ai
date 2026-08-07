@@ -6,6 +6,7 @@ export type CoachErrorKind =
 	| "planItemNotFound"
 	| "alreadyAdopted"
 	| "milestoneNotAdoptedYet"
+	| "goalLimitExceeded"
 	| "rateLimit"
 	| "notConfigured"
 	| "modelUnavailable"
@@ -45,9 +46,24 @@ const STATUS_MESSAGES: Record<number, CoachErrorInfo> = {
 	},
 };
 
+function extractReason(info: unknown): string | undefined {
+	return info && typeof info === "object" && "reason" in info
+		? String((info as { reason: unknown }).reason)
+		: undefined;
+}
+
 // apiClientがスローしたApiClientError（またはその他のError）をユーザー向けメッセージ+種別に変換する
 export function mapCoachError(error: unknown): CoachErrorInfo {
 	if (error instanceof ApiClientError) {
+		// reasonフィールドを持つ409は、汎用の「既に採用済み」文言より先に専用の理由を判定する
+		if (error.status === 409 && extractReason(error.info) === "goalLimitExceeded") {
+			return {
+				kind: "goalLimitExceeded",
+				message:
+					"目標は同時に2件までしか設定できません。既存の目標を完了するか削除してから、新しい相談を始めてください。",
+			};
+		}
+
 		const known = STATUS_MESSAGES[error.status];
 		if (known) return known;
 		if (error.status >= 500) {

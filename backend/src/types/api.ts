@@ -104,9 +104,12 @@ export type GoalWithTodosResponse = {
 	myTodos: TodoResponse[];
 };
 
+export type CoachConversationKindValue = "goal" | "exploration";
+
 export type CoachConversationResponse = {
 	id: string;
 	goalId?: string;
+	kind: CoachConversationKindValue;
 	goalTitleSnapshot: string;
 	goalDeadlineSnapshot?: string;
 	createdAt: string;
@@ -120,7 +123,13 @@ export type PlanProposalTodoPayload = {
 	createdTodoId?: string;
 };
 
-export type PlanProposalMilestonePayload = {
+export type ProposalObjectivePayload = {
+	title: string;
+	deadline: string | null;
+	category: GoalCategoryType;
+} | null;
+
+export type ProposalKeyResultPayload = {
 	title: string;
 	targetValue: number;
 	unit: string;
@@ -128,8 +137,10 @@ export type PlanProposalMilestonePayload = {
 	createdMilestoneId?: string;
 };
 
-export type PlanProposalPayload = {
-	milestone: PlanProposalMilestonePayload | null;
+export type ProposalEnvelopePayload = {
+	version: 1;
+	objective: ProposalObjectivePayload;
+	keyResults: ProposalKeyResultPayload[];
 	todos: PlanProposalTodoPayload[];
 };
 
@@ -140,7 +151,7 @@ export type CoachMessageResponse = {
 	conversationId: string;
 	role: CoachMessageRoleValue;
 	content: string;
-	proposal?: PlanProposalPayload;
+	proposal?: ProposalEnvelopePayload;
 	createdAt: string;
 };
 
@@ -150,7 +161,12 @@ export type CoachMessagePageResponse = {
 };
 
 export type AdoptPlanItemResponse = {
-	proposal: PlanProposalPayload;
+	proposal: ProposalEnvelopePayload;
 	milestone?: MilestoneResponse;
 	todo?: TodoResponse;
+};
+
+export type AdoptObjectiveResponse = {
+	goal: GoalResponse;
+	proposal: ProposalEnvelopePayload;
 };

@@ -15,3 +15,7 @@ export type TaskType = (typeof taskTypes)[number];
 
 export const coachMessageRoles = ["user", "assistant"] as const;
 export type CoachMessageRole = (typeof coachMessageRoles)[number];
+
+// "exploration"は目標未確定の探索スレッド、"goal"は目標に紐づく通常スレッド
+export const coachConversationKinds = ["goal", "exploration"] as const;
+export type CoachConversationKind = (typeof coachConversationKinds)[number];

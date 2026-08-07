@@ -13,8 +13,8 @@ export type UseAdoptPlanItemReturn = {
 };
 
 function toKey(messageId: number, target: AdoptPlanItemTarget): string {
-	return target.target === "milestone"
-		? `${messageId}:milestone`
+	return target.target === "keyResult"
+		? `${messageId}:kr:${target.keyResultIndex}`
 		: `${messageId}:todo:${target.todoIndex}`;
 }
 

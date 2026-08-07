@@ -87,9 +87,11 @@ export class MilestoneRepository {
 			.where(eq(milestones.id, id));
 	}
 
-	// db.batch() 用のステートメント（実行しない）
+	// db.batch() 用のステートメント（実行しない）。idを指定するとアトミック採用のため
+	// 呼び出し側の採番を使う（例: coachの提案採用でconversation更新と同じbatch内で参照する）
 	insertManyStmt(
 		entries: {
+			id?: string;
 			goalId: string;
 			title: string;
 			label?: string;

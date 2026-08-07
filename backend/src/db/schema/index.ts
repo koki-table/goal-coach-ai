@@ -6,5 +6,10 @@ export { todos } from "./todos";
 export { todoLogs } from "./todoLogs";
 export { coachConversations } from "./coachConversations";
 export { coachMessages } from "./coachMessages";
-export { defaultCategories, todoLogTypes, coachMessageRoles } from "./constants";
-export type { TodoLogType, CoachMessageRole } from "./constants";
+export {
+	defaultCategories,
+	todoLogTypes,
+	coachMessageRoles,
+	coachConversationKinds,
+} from "./constants";
+export type { TodoLogType, CoachMessageRole, CoachConversationKind } from "./constants";

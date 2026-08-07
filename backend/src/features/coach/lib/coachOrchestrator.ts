@@ -1,7 +1,7 @@
 import { createUIMessageStream } from "ai";
 import type { UIMessageChunk } from "ai";
-import type { PlanProposalPayload } from "../helpers/coachProposal.helper";
-import { toProposalPayload } from "../helpers/coachProposal.helper";
+import type { ProposalEnvelope } from "../helpers/coachProposal.helper";
+import { toProposalEnvelope } from "../helpers/coachProposal.helper";
 import type { CoachChatReplyResult } from "../prompts/coachPrompts";
 import type { CoachModelError } from "./coachModel";
 import { streamChat } from "./coachModel";
@@ -14,7 +14,9 @@ export type CoachTurnInput = {
 	model: ReturnType<typeof createCoachModel>;
 	system: string;
 	prompt: string;
-	existingMilestoneTitles: string[];
+	existingKeyResultTitles: string[];
+	// goalスレッドではobjectiveを常にnullへ強制する。既定は"goal"
+	threadKind?: "goal" | "exploration";
 };
 
 export type CoachTurnResult = {
@@ -22,7 +24,7 @@ export type CoachTurnResult = {
 	uiStream: ReadableStream<UIMessageChunk>;
 	// ストリーム完了後に確定するreplyとproposal。呼び出し側はuiStreamを最後まで
 	// 消費した後にこのpromiseを読む（streamChatの制約を引き継ぐ）。
-	turnResult: Promise<{ reply: string; proposal: PlanProposalPayload | null }>;
+	turnResult: Promise<{ reply: string; proposal: ProposalEnvelope | null }>;
 };
 
 const REPLY_TEXT_PART_ID = "reply";
@@ -30,9 +32,9 @@ const REPLY_TEXT_PART_ID = "reply";
 // 1ターン分の応答を作る。reply部分文字列をtext-deltaとして逐次書き出し、
 // ストリーム終端で確定したproposalをdata-proposalとして書き出す。
 export function runCoachTurn(input: CoachTurnInput): CoachTurnResult {
-	let resolveTurnResult: (value: { reply: string; proposal: PlanProposalPayload | null }) => void;
+	let resolveTurnResult: (value: { reply: string; proposal: ProposalEnvelope | null }) => void;
 	let rejectTurnResult: (error: unknown) => void;
-	const turnResult = new Promise<{ reply: string; proposal: PlanProposalPayload | null }>(
+	const turnResult = new Promise<{ reply: string; proposal: ProposalEnvelope | null }>(
 		(resolve, reject) => {
 			resolveTurnResult = resolve;
 			rejectTurnResult = reject;
@@ -53,8 +55,11 @@ export function runCoachTurn(input: CoachTurnInput): CoachTurnResult {
 
 				writer.write({ type: "text-end", id: REPLY_TEXT_PART_ID });
 
-				const proposal: PlanProposalPayload | null = result.planProposal
-					? toProposalPayload(result.planProposal, input.existingMilestoneTitles)
+				const proposal: ProposalEnvelope | null = result.proposal
+					? toProposalEnvelope(result.proposal, {
+							threadKind: input.threadKind ?? "goal",
+							existingKeyResultTitles: input.existingKeyResultTitles,
+						})
 					: null;
 
 				if (proposal) {
