@@ -209,22 +209,25 @@ describe("toProposalEnvelope", () => {
 		],
 	};
 
-	it("explorationスレッドではobjectiveをそのまま通す", () => {
+	it("undecidedスレッドではobjectiveをそのまま通す", () => {
 		const result = toProposalEnvelope(base, {
-			threadKind: "exploration",
+			objectiveStatus: "undecided",
 			existingKeyResultTitles: [],
 		});
 		expect(result.objective).toEqual(base.objective);
 	});
 
-	it("goalスレッドではobjectiveを常にnullへ強制する", () => {
-		const result = toProposalEnvelope(base, { threadKind: "goal", existingKeyResultTitles: [] });
+	it("decidedスレッドではobjectiveを常にnullへ強制する", () => {
+		const result = toProposalEnvelope(base, {
+			objectiveStatus: "decided",
+			existingKeyResultTitles: [],
+		});
 		expect(result.objective).toBeNull();
 	});
 
 	it("既存KRタイトルと完全一致するKRは除外する(前後空白は無視)", () => {
 		const result = toProposalEnvelope(base, {
-			threadKind: "exploration",
+			objectiveStatus: "undecided",
 			existingKeyResultTitles: ["  模試900点  "],
 		});
 		expect(result.keyResults).toEqual([]);
@@ -233,7 +236,7 @@ describe("toProposalEnvelope", () => {
 	it("定量目標がnullなら0〜100%スケール(目標100/単位%)にフォールバックする", () => {
 		const result = toProposalEnvelope(
 			{ ...base, keyResults: [{ title: "新KR", targetValue: null, unit: null }] },
-			{ threadKind: "exploration", existingKeyResultTitles: [] },
+			{ objectiveStatus: "undecided", existingKeyResultTitles: [] },
 		);
 		expect(result.keyResults).toEqual([
 			{ title: "新KR", targetValue: 100, unit: "%", adopted: false },
@@ -242,7 +245,7 @@ describe("toProposalEnvelope", () => {
 
 	it("keyResultsとtodosはすべてadopted=falseで変換する", () => {
 		const result = toProposalEnvelope(base, {
-			threadKind: "exploration",
+			objectiveStatus: "undecided",
 			existingKeyResultTitles: [],
 		});
 		expect(result.keyResults[0].adopted).toBe(false);

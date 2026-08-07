@@ -15,8 +15,8 @@ export type CoachTurnInput = {
 	system: string;
 	prompt: string;
 	existingKeyResultTitles: string[];
-	// goalスレッドではobjectiveを常にnullへ強制する。既定は"goal"
-	threadKind?: "goal" | "exploration";
+	// Objective確定済み("decided")スレッドではobjectiveを常にnullへ強制する。既定は"decided"
+	objectiveStatus?: "decided" | "undecided";
 };
 
 export type CoachTurnResult = {
@@ -57,7 +57,7 @@ export function runCoachTurn(input: CoachTurnInput): CoachTurnResult {
 
 				const proposal: ProposalEnvelope | null = result.proposal
 					? toProposalEnvelope(result.proposal, {
-							threadKind: input.threadKind ?? "goal",
+							objectiveStatus: input.objectiveStatus ?? "decided",
 							existingKeyResultTitles: input.existingKeyResultTitles,
 						})
 					: null;

@@ -22,8 +22,8 @@ export class CoachConversationRepository {
 			.get();
 	}
 
-	// 探索スレッド(kind="exploration", goalId未確定)はユーザーに1本だけの前提。
-	// 部分ユニークインデックス(idx_coach_conversations_user_exploration)がDB側の保証を担う
+	// 探索スレッド(objectiveStatus="undecided", goalId未確定)はユーザーに1本だけの前提。
+	// 部分ユニークインデックス(idx_coach_conversations_user_undecided_objective)がDB側の保証を担う
 	async findOpenExplorationByUserId(userId: string) {
 		return this.db
 			.select()
@@ -31,7 +31,7 @@ export class CoachConversationRepository {
 			.where(
 				and(
 					eq(coachConversations.userId, userId),
-					eq(coachConversations.kind, "exploration"),
+					eq(coachConversations.objectiveStatus, "undecided"),
 					isNull(coachConversations.goalId),
 				),
 			)
@@ -53,7 +53,7 @@ export class CoachConversationRepository {
 			.insert(coachConversations)
 			.values({
 				userId: data.userId,
-				kind: "exploration",
+				objectiveStatus: "undecided",
 				goalTitleSnapshot: data.titleSnapshot,
 			})
 			.returning()
@@ -61,8 +61,8 @@ export class CoachConversationRepository {
 	}
 
 	// db.batch() 用のステートメント（実行しない）。Objective採用時に探索スレッドをgoalスレッドへ
-	// 遷移させる。goalIdが入ることでidx_coach_conversations_user_explorationの対象から外れ、
-	// idx_coach_conversations_user_goal_idが「1目標1スレッド」を引き継ぐ
+	// 遷移させる。goalIdが入ることでidx_coach_conversations_user_undecided_objectiveの対象から
+	// 外れ、idx_coach_conversations_user_goal_idが「1目標1スレッド」を引き継ぐ
 	linkGoalStmt(
 		id: string,
 		goalId: string,
@@ -73,7 +73,7 @@ export class CoachConversationRepository {
 			.update(coachConversations)
 			.set({
 				goalId,
-				kind: "goal",
+				objectiveStatus: "decided",
 				goalTitleSnapshot: titleSnapshot,
 				goalDeadlineSnapshot: deadlineSnapshot,
 				updatedAt: new Date().toISOString(),

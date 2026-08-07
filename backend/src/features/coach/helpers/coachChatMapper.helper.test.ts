@@ -6,7 +6,7 @@ describe("mapConversationToResponse", () => {
 		const result = mapConversationToResponse({
 			id: "conv-1",
 			goalId: "goal-1",
-			kind: "goal",
+			objectiveStatus: "decided",
 			goalTitleSnapshot: "TOEIC800点を取る",
 			goalDeadlineSnapshot: "2026-12-31",
 			createdAt: "2026-07-01T00:00:00.000Z",
@@ -16,7 +16,7 @@ describe("mapConversationToResponse", () => {
 		expect(result).toEqual({
 			id: "conv-1",
 			goalId: "goal-1",
-			kind: "goal",
+			objectiveStatus: "decided",
 			goalTitleSnapshot: "TOEIC800点を取る",
 			goalDeadlineSnapshot: "2026-12-31",
 			createdAt: "2026-07-01T00:00:00.000Z",
@@ -28,7 +28,7 @@ describe("mapConversationToResponse", () => {
 		const result = mapConversationToResponse({
 			id: "conv-1",
 			goalId: null,
-			kind: "goal",
+			objectiveStatus: "decided",
 			goalTitleSnapshot: "TOEIC800点を取る",
 			goalDeadlineSnapshot: null,
 			createdAt: "2026-07-01T00:00:00.000Z",
@@ -39,18 +39,18 @@ describe("mapConversationToResponse", () => {
 		expect(result.goalDeadlineSnapshot).toBeUndefined();
 	});
 
-	it("maps an exploration conversation with kind=exploration", () => {
+	it("maps an exploration conversation with objectiveStatus=undecided", () => {
 		const result = mapConversationToResponse({
 			id: "conv-1",
 			goalId: null,
-			kind: "exploration",
+			objectiveStatus: "undecided",
 			goalTitleSnapshot: "目標を決める相談",
 			goalDeadlineSnapshot: null,
 			createdAt: "2026-07-01T00:00:00.000Z",
 			updatedAt: "2026-07-02T00:00:00.000Z",
 		});
 
-		expect(result.kind).toBe("exploration");
+		expect(result.objectiveStatus).toBe("undecided");
 	});
 });
 

@@ -10,6 +10,6 @@ export {
 	defaultCategories,
 	todoLogTypes,
 	coachMessageRoles,
-	coachConversationKinds,
+	objectiveStatuses,
 } from "./constants";
-export type { TodoLogType, CoachMessageRole, CoachConversationKind } from "./constants";
+export type { TodoLogType, CoachMessageRole, ObjectiveStatus } from "./constants";

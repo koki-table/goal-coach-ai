@@ -136,7 +136,7 @@ describe("coachOrchestrator", () => {
 				system: "calm mentor persona",
 				prompt: "goal data",
 				existingKeyResultTitles: [],
-				threadKind: "goal",
+				objectiveStatus: "decided",
 			});
 
 			await collectChunks(uiStream);
@@ -162,7 +162,7 @@ describe("coachOrchestrator", () => {
 				system: "calm mentor persona",
 				prompt: "goal data",
 				existingKeyResultTitles: [],
-				threadKind: "exploration",
+				objectiveStatus: "undecided",
 			});
 
 			await collectChunks(uiStream);

@@ -104,12 +104,12 @@ export type GoalWithTodosResponse = {
 	myTodos: TodoResponse[];
 };
 
-export type CoachConversationKindValue = "goal" | "exploration";
+export type ObjectiveStatusValue = "decided" | "undecided";
 
 export type CoachConversationResponse = {
 	id: string;
 	goalId?: string;
-	kind: CoachConversationKindValue;
+	objectiveStatus: ObjectiveStatusValue;
 	goalTitleSnapshot: string;
 	goalDeadlineSnapshot?: string;
 	createdAt: string;

@@ -1,11 +1,11 @@
 export type TaskType = "daily" | "once";
 export type GoalCategoryType = "study" | "career" | "health" | "skill" | "finance" | "other";
-export type CoachConversationKind = "goal" | "exploration";
+export type ObjectiveStatus = "decided" | "undecided";
 
 export type CoachConversation = {
 	id: string;
 	goalId?: string;
-	kind: CoachConversationKind;
+	objectiveStatus: ObjectiveStatus;
 	goalTitleSnapshot: string;
 	goalDeadlineSnapshot?: string;
 	createdAt: string;

@@ -1,6 +1,6 @@
 # AIコーチ チャット機能
 
-`/coach` ページで、AIコーチと対話する機能。目標(Objective)ごとの通常スレッド(`kind="goal"`)と、目標が未確定のユーザーが対話だけでObjective+Key Resultsを決められる探索スレッド(`kind="exploration"`)の2種類がある。1回きりの提案ではなく、対話を重ねる中でAIが十分に状況を理解したと判断した段階で、Objective・Key Result・TODOの提案を行う。
+`/coach` ページで、AIコーチと対話する機能。目標(Objective)ごとの通常スレッド(`objectiveStatus="decided"`)と、目標が未確定のユーザーが対話だけでObjective+Key Resultsを決められる探索スレッド(`objectiveStatus="undecided"`)の2種類がある。1回きりの提案ではなく、対話を重ねる中でAIが十分に状況を理解したと判断した段階で、Objective・Key Result・TODOの提案を行う。
 
 ## DB設計
 
@@ -13,8 +13,8 @@
 | `id` | text PK (UUID) |
 | `userId` | FK → `users.id`, `onDelete: cascade`。goalId がnull化されうるため、goal経由の推移従属排除は行わずここに直接持つ |
 | `goalId` | FK → `goals.id`, `onDelete: set null`（`goals.categoryId` と同じnullableパターン）。目標削除後も会話履歴は残す。探索スレッドの間もnull |
-| `kind` | `"goal"` \| `"exploration"`。DBレベルでもCHECK制約(`chk_coach_conversations_kind`)で不正値を拒否する。探索スレッドが採用によりgoalスレッドへ遷移すると`"goal"`に変わる |
-| `goalTitleSnapshot` / `goalDeadlineSnapshot` | 会話開始時点の目標タイトル・期限。目標削除後は `goals` テーブルから再現できない「その時点の事実」を保持する正当なスナップショット。**`kind="exploration"`の間はこの列を「検討中のテーマラベル」の意味に拡張して使う**(初期値は定数`EXPLORATION_THREAD_LABEL`="目標を決める相談")。1列が`kind`によって異なる意味を持つ意図的な設計判断で、理由は次の段落に明記する |
+| `objectiveStatus` | `"decided"` \| `"undecided"`。DBレベルでもCHECK制約(`chk_coach_conversations_objective_status`)で不正値を拒否する。探索スレッドが採用によりgoalスレッドへ遷移すると`"decided"`に変わる |
+| `goalTitleSnapshot` / `goalDeadlineSnapshot` | 会話開始時点の目標タイトル・期限。目標削除後は `goals` テーブルから再現できない「その時点の事実」を保持する正当なスナップショット。**`objectiveStatus="undecided"`の間はこの列を「検討中のテーマラベル」の意味に拡張して使う**(初期値は定数`EXPLORATION_THREAD_LABEL`="目標を決める相談")。1列が`objectiveStatus`によって異なる意味を持つ意図的な設計判断で、理由は次の段落に明記する |
 | `createdAt` / `updatedAt` | |
 
 **`goalTitleSnapshot`をNOT NULLのまま維持する理由**: SQLiteでNOT NULLを外すとdrizzle-kitがテーブル再作成(新テーブル作成→データコピー→リネーム)を発行する。`coach_messages`が`coach_conversations`へのcascade FKを持つため、この形の移行はD1上で最も危険な変更になる。既存のスナップショット列を意味オーバーロードさせる方が、新規nullable列を追加するより安全と判断した。
@@ -22,9 +22,9 @@
 **部分ユニークインデックス**: 探索スレッドはユーザーに1本だけ存在できる。
 
 ```sql
-CREATE UNIQUE INDEX idx_coach_conversations_user_exploration
+CREATE UNIQUE INDEX idx_coach_conversations_user_undecided_objective
   ON coach_conversations (userId)
-  WHERE kind = 'exploration' AND goalId IS NULL;
+  WHERE objectiveStatus = 'undecided' AND goalId IS NULL;
 ```
 
 採用により`goalId`が入るとこの索引の対象から外れ、既存の`(userId, goalId)`ユニークインデックスが「1目標1スレッド」を引き継ぐ。SQLiteはNULL同士を区別するため、両方のユニークインデックスが同時に成立する。
@@ -58,7 +58,7 @@ type ProposalEnvelope = {
 
 ### 正規化・将来拡張
 
-`coach_conversations`/`coach_messages` は共に第3正規形(3NF)を満たす。`kind`は`goalId`の値から導出できない独立した事実であり(`kind='goal'`かつ`goalId IS NULL`という組み合わせも正当に存在する)、主キーにのみ関数従属するため推移的従属は発生しない。スナップショット列は非正規化ではなく、削除後に再現不可能な事実の保持である。
+`coach_conversations`/`coach_messages` は共に第3正規形(3NF)を満たす。`objectiveStatus`は`goalId`の値から導出できない独立した事実であり(`objectiveStatus='decided'`かつ`goalId IS NULL`という組み合わせも正当に存在する)、主キーにのみ関数従属するため推移的従属は発生しない。スナップショット列は非正規化ではなく、削除後に再現不可能な事実の保持である。
 
 `coach_messages` は会話の生ログ(短期記憶)として設計し、`coach_messages.id` を安定した参照キーとして使えるようにしている。要約・埋め込み等の長期記憶層・ベクターDB移行は今回は実装しないが、将来必要になった際は `coach_messages.id` を外部キーとする新規テーブル(例: `coach_memory_embeddings`)を追加するだけで済み、既存テーブルの変更は不要という拡張余地を残している。
 
@@ -109,7 +109,7 @@ type ProposalEnvelope = {
 }
 ```
 
-`objective`は探索スレッドのみで意味を持ち、goalスレッドでは`toProposalEnvelope`がサーバー側で強制的に`null`にする。判断できない段階ではproposal自体をnullにして問いを続ける(ターン数などのハードガードはコード側に設けない)。
+`objective`は`objectiveStatus="undecided"`のスレッドのみで意味を持ち、`"decided"`のスレッドでは`toProposalEnvelope`がサーバー側で強制的に`null`にする。判断できない段階ではproposal自体をnullにして問いを続ける(ターン数などのハードガードはコード側に設けない)。
 
 **tool呼び出しを採用しない理由(実装時の検証結果)**: Gemini(`gemini-3.5-flash-lite`)でtool定義付きの`generateText`/`streamText`を試したところ、「テキストのみ返してtool callを実行しない」「`toolChoice:required`では同一提案を複数回重複生成する」という不整合が実測で確認された。このため`coachModel.ts`は`streamObject`のまま、`reply`フィールドの部分文字列を先行して取り出す形を維持している。本issue(#50)のスキーマ変更(`planProposal`→`proposal{objective,keyResults,todos}`)も、この既存パターンをそのまま差し替えただけで、tool化は行っていない。
 

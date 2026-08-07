@@ -105,8 +105,8 @@ const SYSTEM_INSTRUCTIONS: Record<CoachPersona, string> = {
 
 export function getChatSystemInstruction(
 	persona: CoachPersona,
-	threadKind: "goal" | "exploration" = "goal",
+	objectiveStatus: "decided" | "undecided" = "decided",
 ): string {
 	const base = SYSTEM_INSTRUCTIONS[persona];
-	return threadKind === "exploration" ? `${base}${EXPLORATION_ADDENDUM}` : base;
+	return objectiveStatus === "undecided" ? `${base}${EXPLORATION_ADDENDUM}` : base;
 }

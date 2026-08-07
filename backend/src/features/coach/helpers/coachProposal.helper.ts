@@ -142,11 +142,12 @@ export function toProposalPayload(
 }
 
 // LLM出力(CoachProposal)をDB保存用のProposalEnvelopeへ変換する。
-// - goalスレッドではobjectiveを常にnullへ強制する(LLMが誤って返してもサーバー側で除去する)
+// - Objective確定済み("decided")スレッドではobjectiveを常にnullへ強制する(LLMが誤って
+//   返してもサーバー側で除去する)
 // - 既存KRタイトルと完全一致するKRは重複作成を防ぐため除外する(会話履歴のウィンドウ外でも安全)
 export function toProposalEnvelope(
 	proposal: CoachProposal,
-	options: { threadKind: "goal" | "exploration"; existingKeyResultTitles: string[] },
+	options: { objectiveStatus: "decided" | "undecided"; existingKeyResultTitles: string[] },
 ): ProposalEnvelope {
 	const keyResults = proposal.keyResults
 		.filter(
@@ -161,7 +162,7 @@ export function toProposalEnvelope(
 
 	return {
 		version: 1,
-		objective: options.threadKind === "exploration" ? proposal.objective : null,
+		objective: options.objectiveStatus === "undecided" ? proposal.objective : null,
 		keyResults,
 		todos: proposal.todos.map((t) => ({
 			title: t.title,

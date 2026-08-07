@@ -146,11 +146,11 @@ export class CoachChatService {
 						prompt: buildChatUserPrompt({
 							goalTitle: conversation.goalTitleSnapshot,
 							goalDeadline: conversation.goalDeadlineSnapshot,
-							goalDeleted: conversation.kind === "goal",
+							goalDeleted: conversation.objectiveStatus === "decided",
 							history,
 							today: CoachChatService.todayIsoDate(),
 							activeGoalCount:
-								conversation.kind === "exploration"
+								conversation.objectiveStatus === "undecided"
 									? await this.goalRepo.countActiveByUserId(userId)
 									: undefined,
 						}),
@@ -160,10 +160,10 @@ export class CoachChatService {
 		const model = createCoachModel(env);
 		const { uiStream, turnResult } = runCoachTurn({
 			model,
-			system: getChatSystemInstruction("calmMentor", conversation.kind),
+			system: getChatSystemInstruction("calmMentor", conversation.objectiveStatus),
 			prompt,
 			existingKeyResultTitles,
-			threadKind: conversation.kind,
+			objectiveStatus: conversation.objectiveStatus,
 		});
 
 		const persistTurn = () => this.persistCompletedTurn(conversationId, content, turnResult);
@@ -338,7 +338,7 @@ export class CoachChatService {
 			});
 			return { conversation, isNew: true };
 		} catch (e) {
-			// 部分ユニークインデックス(idx_coach_conversations_user_exploration)により、
+			// 部分ユニークインデックス(idx_coach_conversations_user_undecided_objective)により、
 			// 並行リクエストで先に作られていた場合はinsertが失敗する。その場合は既存スレッドを返す。
 			const raced = await this.conversationRepo.findOpenExplorationByUserId(userId);
 			if (raced) return { conversation: raced, isNew: false };
@@ -367,7 +367,7 @@ export class CoachChatService {
 		const model = createCoachModel(env);
 		const { uiStream, turnResult } = runCoachTurn({
 			model,
-			system: getChatSystemInstruction("calmMentor", "exploration"),
+			system: getChatSystemInstruction("calmMentor", "undecided"),
 			prompt: buildChatUserPrompt({
 				goalTitle: conversation.goalTitleSnapshot,
 				goalDeadline: conversation.goalDeadlineSnapshot,
@@ -377,7 +377,7 @@ export class CoachChatService {
 				activeGoalCount,
 			}),
 			existingKeyResultTitles: [],
-			threadKind: "exploration",
+			objectiveStatus: "undecided",
 		});
 
 		const persistTurn = () => this.persistFirstTurn(conversationId, turnResult);

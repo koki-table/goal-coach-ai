@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "432ffa21-c2cb-4f25-93eb-b463685639e0",
+  "id": "4ced572d-bfed-4ced-b30d-86904cf45ca2",
   "prevId": "a40dae11-9681-4023-a229-ba65eb628cee",
   "tables": {
     "coach_conversations": {
@@ -28,13 +28,13 @@
           "notNull": false,
           "autoincrement": false
         },
-        "kind": {
-          "name": "kind",
+        "objectiveStatus": {
+          "name": "objectiveStatus",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'goal'"
+          "default": "'decided'"
         },
         "goalTitleSnapshot": {
           "name": "goalTitleSnapshot",
@@ -81,13 +81,13 @@
           ],
           "isUnique": true
         },
-        "idx_coach_conversations_user_exploration": {
-          "name": "idx_coach_conversations_user_exploration",
+        "idx_coach_conversations_user_undecided_objective": {
+          "name": "idx_coach_conversations_user_undecided_objective",
           "columns": [
             "userId"
           ],
           "isUnique": true,
-          "where": "\"coach_conversations\".\"kind\" = 'exploration' AND \"coach_conversations\".\"goalId\" IS NULL"
+          "where": "\"coach_conversations\".\"objectiveStatus\" = 'undecided' AND \"coach_conversations\".\"goalId\" IS NULL"
         }
       },
       "foreignKeys": {
@@ -121,9 +121,9 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
-        "chk_coach_conversations_kind": {
-          "name": "chk_coach_conversations_kind",
-          "value": "\"coach_conversations\".\"kind\" IN ('goal', 'exploration')"
+        "chk_coach_conversations_objective_status": {
+          "name": "chk_coach_conversations_objective_status",
+          "value": "\"coach_conversations\".\"objectiveStatus\" IN ('decided', 'undecided')"
         }
       }
     },

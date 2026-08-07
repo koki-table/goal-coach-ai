@@ -1,15 +1,15 @@
 import type {
-	CoachConversationKindValue,
 	CoachConversationResponse,
 	CoachMessageResponse,
 	CoachMessageRoleValue,
+	ObjectiveStatusValue,
 } from "../../../types/api";
 import { parseProposalPayload } from "./coachProposal.helper";
 
 export function mapConversationToResponse(conversation: {
 	id: string;
 	goalId: string | null;
-	kind: string;
+	objectiveStatus: string;
 	goalTitleSnapshot: string;
 	goalDeadlineSnapshot: string | null;
 	createdAt: string;
@@ -18,7 +18,7 @@ export function mapConversationToResponse(conversation: {
 	return {
 		id: conversation.id,
 		goalId: conversation.goalId ?? undefined,
-		kind: conversation.kind as CoachConversationKindValue,
+		objectiveStatus: conversation.objectiveStatus as ObjectiveStatusValue,
 		goalTitleSnapshot: conversation.goalTitleSnapshot,
 		goalDeadlineSnapshot: conversation.goalDeadlineSnapshot ?? undefined,
 		createdAt: conversation.createdAt,

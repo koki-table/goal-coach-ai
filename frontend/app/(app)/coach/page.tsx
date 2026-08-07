@@ -48,7 +48,7 @@ function CoachPageContent() {
 	}, [goalsLoading, threadTarget, goals, router]);
 
 	// Objective採用後、探索スレッドは採用先のgoalスレッドへ遷移する(サーバー側でも
-	// conversation.kindがexploration→goalへ変わるため、URLも追従させて整合させる)。
+	// conversation.objectiveStatusがundecided→decidedへ変わるため、URLも追従させて整合させる)。
 	// これをしないと同じ探索スレッドで再度adopt-objectiveを試みるURLに留まってしまう
 	const handleAdoptObjective = async (messageId: number) => {
 		const goalId = await adoptObjective(messageId);
