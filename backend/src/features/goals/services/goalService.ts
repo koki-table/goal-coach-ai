@@ -1,21 +1,17 @@
 import { GoalLimitExceededError, GoalNotFoundError } from "../../../common/errors";
+import { resolveCategoryId } from "../../../common/helpers/categoryResolution.helper";
+import {
+	MAX_ACTIVE_GOALS,
+	isActiveGoalLimitReached,
+} from "../../../common/helpers/goalLimit.helper";
 import { GoalCategoryRepository } from "../../../common/repositories/goalCategoryRepository";
 import { GoalRepository } from "../../../common/repositories/goalRepository";
 import { TodoRepository } from "../../../common/repositories/todoRepository";
 import type { Database } from "../../../db";
-import type {
-	GoalCategoryType,
-	GoalCreateRequest,
-	GoalResponse,
-	GoalUpdateRequest,
-} from "../../../types/api";
+import type { GoalCreateRequest, GoalResponse, GoalUpdateRequest } from "../../../types/api";
 import { getCategoryNameFromKey, mapGoalToResponse } from "../helpers/categoryMapping.helper";
-import { isActiveGoalLimitReached } from "../helpers/goalLimit.helper";
 
 export class GoalService {
-	// OKRの考え方に基づき、同時に持てる未完了(active)目標は最大2件（推奨は1件）に絞る。
-	private static readonly MAX_ACTIVE_GOALS = 2;
-
 	private db: Database;
 	private goalRepo: GoalRepository;
 	private categoryRepo: GoalCategoryRepository;
@@ -44,11 +40,11 @@ export class GoalService {
 
 	async create(userId: string, input: GoalCreateRequest): Promise<GoalResponse> {
 		const existing = await this.goalRepo.findAllByUserId(userId);
-		if (isActiveGoalLimitReached(existing, GoalService.MAX_ACTIVE_GOALS)) {
-			throw new GoalLimitExceededError(GoalService.MAX_ACTIVE_GOALS);
+		if (isActiveGoalLimitReached(existing, MAX_ACTIVE_GOALS)) {
+			throw new GoalLimitExceededError(MAX_ACTIVE_GOALS);
 		}
 
-		const categoryId = await this.resolveCategoryId(userId, input.category);
+		const categoryId = await resolveCategoryId(this.categoryRepo, userId, input.category);
 
 		const goal = await this.goalRepo.create({
 			userId,
@@ -73,7 +69,7 @@ export class GoalService {
 		if (input.description !== undefined) updateData.description = input.description;
 		if (input.deadline !== undefined) updateData.dueDate = input.deadline;
 		if (input.category !== undefined) {
-			updateData.categoryId = await this.resolveCategoryId(userId, input.category);
+			updateData.categoryId = await resolveCategoryId(this.categoryRepo, userId, input.category);
 		}
 
 		const updated = await this.goalRepo.update(goalId, userId, updateData);
@@ -101,17 +97,5 @@ export class GoalService {
 			this.todoRepo.unlinkByGoalIdStmt(goalId),
 			this.goalRepo.deleteStmt(goalId, userId),
 		]);
-	}
-
-	private async resolveCategoryId(userId: string, categoryKey: GoalCategoryType): Promise<string> {
-		const categoryName = getCategoryNameFromKey(categoryKey);
-
-		let category = await this.categoryRepo.findByUserIdAndName(userId, categoryName);
-		if (!category) {
-			const created = await this.categoryRepo.createDefaultCategories(userId);
-			category = created.find((c) => c.name === categoryName) ?? created[0];
-		}
-
-		return category.id;
 	}
 }

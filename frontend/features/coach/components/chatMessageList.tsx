@@ -13,9 +13,12 @@ type ChatMessageListProps = {
 	isLoadingMore: boolean;
 	isSending: boolean;
 	onLoadMore: () => void;
-	onAdoptMilestone: (messageId: number) => Promise<void>;
+	onAdoptKeyResult: (messageId: number, keyResultIndex: number) => Promise<void>;
 	onAdoptTodo: (messageId: number, todoIndex: number) => Promise<void>;
+	onAdoptObjective: (messageId: number) => Promise<void>;
 	adoptingKey: string | undefined;
+	isAdoptingObjective: boolean;
+	isGoalLimitReached: boolean;
 };
 
 export function ChatMessageList({
@@ -24,9 +27,12 @@ export function ChatMessageList({
 	isLoadingMore,
 	isSending,
 	onLoadMore,
-	onAdoptMilestone,
+	onAdoptKeyResult,
 	onAdoptTodo,
+	onAdoptObjective,
 	adoptingKey,
+	isAdoptingObjective,
+	isGoalLimitReached,
 }: ChatMessageListProps) {
 	const topSentinelRef = useRef<HTMLDivElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -102,9 +108,12 @@ export function ChatMessageList({
 				<ChatMessageBubble
 					key={message.id}
 					message={message}
-					onAdoptMilestone={onAdoptMilestone}
+					onAdoptKeyResult={onAdoptKeyResult}
 					onAdoptTodo={onAdoptTodo}
+					onAdoptObjective={onAdoptObjective}
 					adoptingKey={adoptingKey}
+					isAdoptingObjective={isAdoptingObjective}
+					isGoalLimitReached={isGoalLimitReached}
 				/>
 			))}
 			{isSending && (

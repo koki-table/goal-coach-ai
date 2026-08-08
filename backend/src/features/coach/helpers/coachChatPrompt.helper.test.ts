@@ -7,6 +7,7 @@ describe("buildChatUserPrompt", () => {
 			goalTitle: "TOEIC800点を取る",
 			goalDeadline: "2026-12-31",
 			goalDeleted: false,
+			today: "2026-08-05",
 			snapshot: {
 				realProgressPercent: 30,
 				totalTodos: 10,
@@ -28,11 +29,35 @@ describe("buildChatUserPrompt", () => {
 		expect(prompt).toContain("[ユーザー] 最近全然進んでいません");
 	});
 
+	it("includes today's date so the LLM does not guess a deadline", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			today: "2026-08-05",
+			history: [],
+		});
+
+		expect(prompt).toContain("本日の日付: 2026-08-05");
+	});
+
+	it("includes today's date in the deleted-goal branch too", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeadline: "2026-12-31",
+			goalDeleted: true,
+			today: "2026-08-05",
+			history: [],
+		});
+
+		expect(prompt).toContain("本日の日付: 2026-08-05");
+	});
+
 	it("shows a deleted-goal notice and omits snapshot when the goal has been deleted", () => {
 		const prompt = buildChatUserPrompt({
 			goalTitle: "TOEIC800点を取る",
 			goalDeadline: "2026-12-31",
 			goalDeleted: true,
+			today: "2026-08-05",
 			history: [],
 		});
 
@@ -45,6 +70,7 @@ describe("buildChatUserPrompt", () => {
 		const prompt = buildChatUserPrompt({
 			goalTitle: "TOEIC800点を取る",
 			goalDeleted: false,
+			today: "2026-08-05",
 			milestones: [],
 			history: [],
 		});
@@ -56,6 +82,7 @@ describe("buildChatUserPrompt", () => {
 		const prompt = buildChatUserPrompt({
 			goalTitle: "TOEIC800点を取る",
 			goalDeleted: false,
+			today: "2026-08-05",
 			milestones: [{ title: "文法基礎を固める", isCompleted: false }],
 			history: [],
 		});
@@ -68,13 +95,15 @@ describe("buildChatUserPrompt", () => {
 		const prompt = buildChatUserPrompt({
 			goalTitle: "TOEIC800点を取る",
 			goalDeleted: false,
+			today: "2026-08-05",
 			milestones: [],
 			history: [
 				{
 					role: "assistant",
 					content: "次のマイルストーンを提案します。",
 					proposal: {
-						milestone: { title: "基礎文法を習得する", adopted: true },
+						objective: null,
+						keyResults: [{ title: "基礎文法を習得する", adopted: true }],
 						todos: [
 							{ title: "毎日30分学習する", adopted: true },
 							{ title: "参考書を1冊読み終える", adopted: false },
@@ -87,5 +116,51 @@ describe("buildChatUserPrompt", () => {
 		expect(prompt).toContain("主要な成果(Key Result)『基礎文法を習得する』(採用済み)");
 		expect(prompt).toContain("TODO『毎日30分学習する』(採用済み)");
 		expect(prompt).toContain("TODO『参考書を1冊読み終える』(未採用)");
+	});
+
+	it("annotates an objective proposal with its adoption state", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "目標を決める相談",
+			goalDeleted: false,
+			today: "2026-08-05",
+			milestones: [],
+			history: [
+				{
+					role: "assistant",
+					content: "この目標にしましょう。",
+					proposal: {
+						objective: { title: "資格を取得する", adopted: false },
+						keyResults: [],
+						todos: [],
+					},
+				},
+			],
+		});
+
+		expect(prompt).toContain("目標(Objective)『資格を取得する』(未採用)");
+	});
+
+	it("includes the active goal count in user_state when provided", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "目標を決める相談",
+			goalDeleted: false,
+			today: "2026-08-05",
+			history: [],
+			activeGoalCount: 2,
+		});
+
+		expect(prompt).toContain("<user_state>");
+		expect(prompt).toContain("現在のactive(未完了)目標数: 2件");
+	});
+
+	it("omits the user_state block when activeGoalCount is not provided", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			today: "2026-08-05",
+			history: [],
+		});
+
+		expect(prompt).not.toContain("<user_state>");
 	});
 });

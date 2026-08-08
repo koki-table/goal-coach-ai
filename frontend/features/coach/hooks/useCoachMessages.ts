@@ -2,7 +2,7 @@ import { ApiClientError } from "@/lib/swr/apiClient";
 import { useChat } from "@ai-sdk/react";
 import { useAuth } from "@clerk/nextjs";
 import { DefaultChatTransport } from "ai";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWRInfinite from "swr/infinite";
 import type { CoachErrorInfo } from "../helpers/coachErrorMessage.helper";
 import { mapCoachError } from "../helpers/coachErrorMessage.helper";
@@ -23,6 +23,17 @@ export type UseCoachMessagesReturn = {
 	sendError: CoachErrorInfo | undefined;
 	refresh: () => Promise<void>;
 };
+
+// レスポンスボディ(SSE)を読み切るだけの用途。first-turnはトークン単位の表示をせず、
+// 完了後にmutate()で確定履歴を再取得する(ユーザー入力を伴わないため楽観的表示は不要)。
+async function drainResponseBody(res: Response): Promise<void> {
+	const reader = res.body?.getReader();
+	if (!reader) return;
+	while (true) {
+		const { done } = await reader.read();
+		if (done) break;
+	}
+}
 
 // useChatのDefaultChatTransportはfetchがres.ok===falseでも素のErrorしかthrowしないため、
 // ステータスコード別の文言（429/502/503等）をmapCoachErrorで出し分けられない。
@@ -50,8 +61,12 @@ async function fetchAndThrowApiClientError(
 	throw new ApiClientError(res.status, message, body);
 }
 
-export function useCoachMessages(conversationId: string | undefined): UseCoachMessagesReturn {
+export function useCoachMessages(
+	conversationId: string | undefined,
+	options?: { autoTriggerFirstTurn?: boolean },
+): UseCoachMessagesReturn {
 	const { getToken, isLoaded, isSignedIn } = useAuth();
+	const autoTriggerFirstTurn = options?.autoTriggerFirstTurn ?? false;
 
 	const getKey = (pageIndex: number, previousPageData: CoachMessagePage | null) => {
 		if (!isLoaded || !isSignedIn || !conversationId) return null;
@@ -171,6 +186,54 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 		await mutate();
 	}, [mutate]);
 
+	const [isFirstTurnLoading, setIsFirstTurnLoading] = useState(false);
+	// 探索スレッド新規作成直後、mount時に一度だけfirst-turnをトリガーする。
+	// レスポンスはSSEだがトークン単位の表示はせず、完了後にmutate()で確定履歴を取り直す。
+	// 依存配列にconversationIdのみを含め、trueのまま再マウントされない限り再実行しない
+	// (getToken/mutateを依存に含めると再実行が発生し、mount時1回限りの意図が崩れる)。
+	// AbortControllerでcleanup時にリクエスト自体を中断する。これがないとStrictModeの
+	// 二重mountや素早い再訪で2本のfirst-turnが飛び、サーバの冪等ガード(履歴0件判定)が
+	// 先行リクエストの永続化(waitUntil)完了前に走って第一声が二重生成され得る。
+	// biome-ignore lint/correctness/useExhaustiveDependencies: 上記の理由でconversationId/autoTriggerFirstTurnのみを依存にする
+	useEffect(() => {
+		if (!autoTriggerFirstTurn || !conversationId) return;
+
+		const controller = new AbortController();
+		setIsFirstTurnLoading(true);
+		(async () => {
+			try {
+				const token = await getToken();
+				const res = await fetch(
+					`${API_BASE_URL}/coach/conversations/${conversationId}/first-turn`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							...(token ? { Authorization: `Bearer ${token}` } : {}),
+						},
+						signal: controller.signal,
+					},
+				);
+				await drainResponseBody(res);
+				if (!controller.signal.aborted) {
+					await mutate();
+				}
+			} catch {
+				// abort()によるキャンセル、およびネットワーク等の失敗はいずれも握りつぶす。
+				// first-turnの失敗はスレッド自体を壊さない設計で、フロントは通常のメッセージ
+				// 一覧取得にフォールバックする(第一声はサーバ側で冪等に再試行可能)
+			} finally {
+				if (!controller.signal.aborted) {
+					setIsFirstTurnLoading(false);
+				}
+			}
+		})();
+
+		return () => {
+			controller.abort();
+		};
+	}, [autoTriggerFirstTurn, conversationId]);
+
 	return {
 		messages,
 		isLoadingInitial: !data && isLoading,
@@ -179,7 +242,7 @@ export function useCoachMessages(conversationId: string | undefined): UseCoachMe
 		loadMore,
 		messagesError,
 		sendMessage,
-		isSending,
+		isSending: isSending || isFirstTurnLoading,
 		sendError,
 		refresh,
 	};

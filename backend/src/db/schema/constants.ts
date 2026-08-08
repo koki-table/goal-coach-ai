@@ -15,3 +15,8 @@ export type TaskType = (typeof taskTypes)[number];
 
 export const coachMessageRoles = ["user", "assistant"] as const;
 export type CoachMessageRole = (typeof coachMessageRoles)[number];
+
+// "undecided"はObjective(目標)がまだ決まっていない探索スレッド、
+// "decided"はObjectiveが確定し目標に紐づいた通常スレッド
+export const objectiveStatuses = ["decided", "undecided"] as const;
+export type ObjectiveStatus = (typeof objectiveStatuses)[number];

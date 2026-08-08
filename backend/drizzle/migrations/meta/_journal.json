@@ -50,6 +50,13 @@
       "when": 1785136457713,
       "tag": "0006_kr_percentage_scale",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786104001497,
+      "tag": "0007_illegal_loki",
+      "breakpoints": true
     }
   ]
 }

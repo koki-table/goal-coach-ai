@@ -42,7 +42,7 @@ describe("coachModel", () => {
 			const model = mockStreamModelReturning(
 				JSON.stringify({
 					reply: "現在の状況について、もう少し詳しく教えていただけますか。",
-					planProposal: null,
+					proposal: null,
 				}),
 			);
 
@@ -50,18 +50,17 @@ describe("coachModel", () => {
 
 			expect(result).toEqual({
 				reply: "現在の状況について、もう少し詳しく教えていただけますか。",
-				planProposal: null,
+				proposal: null,
 			});
 		});
 
-		it("returns a parsed reply with a hierarchical plan proposal", async () => {
+		it("returns a parsed reply with a key result proposal", async () => {
 			const model = mockStreamModelReturning(
 				JSON.stringify({
-					reply: "では、次のマイルストーンを提案します。",
-					planProposal: {
-						milestoneTitle: "基礎文法を習得する",
-						milestoneTargetValue: 300,
-						milestoneUnit: "問",
+					reply: "では、次の主要な成果を提案します。",
+					proposal: {
+						objective: null,
+						keyResults: [{ title: "基礎文法を習得する", targetValue: 300, unit: "問" }],
 						todos: [
 							{ title: "毎日30分学習する", taskType: "daily" },
 							{ title: "参考書を1冊読み終える", taskType: "once" },
@@ -72,10 +71,9 @@ describe("coachModel", () => {
 
 			const { result } = await collectReplyDeltas(model);
 
-			expect(result.planProposal).toEqual({
-				milestoneTitle: "基礎文法を習得する",
-				milestoneTargetValue: 300,
-				milestoneUnit: "問",
+			expect(result.proposal).toEqual({
+				objective: null,
+				keyResults: [{ title: "基礎文法を習得する", targetValue: 300, unit: "問" }],
 				todos: [
 					{ title: "毎日30分学習する", taskType: "daily" },
 					{ title: "参考書を1冊読み終える", taskType: "once" },
@@ -85,7 +83,7 @@ describe("coachModel", () => {
 
 		it("emits reply text incrementally via onReplyDelta before the object resolves", async () => {
 			const model = mockStreamModelReturning(
-				JSON.stringify({ reply: "こんにちは、元気ですか。", planProposal: null }),
+				JSON.stringify({ reply: "こんにちは、元気ですか。", proposal: null }),
 			);
 
 			const { deltas } = await collectReplyDeltas(model);

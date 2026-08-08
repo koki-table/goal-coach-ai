@@ -1,44 +1,48 @@
 import { createApiClient } from "@/lib/swr/apiClient";
 import { useAuth } from "@clerk/nextjs";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
+import useSWR from "swr";
 import type { CoachErrorInfo } from "../helpers/coachErrorMessage.helper";
 import { mapCoachError } from "../helpers/coachErrorMessage.helper";
+import type { ThreadTarget } from "../helpers/coachThreadTarget.helper";
 import type { CoachConversation } from "../types";
+
+type CoachConversationWithIsNew = CoachConversation & { isNew: boolean };
 
 export type UseCoachConversationReturn = {
 	conversation: CoachConversation | undefined;
+	// 探索スレッドが今回のリクエストで新規作成されたかどうか。trueの場合のみ
+	// first-turnをトリガーして第一声を生成する(既存スレッド取得時はLLMを呼ばない)
+	isNew: boolean;
 	isStarting: boolean;
 	error: CoachErrorInfo | undefined;
-	startConversation: (goalId: string) => Promise<CoachConversation | undefined>;
 };
 
-export function useCoachConversation(): UseCoachConversationReturn {
+export function useCoachConversation(threadTarget: ThreadTarget): UseCoachConversationReturn {
 	const { getToken } = useAuth();
-	// getTokenが安定しないとapiClientが毎レンダリング再生成され、これに依存するuseCallback/useEffectが
-	// 無限に再発火する(startConversationをuseEffectで呼ぶ呼び出し元で顕在化した)。useMemoで参照を安定させる。
 	const apiClient = useMemo(() => createApiClient(getToken), [getToken]);
-	const [conversation, setConversation] = useState<CoachConversation | undefined>(undefined);
-	const [isStarting, setIsStarting] = useState(false);
-	const [error, setError] = useState<CoachErrorInfo | undefined>(undefined);
 
-	const startConversation = useCallback(
-		async (goalId: string): Promise<CoachConversation | undefined> => {
-			setIsStarting(true);
-			setError(undefined);
-			try {
-				const result = await apiClient.post<CoachConversation>("/coach/conversations", { goalId });
-				setConversation(result);
-				return result;
-			} catch (e) {
-				setError(mapCoachError(e));
-				setConversation(undefined);
-				return undefined;
-			} finally {
-				setIsStarting(false);
-			}
-		},
-		[apiClient],
-	);
+	const key = threadTarget ? ["coach-conversation", JSON.stringify(threadTarget)] : null;
 
-	return { conversation, isStarting, error, startConversation };
+	const { data, error, isLoading } = useSWR<CoachConversationWithIsNew>(key, async () => {
+		if (!threadTarget) throw new Error("threadTarget is required");
+		return threadTarget.kind === "goal"
+			? apiClient.post<CoachConversationWithIsNew>("/coach/conversations", {
+					goalId: threadTarget.goalId,
+				})
+			: apiClient.post<CoachConversationWithIsNew>("/coach/conversations/exploration", {});
+	});
+
+	// エラー時はdataが直前に選択していた別スレッドの古いconversationを指したままになる
+	// (SWRはkeyが変わってもエラー発生時に前回の成功データを保持するため)。
+	// 古いconversationIdに紐づくメッセージ履歴が誤って表示され続けるのを防ぐため、
+	// エラー時は明示的にundefinedにする
+	const conversation = error ? undefined : data;
+
+	return {
+		conversation,
+		isNew: conversation?.isNew ?? false,
+		isStarting: isLoading,
+		error: error ? mapCoachError(error) : undefined,
+	};
 }

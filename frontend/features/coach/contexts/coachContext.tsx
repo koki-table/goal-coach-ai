@@ -2,8 +2,10 @@
 
 import { useGoals } from "@/features/goals/hooks/useGoals";
 import type { Goal } from "@/features/goals/types";
-import { createContext, useCallback, useContext, useEffect } from "react";
+import { createContext, useCallback, useContext } from "react";
 import type { CoachErrorInfo } from "../helpers/coachErrorMessage.helper";
+import type { ThreadTarget } from "../helpers/coachThreadTarget.helper";
+import { useAdoptObjective } from "../hooks/useAdoptObjective";
 import { useAdoptPlanItem } from "../hooks/useAdoptPlanItem";
 import { useCoachConversation } from "../hooks/useCoachConversation";
 import { useCoachMessages } from "../hooks/useCoachMessages";
@@ -12,8 +14,10 @@ import type { CoachMessage } from "../types";
 type CoachContextValue = {
 	goals: Goal[];
 	goalsLoading: boolean;
-	selectedGoalId: string | undefined;
-	selectGoal: (goalId: string) => void;
+	activeGoalCount: number;
+	isGoalLimitReached: boolean;
+	threadTarget: ThreadTarget;
+	selectThread: (target: ThreadTarget) => void;
 	conversationError: CoachErrorInfo | undefined;
 	messages: CoachMessage[];
 	isLoadingInitial: boolean;
@@ -24,9 +28,12 @@ type CoachContextValue = {
 	sendMessage: (content: string) => Promise<boolean>;
 	isSending: boolean;
 	sendError: CoachErrorInfo | undefined;
-	adoptMilestone: (messageId: number) => Promise<void>;
+	adoptKeyResult: (messageId: number, keyResultIndex: number) => Promise<void>;
 	adoptTodo: (messageId: number, todoIndex: number) => Promise<void>;
+	// 採用に成功すると新規作成されたgoalIdを返す
+	adoptObjective: (messageId: number) => Promise<string | undefined>;
 	adoptingKey: string | undefined;
+	isAdoptingObjective: boolean;
 	adoptError: CoachErrorInfo | undefined;
 };
 
@@ -34,19 +41,24 @@ const CoachContext = createContext<CoachContextValue | undefined>(undefined);
 
 type CoachProviderProps = {
 	children: React.ReactNode;
-	selectedGoalId: string | undefined;
-	onSelectGoal: (goalId: string) => void;
+	threadTarget: ThreadTarget;
+	onSelectThread: (target: ThreadTarget) => void;
+	// MAX_ACTIVE_GOALS(goals featureのconfig値)の上限判定。coach featureは他featureの
+	// configを直接importしない方針のため、呼び出し元(page.tsx)から渡す
+	maxActiveGoals: number;
 };
 
-export function CoachProvider({ children, selectedGoalId, onSelectGoal }: CoachProviderProps) {
+export function CoachProvider({
+	children,
+	threadTarget,
+	onSelectThread,
+	maxActiveGoals,
+}: CoachProviderProps) {
 	const { data: goals, isLoading: goalsLoading } = useGoals();
-	const { conversation, error: conversationError, startConversation } = useCoachConversation();
+	const activeGoalCount = (goals ?? []).filter((g) => g.status === "active").length;
+	const isGoalLimitReached = activeGoalCount >= maxActiveGoals;
 
-	useEffect(() => {
-		if (selectedGoalId) {
-			startConversation(selectedGoalId);
-		}
-	}, [selectedGoalId, startConversation]);
+	const { conversation, isNew, error: conversationError } = useCoachConversation(threadTarget);
 
 	const {
 		messages,
@@ -59,13 +71,18 @@ export function CoachProvider({ children, selectedGoalId, onSelectGoal }: CoachP
 		isSending,
 		sendError,
 		refresh,
-	} = useCoachMessages(conversation?.id);
+	} = useCoachMessages(conversation?.id, { autoTriggerFirstTurn: isNew });
 
 	const { adoptPlanItem, adoptingKey, error: adoptError } = useAdoptPlanItem(refresh);
+	const {
+		adoptObjective,
+		isAdoptingObjective,
+		error: adoptObjectiveError,
+	} = useAdoptObjective(refresh);
 
-	const adoptMilestone = useCallback(
-		async (messageId: number) => {
-			await adoptPlanItem(messageId, { target: "milestone" });
+	const adoptKeyResult = useCallback(
+		async (messageId: number, keyResultIndex: number) => {
+			await adoptPlanItem(messageId, { target: "keyResult", keyResultIndex });
 		},
 		[adoptPlanItem],
 	);
@@ -80,8 +97,10 @@ export function CoachProvider({ children, selectedGoalId, onSelectGoal }: CoachP
 	const value: CoachContextValue = {
 		goals: goals ?? [],
 		goalsLoading,
-		selectedGoalId,
-		selectGoal: onSelectGoal,
+		activeGoalCount,
+		isGoalLimitReached,
+		threadTarget,
+		selectThread: onSelectThread,
 		conversationError,
 		messages,
 		isLoadingInitial,
@@ -92,10 +111,12 @@ export function CoachProvider({ children, selectedGoalId, onSelectGoal }: CoachP
 		sendMessage,
 		isSending,
 		sendError,
-		adoptMilestone,
+		adoptKeyResult,
 		adoptTodo,
+		adoptObjective,
 		adoptingKey,
-		adoptError,
+		isAdoptingObjective,
+		adoptError: adoptError ?? adoptObjectiveError,
 	};
 
 	return <CoachContext.Provider value={value}>{children}</CoachContext.Provider>;

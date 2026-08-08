@@ -9,24 +9,72 @@ const GOALS = [
 
 describe("GoalThreadList", () => {
 	it("highlights the selected goal", () => {
-		render(<GoalThreadList goals={GOALS} selectedGoalId="goal-1" onSelectGoal={vi.fn()} />);
+		render(
+			<GoalThreadList
+				goals={GOALS}
+				selectedThread={{ kind: "goal", goalId: "goal-1" }}
+				onSelectGoal={vi.fn()}
+				onSelectExploration={vi.fn()}
+			/>,
+		);
 
 		expect(screen.getByRole("button", { name: "TOEIC800点を取る" })).toHaveClass("text-primary");
 	});
 
 	it("calls onSelectGoal when a goal is clicked", () => {
 		const onSelectGoal = vi.fn();
-		render(<GoalThreadList goals={GOALS} selectedGoalId={undefined} onSelectGoal={onSelectGoal} />);
+		render(
+			<GoalThreadList
+				goals={GOALS}
+				selectedThread={undefined}
+				onSelectGoal={onSelectGoal}
+				onSelectExploration={vi.fn()}
+			/>,
+		);
 
 		fireEvent.click(screen.getByRole("button", { name: "5kg減量する" }));
 		expect(onSelectGoal).toHaveBeenCalledWith("goal-2");
 	});
 
-	it("shows an empty state with a link to create a goal", () => {
-		render(<GoalThreadList goals={[]} selectedGoalId={undefined} onSelectGoal={vi.fn()} />);
+	it("always shows the exploration entry, even with no goals", () => {
+		render(
+			<GoalThreadList
+				goals={[]}
+				selectedThread={undefined}
+				onSelectGoal={vi.fn()}
+				onSelectExploration={vi.fn()}
+			/>,
+		);
 
-		expect(screen.getByText(/相談できる目標がありません/)).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "目標を作成する" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "目標を決める相談" })).toBeInTheDocument();
+	});
+
+	it("calls onSelectExploration when the exploration entry is clicked", () => {
+		const onSelectExploration = vi.fn();
+		render(
+			<GoalThreadList
+				goals={GOALS}
+				selectedThread={undefined}
+				onSelectGoal={vi.fn()}
+				onSelectExploration={onSelectExploration}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "目標を決める相談" }));
+		expect(onSelectExploration).toHaveBeenCalledTimes(1);
+	});
+
+	it("highlights the exploration entry when selected", () => {
+		render(
+			<GoalThreadList
+				goals={GOALS}
+				selectedThread={{ kind: "exploration" }}
+				onSelectGoal={vi.fn()}
+				onSelectExploration={vi.fn()}
+			/>,
+		);
+
+		expect(screen.getByRole("button", { name: "目標を決める相談" })).toHaveClass("text-primary");
 	});
 
 	it("renders a dropdown instead of the nav list on mobile widths", () => {
@@ -42,7 +90,14 @@ describe("GoalThreadList", () => {
 		} as unknown as MediaQueryList);
 
 		const onSelectGoal = vi.fn();
-		render(<GoalThreadList goals={GOALS} selectedGoalId="goal-2" onSelectGoal={onSelectGoal} />);
+		render(
+			<GoalThreadList
+				goals={GOALS}
+				selectedThread={{ kind: "goal", goalId: "goal-2" }}
+				onSelectGoal={onSelectGoal}
+				onSelectExploration={vi.fn()}
+			/>,
+		);
 
 		const select = screen.getByRole("combobox", { name: "目標一覧" });
 		expect(select).toHaveValue("goal-2");

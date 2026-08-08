@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-const goalCategorySchema = z.enum(["study", "career", "health", "skill", "finance", "other"]);
+export const goalCategorySchema = z.enum([
+	"study",
+	"career",
+	"health",
+	"skill",
+	"finance",
+	"other",
+]);
 
 export const goalCreateSchema = z.object({
 	title: z.string().min(1).max(200),
@@ -79,7 +86,10 @@ export const coachMessageCreateSchema = z.object({
 	content: z.string().min(1).max(1000),
 });
 
+// "milestone"はkeyResultIndex:0を指す旧クライアント互換のエイリアス(既存行のみ対象)。
+// 新規コードは"keyResult"を使う
 export const coachAdoptPlanItemSchema = z.union([
 	z.object({ target: z.literal("milestone") }),
+	z.object({ target: z.literal("keyResult"), keyResultIndex: z.number().int().min(0) }),
 	z.object({ target: z.literal("todo"), todoIndex: z.number().int().min(0) }),
 ]);

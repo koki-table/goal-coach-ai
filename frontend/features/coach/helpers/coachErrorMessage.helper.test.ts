@@ -18,6 +18,17 @@ describe("mapCoachError", () => {
 		expect(result.kind).toBe("alreadyAdopted");
 	});
 
+	it("reason:goalLimitExceededを持つ409はgoalLimitExceededとして扱う", () => {
+		const result = mapCoachError(
+			new ApiClientError(409, "goal limit exceeded", {
+				message: "目標は同時に2件までしか設定できません。",
+				reason: "goalLimitExceeded",
+			}),
+		);
+		expect(result.kind).toBe("goalLimitExceeded");
+		expect(result.message).toContain("目標は同時に2件までしか設定できません");
+	});
+
 	it("429はrateLimitとして扱う", () => {
 		const result = mapCoachError(new ApiClientError(429, "Rate limit exceeded"));
 		expect(result.kind).toBe("rateLimit");

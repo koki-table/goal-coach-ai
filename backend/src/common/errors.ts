@@ -67,3 +67,17 @@ export class CoachChatRateLimitError extends Error {
 		this.name = "CoachChatRateLimitError";
 	}
 }
+
+export class ObjectiveAlreadyAdoptedError extends Error {
+	constructor(messageId: number) {
+		super(`Objective already adopted for message: ${messageId}`);
+		this.name = "ObjectiveAlreadyAdoptedError";
+	}
+}
+
+export class ExplorationThreadAlreadyLinkedError extends Error {
+	constructor(conversationId: string) {
+		super(`Exploration thread already linked to a goal: ${conversationId}`);
+		this.name = "ExplorationThreadAlreadyLinkedError";
+	}
+}

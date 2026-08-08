@@ -6,7 +6,8 @@ export type CoachChatPromptMilestone = {
 };
 
 export type CoachChatPromptProposal = {
-	milestone: { title: string; adopted: boolean } | null;
+	objective: { title: string; adopted: boolean } | null;
+	keyResults: { title: string; adopted: boolean }[];
 	todos: { title: string; adopted: boolean }[];
 };
 
@@ -25,12 +26,22 @@ export type CoachChatPromptInput = {
 	snapshot?: GoalSnapshot;
 	milestones?: CoachChatPromptMilestone[];
 	history: CoachChatPromptMessage[];
+	// 本日の日付(ISO, YYYY-MM-DD)。LLMが期限(deadline)を推測で生成し過去日付等の
+	// 不自然な値を返すことを防ぐため、常に明示的に渡す
+	today: string;
+	// active goal数。上限到達時にAIが対話で先に伝えられるようにする
+	activeGoalCount?: number;
+	// #52(Step3)で全人的プロフィールを注入するための拡張点。現時点では未使用
+	wholePersonProfile?: unknown;
+	// コーチングフェーズの拡張点。現時点では未使用
+	phase?: unknown;
 };
 
 // XMLタグでデータを明示的に区切り、AIが前提データと会話履歴を正確に認識できるようにする。
 export function buildChatUserPrompt(input: CoachChatPromptInput): string {
 	const goalDataText = input.goalDeleted
-		? `- 目標タイトル(会話開始時点): ${input.goalTitle}
+		? `- 本日の日付: ${input.today}
+- 目標タイトル(会話開始時点): ${input.goalTitle}
 - 達成期限(会話開始時点): ${input.goalDeadline ?? "未設定"}
 - 注記: この目標は削除済みです。現況データは取得できないため、会話開始時点のタイトル・期限のみを参考情報として扱ってください。`
 		: buildLivingGoalDataText(input);
@@ -45,6 +56,11 @@ export function buildChatUserPrompt(input: CoachChatPromptInput): string {
 					.join("\n")
 			: "  (会話履歴なし、これが最初のメッセージです)";
 
+	const userStateText =
+		input.activeGoalCount !== undefined
+			? `\n\n<user_state>\n- 現在のactive(未完了)目標数: ${input.activeGoalCount}件\n</user_state>`
+			: "";
+
 	return `以下のユーザーの目標データと会話履歴を踏まえ、コーチとして応答してください。
 
 <goal_data>
@@ -53,21 +69,24 @@ ${goalDataText}
 
 <conversation_history>
 ${historyText}
-</conversation_history>
+</conversation_history>${userStateText}
 
 設定されたキャラクターになりきり、レスポンス形式に従って応答してください。`;
 }
 
-// 提案に含まれる各項目(マイルストーン・TODO)の採用状態をAIに明示し、
+// 提案に含まれる各項目(Objective・KR・TODO)の採用状態をAIに明示し、
 // 既に提案済み・採用済みの項目を同一内容で繰り返し提案しないようにする。
 function buildProposalNote(proposal: CoachChatPromptProposal | undefined): string {
 	if (!proposal) return "";
 
 	const parts: string[] = [];
-	if (proposal.milestone) {
+	if (proposal.objective) {
 		parts.push(
-			`主要な成果(Key Result)『${proposal.milestone.title}』(${adoptedLabel(proposal.milestone.adopted)})`,
+			`目標(Objective)『${proposal.objective.title}』(${adoptedLabel(proposal.objective.adopted)})`,
 		);
+	}
+	for (const keyResult of proposal.keyResults) {
+		parts.push(`主要な成果(Key Result)『${keyResult.title}』(${adoptedLabel(keyResult.adopted)})`);
 	}
 	for (const todo of proposal.todos) {
 		parts.push(`TODO『${todo.title}』(${adoptedLabel(todo.adopted)})`);
@@ -94,13 +113,15 @@ function buildLivingGoalDataText(input: CoachChatPromptInput): string {
 			: "";
 
 	if (!snapshot) {
-		return `- 目標タイトル: ${input.goalTitle}
+		return `- 本日の日付: ${input.today}
+- 目標タイトル: ${input.goalTitle}
 - 達成期限: ${input.goalDeadline ?? "未設定"}
 - 主要な成果(Key Results)の状態:
 ${milestonesText}${milestonesNote}`;
 	}
 
-	return `- 目標タイトル: ${input.goalTitle}
+	return `- 本日の日付: ${input.today}
+- 目標タイトル: ${input.goalTitle}
 - 達成期限: ${input.goalDeadline ?? "未設定"}
 - 実データに基づく進捗率: ${snapshot.realProgressPercent}%（TODO ${snapshot.completedTodos}/${snapshot.totalTodos}件・主要な成果 ${snapshot.completedMilestones}/${snapshot.totalMilestones}件）
 - 期限超過中のTODO数: ${snapshot.overdueTodosCount}件

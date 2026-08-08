@@ -6,6 +6,7 @@ describe("mapConversationToResponse", () => {
 		const result = mapConversationToResponse({
 			id: "conv-1",
 			goalId: "goal-1",
+			objectiveStatus: "decided",
 			goalTitleSnapshot: "TOEIC800点を取る",
 			goalDeadlineSnapshot: "2026-12-31",
 			createdAt: "2026-07-01T00:00:00.000Z",
@@ -15,6 +16,7 @@ describe("mapConversationToResponse", () => {
 		expect(result).toEqual({
 			id: "conv-1",
 			goalId: "goal-1",
+			objectiveStatus: "decided",
 			goalTitleSnapshot: "TOEIC800点を取る",
 			goalDeadlineSnapshot: "2026-12-31",
 			createdAt: "2026-07-01T00:00:00.000Z",
@@ -26,6 +28,7 @@ describe("mapConversationToResponse", () => {
 		const result = mapConversationToResponse({
 			id: "conv-1",
 			goalId: null,
+			objectiveStatus: "decided",
 			goalTitleSnapshot: "TOEIC800点を取る",
 			goalDeadlineSnapshot: null,
 			createdAt: "2026-07-01T00:00:00.000Z",
@@ -35,24 +38,40 @@ describe("mapConversationToResponse", () => {
 		expect(result.goalId).toBeUndefined();
 		expect(result.goalDeadlineSnapshot).toBeUndefined();
 	});
+
+	it("maps an exploration conversation with objectiveStatus=undecided", () => {
+		const result = mapConversationToResponse({
+			id: "conv-1",
+			goalId: null,
+			objectiveStatus: "undecided",
+			goalTitleSnapshot: "目標を決める相談",
+			goalDeadlineSnapshot: null,
+			createdAt: "2026-07-01T00:00:00.000Z",
+			updatedAt: "2026-07-02T00:00:00.000Z",
+		});
+
+		expect(result.objectiveStatus).toBe("undecided");
+	});
 });
 
 describe("mapMessageToResponse", () => {
-	it("parses the proposal JSON when present", () => {
+	it("normalizes a legacy proposal JSON into the version:1 envelope", () => {
 		const result = mapMessageToResponse({
 			id: 1,
 			conversationId: "conv-1",
 			role: "assistant",
 			content: "次のマイルストーンを提案します。",
 			proposal: JSON.stringify({
-				milestone: { title: "基礎文法を習得する", adopted: false },
+				milestone: { title: "基礎文法を習得する", targetValue: 100, unit: "%", adopted: false },
 				todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
 			}),
 			createdAt: "2026-07-01T00:00:00.000Z",
 		});
 
 		expect(result.proposal).toEqual({
-			milestone: { title: "基礎文法を習得する", adopted: false },
+			version: 1,
+			objective: null,
+			keyResults: [{ title: "基礎文法を習得する", targetValue: 100, unit: "%", adopted: false }],
 			todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
 		});
 	});

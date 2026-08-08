@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { Database } from "../../db";
 import { goals } from "../../db/schema";
 
@@ -7,6 +7,15 @@ export class GoalRepository {
 
 	async findAllByUserId(userId: string) {
 		return this.db.select().from(goals).where(eq(goals.userId, userId)).all();
+	}
+
+	async countActiveByUserId(userId: string): Promise<number> {
+		const result = await this.db
+			.select({ count: sql<number>`count(*)`.as("count") })
+			.from(goals)
+			.where(and(eq(goals.userId, userId), eq(goals.status, "active")))
+			.get();
+		return result?.count ?? 0;
 	}
 
 	async findByIdAndUserId(id: string, userId: string) {
@@ -26,6 +35,18 @@ export class GoalRepository {
 	}) {
 		const result = await this.db.insert(goals).values(data).returning().get();
 		return result;
+	}
+
+	// db.batch() 用のステートメント（実行しない）。idはアトミック採用のため呼び出し側で採番する
+	insertStmt(data: {
+		id: string;
+		userId: string;
+		title: string;
+		description?: string;
+		categoryId?: string;
+		dueDate?: string;
+	}) {
+		return this.db.insert(goals).values(data);
 	}
 
 	async update(

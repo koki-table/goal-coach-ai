@@ -1,30 +1,10 @@
+import {
+	getCategoryKeyFromName,
+	getCategoryNameFromKey,
+} from "../../../common/helpers/categoryMapping.helper";
 import type { GoalCategoryType } from "../../../types/api";
 
-const categoryKeyToName: Record<GoalCategoryType, string> = {
-	study: "学習",
-	career: "仕事",
-	health: "健康",
-	skill: "スキル",
-	finance: "財務",
-	other: "その他",
-};
-
-const categoryNameToKey: Record<string, GoalCategoryType> = {
-	学習: "study",
-	仕事: "career",
-	健康: "health",
-	スキル: "skill",
-	財務: "finance",
-	その他: "other",
-};
-
-export function getCategoryNameFromKey(key: GoalCategoryType): string {
-	return categoryKeyToName[key] ?? "その他";
-}
-
-export function getCategoryKeyFromName(name: string): GoalCategoryType {
-	return categoryNameToKey[name] ?? "other";
-}
+export { getCategoryKeyFromName, getCategoryNameFromKey };
 
 export function mapGoalToResponse(
 	goal: {

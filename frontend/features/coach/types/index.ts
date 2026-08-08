@@ -1,15 +1,24 @@
 export type TaskType = "daily" | "once";
+export type GoalCategoryType = "study" | "career" | "health" | "skill" | "finance" | "other";
+export type ObjectiveStatus = "decided" | "undecided";
 
 export type CoachConversation = {
 	id: string;
 	goalId?: string;
+	objectiveStatus: ObjectiveStatus;
 	goalTitleSnapshot: string;
 	goalDeadlineSnapshot?: string;
 	createdAt: string;
 	updatedAt: string;
 };
 
-export type PlanProposalMilestone = {
+export type ProposalObjective = {
+	title: string;
+	deadline: string | null;
+	category: GoalCategoryType;
+} | null;
+
+export type ProposalKeyResult = {
 	title: string;
 	targetValue: number;
 	unit: string;
@@ -17,7 +26,7 @@ export type PlanProposalMilestone = {
 	createdMilestoneId?: string;
 };
 
-export type PlanProposalTodo = {
+export type ProposalTodo = {
 	title: string;
 	taskType: TaskType;
 	adopted: boolean;
@@ -25,8 +34,10 @@ export type PlanProposalTodo = {
 };
 
 export type PlanProposal = {
-	milestone: PlanProposalMilestone | null;
-	todos: PlanProposalTodo[];
+	version: 1;
+	objective: ProposalObjective;
+	keyResults: ProposalKeyResult[];
+	todos: ProposalTodo[];
 };
 
 export type CoachMessageRole = "user" | "assistant";
@@ -45,4 +56,6 @@ export type CoachMessagePage = {
 	nextCursor?: number;
 };
 
-export type AdoptPlanItemTarget = { target: "milestone" } | { target: "todo"; todoIndex: number };
+export type AdoptPlanItemTarget =
+	| { target: "keyResult"; keyResultIndex: number }
+	| { target: "todo"; todoIndex: number };
