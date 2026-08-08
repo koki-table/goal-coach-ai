@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { Database } from "../../db";
 import { coachConversations } from "../../db/schema";
+import type { CoachSessionPhase } from "../../db/schema/constants";
 
 export class CoachConversationRepository {
 	constructor(private db: Database) {}
@@ -86,6 +87,16 @@ export class CoachConversationRepository {
 		return this.db
 			.update(coachConversations)
 			.set({ updatedAt: new Date().toISOString() })
+			.where(eq(coachConversations.id, id));
+	}
+
+	// db.batch() 用のステートメント（実行しない）。resolveNextPhase()で矯正済みのphase・
+	// turnsInPhaseを反映する(objectiveStatus="decided"のスレッドのみ呼ぶ)。updatedAtも
+	// 同時に更新するためtouchStmtは不要になる。
+	setPhaseStmt(id: string, phase: CoachSessionPhase, turnsInPhase: number) {
+		return this.db
+			.update(coachConversations)
+			.set({ phase, turnsInPhase, updatedAt: new Date().toISOString() })
 			.where(eq(coachConversations.id, id));
 	}
 }

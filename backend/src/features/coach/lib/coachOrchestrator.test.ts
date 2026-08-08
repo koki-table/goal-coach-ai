@@ -175,6 +175,42 @@ describe("coachOrchestrator", () => {
 			});
 		});
 
+		it("passes through the phase declared by the model without validating it", async () => {
+			const model = mockStreamModelReturning(
+				JSON.stringify({ reply: "現状を教えてほしい。", proposal: null, phase: "insight" }),
+			);
+
+			const { uiStream, turnResult } = runCoachTurn({
+				model,
+				system: "calm mentor persona",
+				prompt: "goal data",
+				existingKeyResultTitles: [],
+			});
+
+			await collectChunks(uiStream);
+			const result = await turnResult;
+
+			expect(result.phase).toBe("insight");
+		});
+
+		it("resolves phase as undefined when the model omits it", async () => {
+			const model = mockStreamModelReturning(
+				JSON.stringify({ reply: "何にワクワクするペン。", proposal: null }),
+			);
+
+			const { uiStream, turnResult } = runCoachTurn({
+				model,
+				system: "calm mentor persona",
+				prompt: "goal data",
+				existingKeyResultTitles: [],
+			});
+
+			await collectChunks(uiStream);
+			const result = await turnResult;
+
+			expect(result.phase).toBeUndefined();
+		});
+
 		it("rejects turnResult and emits no data-proposal chunk when the model output does not match the schema", async () => {
 			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
 

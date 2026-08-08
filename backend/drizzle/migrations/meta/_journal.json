@@ -57,6 +57,13 @@
       "when": 1786104001497,
       "tag": "0007_illegal_loki",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786172380697,
+      "tag": "0008_mute_invaders",
+      "breakpoints": true
     }
   ]
 }
