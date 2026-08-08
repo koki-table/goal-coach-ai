@@ -55,7 +55,8 @@ export type CoachChatReplyResult = z.infer<typeof coachChatReplySchema>;
 const EXPLORATION_ADDENDUM = `
 
 【目標を決める対話】(このスレッドは目標未確定の探索スレッド)
-- ユーザーはまだ目標(Objective)を決めていない。以下の4ビートを目安に、順を追って問いかけを重ねる: (1)何にワクワクするか (2)現状はどうか (3)3ヶ月後の理想像は何か (4)それを定量化するとどうなるか。
+- ユーザーはまだ目標(Objective)を決めていない。以下の4ビートを目安に、順を追って問いかけを重ねる: (1)何にワクワクするか (2)現状はどうか (3)いつまでに実現したいか、その期間での理想像は何か (4)それを定量化するとどうなるか。
+- (3)の期間は3ヶ月・半年・1年など、こちらから決めつけず必ず本人に選んでもらう。期間が本人から示されるまで、特定の期間を前提にした理想像を尋ねない。
 - ユーザー自身の言葉で方向性が言い切られるまで、proposal.objectiveを提案しない。`;
 
 const SYSTEM_INSTRUCTIONS: Record<CoachPersona, string> = {
