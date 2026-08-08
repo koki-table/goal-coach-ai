@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { billingRoute } from "../features/billing/routes/billingRoute";
+import { billingWebhookRoute } from "../features/billing/routes/billingWebhookRoute";
 import { coachRoute } from "../features/coach/routes/coachRoute";
 import { goalsRoute } from "../features/goals/routes/goalsRoute";
 import { milestonesRoute } from "../features/milestones/routes/milestonesRoute";
@@ -12,6 +14,8 @@ const routes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // Public routes
 routes.route("/health", health);
+// Stripe Webhook: ClerkのJWT認証を持たないため公開ルートに置く(署名検証はルート内で行う)
+routes.route("/webhooks/stripe", billingWebhookRoute);
 
 // Protected routes (auth required)
 const protectedRoutes = new Hono<{
@@ -31,6 +35,9 @@ protectedRoutes.route("/todos", todosRoute);
 
 // AIコーチとのチャット (/coach/conversations, /coach/messages/:id/adopt-plan-item)
 protectedRoutes.route("/coach", coachRoute);
+
+// 課金(Stripe Checkout/Customer Portalセッション作成、現在の契約状況取得)
+protectedRoutes.route("/billing", billingRoute);
 
 routes.route("/", protectedRoutes);
 
