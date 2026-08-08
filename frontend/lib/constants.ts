@@ -4,4 +4,5 @@ export const NAV_ITEMS = [
 	{ label: "目標管理", href: "/goals", icon: "Target" },
 	{ label: "ToDo", href: "/todos", icon: "CheckSquare" },
 	{ label: "AIコーチ", href: "/coach", icon: "ChatsCircle" },
+	{ label: "プラン設定", href: "/settings/billing", icon: "CreditCard" },
 ] as const;
