@@ -35,6 +35,7 @@ function CoachPageContent() {
 		adoptObjective,
 		adoptingKey,
 		isAdoptingObjective,
+		decidedMessagesRemainingToday,
 	} = useCoachContext();
 
 	const router = useRouter();
@@ -117,6 +118,11 @@ function CoachPageContent() {
 									isAdoptingObjective={isAdoptingObjective}
 									isGoalLimitReached={isGoalLimitReached}
 								/>
+								{decidedMessagesRemainingToday !== undefined && (
+									<p className="border-t px-4 py-1.5 text-xs text-muted-foreground">
+										本日の残り: {decidedMessagesRemainingToday}回
+									</p>
+								)}
 								<ChatInputBar onSend={sendMessage} disabled={isSending} />
 							</>
 						)}

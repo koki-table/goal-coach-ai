@@ -2,7 +2,7 @@
 
 import { NAV_ITEMS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { ChatsCircle, CheckSquare, Target } from "@phosphor-icons/react";
+import { ChatsCircle, CheckSquare, CreditCard, Target } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,6 +10,7 @@ const iconMap = {
 	Target,
 	CheckSquare,
 	ChatsCircle,
+	CreditCard,
 } as const;
 
 type SidebarProps = {
