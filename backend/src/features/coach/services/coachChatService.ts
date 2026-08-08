@@ -36,6 +36,7 @@ import { createCoachModel } from "../lib/coachModel";
 import type { CoachTurnResult } from "../lib/coachOrchestrator";
 import { runCoachTurn } from "../lib/coachOrchestrator";
 import { getChatSystemInstruction } from "../prompts/coachPrompts";
+import { CoachChatGate } from "./coachChatGate";
 
 export type AdoptPlanItemTarget =
 	| { type: "keyResult"; keyResultIndex: number }
@@ -44,8 +45,7 @@ export type AdoptPlanItemTarget =
 export class CoachChatService {
 	// プロンプトに渡す直近履歴の件数
 	private static readonly CHAT_HISTORY_LIMIT = 20;
-	// 24時間あたりのユーザーメッセージ上限
-	private static readonly CHAT_DAILY_MESSAGE_LIMIT = 50;
+	// tier-aware課金ゲート(CoachChatGate)のカウント基準ウィンドウ
 	private static readonly RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 	// メッセージ取得のページサイズ方針（コントローラではなくドメインが持つ）
 	private static readonly DEFAULT_MESSAGE_PAGE_SIZE = 30;
@@ -63,6 +63,7 @@ export class CoachChatService {
 	private milestoneRepo: MilestoneRepository;
 	private todoRepo: TodoRepository;
 	private todoLogRepo: TodoLogRepository;
+	private chatGate: CoachChatGate;
 
 	constructor(private db: Database) {
 		this.conversationRepo = new CoachConversationRepository(db);
@@ -72,6 +73,7 @@ export class CoachChatService {
 		this.milestoneRepo = new MilestoneRepository(db);
 		this.todoRepo = new TodoRepository(db);
 		this.todoLogRepo = new TodoLogRepository(db);
+		this.chatGate = new CoachChatGate(db);
 	}
 
 	async startOrGetConversation(userId: string, goalId: string) {
@@ -115,8 +117,11 @@ export class CoachChatService {
 		}
 
 		const since = new Date(Date.now() - CoachChatService.RATE_LIMIT_WINDOW_MS).toISOString();
-		const recentCount = await this.messageRepo.countUserMessagesByUserIdSince(userId, since);
-		if (recentCount >= CoachChatService.CHAT_DAILY_MESSAGE_LIMIT) {
+		const { modelId, blocked } =
+			conversation.objectiveStatus === "decided"
+				? await this.chatGate.resolveForDecidedMessage(userId, since)
+				: { modelId: await this.chatGate.resolveForUndecidedMessage(userId), blocked: false };
+		if (blocked) {
 			throw new CoachChatRateLimitError(userId);
 		}
 
@@ -164,7 +169,7 @@ export class CoachChatService {
 						existingKeyResultTitles: [] as string[],
 					};
 
-		const model = createCoachModel(env);
+		const model = createCoachModel(env, modelId);
 		const { uiStream, turnResult } = runCoachTurn({
 			model,
 			system: getChatSystemInstruction("calmMentor", conversation.objectiveStatus),
@@ -174,7 +179,7 @@ export class CoachChatService {
 		});
 
 		const persistTurn = () =>
-			this.persistCompletedTurn(conversationId, content, turnResult, {
+			this.persistCompletedTurn(conversationId, content, turnResult, modelId, {
 				objectiveStatus: conversation.objectiveStatus,
 				phase: conversation.phase,
 				turnsInPhase: conversation.turnsInPhase,
@@ -190,6 +195,7 @@ export class CoachChatService {
 		conversationId: string,
 		userContent: string,
 		turnResult: CoachTurnResult["turnResult"],
+		modelId: string,
 		phaseState: {
 			objectiveStatus: ObjectiveStatus;
 			phase: CoachSessionPhase;
@@ -223,6 +229,7 @@ export class CoachChatService {
 					role: "assistant",
 					content: reply,
 					proposal: proposal ? JSON.stringify(proposal) : null,
+					model: modelId,
 				})
 				.returning(),
 			conversationUpdateStmt,
@@ -399,7 +406,8 @@ export class CoachChatService {
 		}
 
 		const activeGoalCount = await this.goalRepo.countActiveByUserId(userId);
-		const model = createCoachModel(env);
+		const modelId = await this.chatGate.resolveForUndecidedMessage(userId);
+		const model = createCoachModel(env, modelId);
 		const { uiStream, turnResult } = runCoachTurn({
 			model,
 			system: getChatSystemInstruction("calmMentor", "undecided"),
@@ -415,7 +423,7 @@ export class CoachChatService {
 			objectiveStatus: "undecided",
 		});
 
-		const persistTurn = () => this.persistFirstTurn(conversationId, turnResult);
+		const persistTurn = () => this.persistFirstTurn(conversationId, turnResult, modelId);
 
 		return { uiStream, persistTurn };
 	}
@@ -425,6 +433,7 @@ export class CoachChatService {
 	private async persistFirstTurn(
 		conversationId: string,
 		turnResult: CoachTurnResult["turnResult"],
+		modelId: string,
 	) {
 		const { reply, proposal } = await turnResult;
 
@@ -435,6 +444,7 @@ export class CoachChatService {
 					role: "assistant",
 					content: reply,
 					proposal: proposal ? JSON.stringify(proposal) : null,
+					model: modelId,
 				})
 				.returning(),
 			this.conversationRepo.touchStmt(conversationId),
