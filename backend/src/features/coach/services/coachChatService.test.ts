@@ -95,6 +95,11 @@ describe("CoachChatService", () => {
 					};
 				}
 			).goalRepo;
+			const chatGate = (
+				service as unknown as {
+					chatGate: { resolveForUndecidedMessage: (...args: unknown[]) => unknown };
+				}
+			).chatGate;
 
 			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
 				id: conversationId,
@@ -110,6 +115,7 @@ describe("CoachChatService", () => {
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
 
 			const insertStmtSpy = vi.spyOn(messageRepo, "insertStmt");
 			const touchStmtSpy = vi.spyOn(conversationRepo, "touchStmt");
@@ -200,6 +206,11 @@ describe("CoachChatService", () => {
 					todoLogRepo: { findAllByTodoIds: (...args: unknown[]) => unknown };
 				}
 			).todoLogRepo;
+			const chatGate = (
+				service as unknown as {
+					chatGate: { resolveForDecidedMessage: (...args: unknown[]) => unknown };
+				}
+			).chatGate;
 
 			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
 				id: conversationId,
@@ -223,6 +234,10 @@ describe("CoachChatService", () => {
 			vi.spyOn(milestoneRepo, "findAllByGoalId").mockResolvedValue([]);
 			vi.spyOn(todoRepo, "findAllByGoalId").mockResolvedValue([]);
 			vi.spyOn(todoLogRepo, "findAllByTodoIds").mockResolvedValue([]);
+			vi.spyOn(chatGate, "resolveForDecidedMessage").mockResolvedValue({
+				modelId: "gemini-3.5-flash-lite",
+				blocked: false,
+			});
 
 			const insertStmtSpy = vi.spyOn(messageRepo, "insertStmt");
 			const touchStmtSpy = vi.spyOn(conversationRepo, "touchStmt");
@@ -293,6 +308,11 @@ describe("CoachChatService", () => {
 					};
 				}
 			).goalRepo;
+			const chatGate = (
+				service as unknown as {
+					chatGate: { resolveForUndecidedMessage: (...args: unknown[]) => unknown };
+				}
+			).chatGate;
 
 			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
 				id: conversationId,
@@ -308,6 +328,7 @@ describe("CoachChatService", () => {
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
 
 			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
 			vi.spyOn(coachModel, "createCoachModel").mockReturnValue(model);
@@ -509,6 +530,11 @@ describe("CoachChatService", () => {
 			const goalRepo = (
 				service as unknown as { goalRepo: { countActiveByUserId: (...args: unknown[]) => unknown } }
 			).goalRepo;
+			const chatGate = (
+				service as unknown as {
+					chatGate: { resolveForUndecidedMessage: (...args: unknown[]) => unknown };
+				}
+			).chatGate;
 
 			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
 				id: conversationId,
@@ -522,6 +548,7 @@ describe("CoachChatService", () => {
 			});
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
 			const insertStmtSpy = vi.spyOn(messageRepo, "insertStmt");
 			const touchStmtSpy = vi.spyOn(conversationRepo, "touchStmt");
 
