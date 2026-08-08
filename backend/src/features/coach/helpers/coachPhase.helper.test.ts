@@ -33,7 +33,9 @@ describe("coachPhase helper", () => {
 			expect(result).toEqual({ phase: "reality", turnsInPhase: 0 });
 		});
 
-		it("corrects a skip straight to closed down to a single-phase advance", () => {
+		it("clamps a declared closed down to action before applying skip correction", () => {
+			// closedはactionにクランプされるため、reality→closed宣言はreality→action宣言と
+			// 同じ扱いになり、差2の飛び級矯正でinsightへ進む
 			const result = resolveNextPhase("reality", "closed", 0);
 
 			expect(result).toEqual({ phase: "insight", turnsInPhase: 0 });
@@ -63,10 +65,28 @@ describe("coachPhase helper", () => {
 			expect(result).toEqual({ phase: "insight", turnsInPhase: 1 });
 		});
 
-		it("does not advance past closed even after MAX_TURNS_IN_PHASE is reached", () => {
-			const result = resolveNextPhase("closed", "closed", 3);
+		it("does not let the AI self-declare closed; treats it as action instead", () => {
+			const result = resolveNextPhase("action", "closed", 0);
+
+			expect(result).toEqual({ phase: "action", turnsInPhase: 1 });
+		});
+
+		it("only reaches closed via forced advancement from action after MAX_TURNS_IN_PHASE", () => {
+			const result = resolveNextPhase("action", "action", 3);
 
 			expect(result).toEqual({ phase: "closed", turnsInPhase: 0 });
+		});
+
+		it("resets to theme on the next turn once the conversation has reached closed", () => {
+			const result = resolveNextPhase("closed", "action", 0);
+
+			expect(result).toEqual({ phase: "theme", turnsInPhase: 0 });
+		});
+
+		it("resets to theme from closed even when declared is undefined or invalid", () => {
+			const result = resolveNextPhase("closed", undefined, 5);
+
+			expect(result).toEqual({ phase: "theme", turnsInPhase: 0 });
 		});
 	});
 });
