@@ -15,6 +15,9 @@ export const coachMessages = sqliteTable(
 		content: text("content").notNull(),
 		// 提案(nullable JSON)。採用時にadopted:true, createdXxxIdを書き込んで更新する
 		proposal: text("proposal"),
+		// 生成に使用したモデルID。assistant roleの行のみ設定する(Pro tierのソフトリミット
+		// 超過によるダウングレード発生を追跡できるようにするため)
+		model: text("model"),
 		createdAt: text("createdAt")
 			.notNull()
 			.$defaultFn(() => new Date().toISOString()),
