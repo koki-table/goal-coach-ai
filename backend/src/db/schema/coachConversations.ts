@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { objectiveStatuses } from "./constants";
+import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { coachSessionPhases, objectiveStatuses } from "./constants";
 import { goals } from "./goals";
 import { users } from "./users";
 
@@ -28,6 +28,11 @@ export const coachConversations = sqliteTable(
 		// で使い分ける（1列1意味の原則からの意図的逸脱。詳細はdocs/coach-chat.md参照）
 		goalTitleSnapshot: text("goalTitleSnapshot").notNull(),
 		goalDeadlineSnapshot: text("goalDeadlineSnapshot"),
+		// GROWサイクルのセッションフェーズ。objectiveStatus="undecided"(探索スレッド)では
+		// 既定値のまま更新・参照しない(4ビート誘導が同種の目的を既に担保しているため)
+		phase: text("phase", { enum: coachSessionPhases }).notNull().default("theme"),
+		// 同一phaseに留まった往復数。resolveNextPhase()の強制前進判定に使う
+		turnsInPhase: integer("turnsInPhase").notNull().default(0),
 		createdAt: text("createdAt")
 			.notNull()
 			.$defaultFn(() => new Date().toISOString()),
@@ -50,6 +55,10 @@ export const coachConversations = sqliteTable(
 		check(
 			"chk_coach_conversations_objective_status",
 			sql`${table.objectiveStatus} IN ('decided', 'undecided')`,
+		),
+		check(
+			"chk_coach_conversations_phase",
+			sql`${table.phase} IN ('theme', 'reality', 'insight', 'action', 'closed')`,
 		),
 	],
 );

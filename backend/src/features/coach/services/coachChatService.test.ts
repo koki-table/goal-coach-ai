@@ -156,6 +156,115 @@ describe("CoachChatService", () => {
 			expect(assistantMessage).toEqual(assistantRow);
 		});
 
+		it("resolves and persists the next phase via setPhaseStmt on a decided (goal) thread", async () => {
+			const db = createDb(createUnusedD1());
+			const service = new CoachChatService(db);
+
+			const conversationId = "conv-1";
+			const userId = "user-1";
+			const goalId = "goal-1";
+
+			const conversationRepo = (
+				service as unknown as {
+					conversationRepo: {
+						findByIdAndUserId: (...args: unknown[]) => unknown;
+						touchStmt: (...args: unknown[]) => unknown;
+						setPhaseStmt: (...args: unknown[]) => unknown;
+					};
+				}
+			).conversationRepo;
+			const messageRepo = (
+				service as unknown as {
+					messageRepo: {
+						countUserMessagesByUserIdSince: (...args: unknown[]) => unknown;
+						findRecentByConversationId: (...args: unknown[]) => unknown;
+						insertStmt: (...args: unknown[]) => unknown;
+					};
+				}
+			).messageRepo;
+			const goalRepo = (
+				service as unknown as {
+					goalRepo: { findByIdAndUserId: (...args: unknown[]) => unknown };
+				}
+			).goalRepo;
+			const milestoneRepo = (
+				service as unknown as {
+					milestoneRepo: { findAllByGoalId: (...args: unknown[]) => unknown };
+				}
+			).milestoneRepo;
+			const todoRepo = (
+				service as unknown as { todoRepo: { findAllByGoalId: (...args: unknown[]) => unknown } }
+			).todoRepo;
+			const todoLogRepo = (
+				service as unknown as {
+					todoLogRepo: { findAllByTodoIds: (...args: unknown[]) => unknown };
+				}
+			).todoLogRepo;
+
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "資格を取得する",
+				goalDeadlineSnapshot: "2026-12-31",
+				phase: "reality",
+				turnsInPhase: 0,
+				createdAt: "",
+				updatedAt: "",
+			});
+			vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(0);
+			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
+			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue({
+				id: goalId,
+				title: "資格を取得する",
+				dueDate: "2026-12-31",
+			});
+			vi.spyOn(milestoneRepo, "findAllByGoalId").mockResolvedValue([]);
+			vi.spyOn(todoRepo, "findAllByGoalId").mockResolvedValue([]);
+			vi.spyOn(todoLogRepo, "findAllByTodoIds").mockResolvedValue([]);
+
+			const insertStmtSpy = vi.spyOn(messageRepo, "insertStmt");
+			const touchStmtSpy = vi.spyOn(conversationRepo, "touchStmt");
+			const setPhaseStmtSpy = vi.spyOn(conversationRepo, "setPhaseStmt");
+
+			const model = mockStreamModelReturning(
+				JSON.stringify({ reply: "現状を教えてほしい。", proposal: null, phase: "insight" }),
+			);
+			vi.spyOn(coachModel, "createCoachModel").mockReturnValue(model);
+
+			const assistantRow = {
+				id: 1,
+				conversationId,
+				role: "assistant",
+				content: "現状を教えてほしい。",
+				proposal: null,
+				createdAt: "",
+			};
+			const batchSpy = vi
+				.spyOn(db, "batch")
+				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<ReturnType<typeof db.batch>>);
+
+			const { uiStream, persistTurn } = await service.startMessageStream(
+				userId,
+				conversationId,
+				"最近進んでいない",
+				{ GEMINI_API_KEY: "dummy" } as Bindings,
+			);
+
+			await drainStream(uiStream);
+			await persistTurn();
+
+			expect(insertStmtSpy).toHaveBeenCalledWith(
+				expect.objectContaining({ conversationId, role: "user", content: "最近進んでいない" }),
+			);
+			// declaredPhase("insight")はcurrent("reality")から1段階前進のため矯正されずそのまま適用される
+			expect(setPhaseStmtSpy).toHaveBeenCalledWith(conversationId, "insight", 0);
+			expect(touchStmtSpy).not.toHaveBeenCalled();
+			expect(batchSpy).toHaveBeenCalledTimes(1);
+			expect(batchSpy.mock.calls[0][0]).toHaveLength(3);
+		});
+
 		it("does not call db.batch when the model output fails schema validation", async () => {
 			const db = createDb(createUnusedD1());
 			const service = new CoachChatService(db);

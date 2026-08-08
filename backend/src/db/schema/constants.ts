@@ -20,3 +20,9 @@ export type CoachMessageRole = (typeof coachMessageRoles)[number];
 // "decided"はObjectiveが確定し目標に紐づいた通常スレッド
 export const objectiveStatuses = ["decided", "undecided"] as const;
 export type ObjectiveStatus = (typeof objectiveStatuses)[number];
+
+// GROWサイクル(Goal→Reality & Vision→Insights→Action)に沿ったコーチングセッションの
+// フェーズ。objectiveStatus="decided"(通常スレッド)でのみ使用し、"undecided"(探索スレッド)
+// では常に既定値"theme"のまま更新・参照しない(理由はdocs/coach-chat.md参照)
+export const coachSessionPhases = ["theme", "reality", "insight", "action", "closed"] as const;
+export type CoachSessionPhase = (typeof coachSessionPhases)[number];

@@ -163,4 +163,28 @@ describe("buildChatUserPrompt", () => {
 
 		expect(prompt).not.toContain("<user_state>");
 	});
+
+	it("includes the session_state block with the current phase when provided", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			today: "2026-08-05",
+			history: [],
+			phase: "insight",
+		});
+
+		expect(prompt).toContain("<session_state>");
+		expect(prompt).toContain("現在のphase: insight");
+	});
+
+	it("omits the session_state block when phase is not provided", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			today: "2026-08-05",
+			history: [],
+		});
+
+		expect(prompt).not.toContain("<session_state>");
+	});
 });

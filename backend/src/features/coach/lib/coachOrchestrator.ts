@@ -22,9 +22,14 @@ export type CoachTurnInput = {
 export type CoachTurnResult = {
 	// SSEとしてそのままHTTPレスポンス化できるUI Message Chunkのストリーム。
 	uiStream: ReadableStream<UIMessageChunk>;
-	// ストリーム完了後に確定するreplyとproposal。呼び出し側はuiStreamを最後まで
-	// 消費した後にこのpromiseを読む（streamChatの制約を引き継ぐ）。
-	turnResult: Promise<{ reply: string; proposal: ProposalEnvelope | null }>;
+	// ストリーム完了後に確定するreply・proposal・phase。呼び出し側はuiStreamを最後まで
+	// 消費した後にこのpromiseを読む（streamChatの制約を引き継ぐ）。phaseはAIが宣言した
+	// 生の値で、resolveNextPhase()による矯正前(未検証)のまま渡す。
+	turnResult: Promise<{
+		reply: string;
+		proposal: ProposalEnvelope | null;
+		phase: string | undefined;
+	}>;
 };
 
 const REPLY_TEXT_PART_ID = "reply";
@@ -32,14 +37,20 @@ const REPLY_TEXT_PART_ID = "reply";
 // 1ターン分の応答を作る。reply部分文字列をtext-deltaとして逐次書き出し、
 // ストリーム終端で確定したproposalをdata-proposalとして書き出す。
 export function runCoachTurn(input: CoachTurnInput): CoachTurnResult {
-	let resolveTurnResult: (value: { reply: string; proposal: ProposalEnvelope | null }) => void;
+	let resolveTurnResult: (value: {
+		reply: string;
+		proposal: ProposalEnvelope | null;
+		phase: string | undefined;
+	}) => void;
 	let rejectTurnResult: (error: unknown) => void;
-	const turnResult = new Promise<{ reply: string; proposal: ProposalEnvelope | null }>(
-		(resolve, reject) => {
-			resolveTurnResult = resolve;
-			rejectTurnResult = reject;
-		},
-	);
+	const turnResult = new Promise<{
+		reply: string;
+		proposal: ProposalEnvelope | null;
+		phase: string | undefined;
+	}>((resolve, reject) => {
+		resolveTurnResult = resolve;
+		rejectTurnResult = reject;
+	});
 
 	const uiStream = createUIMessageStream({
 		execute: async ({ writer }) => {
@@ -66,7 +77,7 @@ export function runCoachTurn(input: CoachTurnInput): CoachTurnResult {
 					writer.write({ type: "data-proposal", data: proposal });
 				}
 
-				resolveTurnResult({ reply: result.reply, proposal });
+				resolveTurnResult({ reply: result.reply, proposal, phase: result.phase });
 			} catch (error) {
 				writer.write({ type: "text-end", id: REPLY_TEXT_PART_ID });
 				rejectTurnResult(error as CoachModelError);

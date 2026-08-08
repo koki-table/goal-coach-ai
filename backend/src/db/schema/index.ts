@@ -11,5 +11,11 @@ export {
 	todoLogTypes,
 	coachMessageRoles,
 	objectiveStatuses,
+	coachSessionPhases,
 } from "./constants";
-export type { TodoLogType, CoachMessageRole, ObjectiveStatus } from "./constants";
+export type {
+	TodoLogType,
+	CoachMessageRole,
+	ObjectiveStatus,
+	CoachSessionPhase,
+} from "./constants";

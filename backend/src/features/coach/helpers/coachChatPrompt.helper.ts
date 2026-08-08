@@ -1,4 +1,14 @@
+import type { CoachSessionPhase } from "../../../db/schema/constants";
 import type { GoalSnapshot } from "./goalSnapshot.helper";
+
+// フェーズ別の問いメニュー。AIへの参考情報であり、機械的な台本の強制ではない
+const PHASE_QUESTION_MENUS: Record<CoachSessionPhase, string> = {
+	theme: "今日話したい主題・関心は何か",
+	reality: "現状はどうか、理想の状態は何か",
+	insight: "なぜそう思うか、何が本当のブレーキになっているか",
+	action: "掘れた洞察を踏まえ、明日試せる次の一歩は何か",
+	closed: "(セッション終了。新たな問いかけは不要)",
+};
 
 export type CoachChatPromptMilestone = {
 	title: string;
@@ -33,8 +43,9 @@ export type CoachChatPromptInput = {
 	activeGoalCount?: number;
 	// #52(Step3)で全人的プロフィールを注入するための拡張点。現時点では未使用
 	wholePersonProfile?: unknown;
-	// コーチングフェーズの拡張点。現時点では未使用
-	phase?: unknown;
+	// GROWサイクルのセッションフェーズ。objectiveStatus="decided"(通常スレッド)の時のみ渡す。
+	// 探索スレッドではundefinedのままにし、<session_state>ブロックを注入しない
+	phase?: CoachSessionPhase;
 };
 
 // XMLタグでデータを明示的に区切り、AIが前提データと会話履歴を正確に認識できるようにする。
@@ -61,6 +72,11 @@ export function buildChatUserPrompt(input: CoachChatPromptInput): string {
 			? `\n\n<user_state>\n- 現在のactive(未完了)目標数: ${input.activeGoalCount}件\n</user_state>`
 			: "";
 
+	const sessionStateText =
+		input.phase !== undefined
+			? `\n\n<session_state>\n- 現在のphase: ${input.phase}\n- このphaseで問うべきことの目安: ${PHASE_QUESTION_MENUS[input.phase]}\n</session_state>`
+			: "";
+
 	return `以下のユーザーの目標データと会話履歴を踏まえ、コーチとして応答してください。
 
 <goal_data>
@@ -69,7 +85,7 @@ ${goalDataText}
 
 <conversation_history>
 ${historyText}
-</conversation_history>${userStateText}
+</conversation_history>${userStateText}${sessionStateText}
 
 設定されたキャラクターになりきり、レスポンス形式に従って応答してください。`;
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { goalCategorySchema } from "../../../common/validators";
+import { coachSessionPhases } from "../../../db/schema/constants";
 
 export type CoachPersona = "calmMentor";
 
@@ -48,6 +49,9 @@ export const coachChatReplySchema = z.object({
 	reply: z.string(),
 	// 提案すべき段階に達したと判断した場合のみ値を持つ。それまではnullで対話を続ける
 	proposal: coachProposalSchema.nullable(),
+	// GROWサイクルのセッションフェーズ。objectiveStatus="decided"(通常スレッド)のみ問い合わせ、
+	// 探索スレッドではプロンプトに指示を注入しないためAIが返さない(optional)
+	phase: z.enum(coachSessionPhases).optional(),
 });
 
 export type CoachChatReplyResult = z.infer<typeof coachChatReplySchema>;
@@ -58,6 +62,16 @@ const EXPLORATION_ADDENDUM = `
 - ユーザーはまだ目標(Objective)を決めていない。以下の4ビートを目安に、順を追って問いかけを重ねる: (1)何にワクワクするか (2)現状はどうか (3)いつまでに実現したいか、その期間での理想像は何か (4)それを定量化するとどうなるか。
 - (3)の期間は3ヶ月・半年・1年など、こちらから決めつけず必ず本人に選んでもらう。期間が本人から示されるまで、特定の期間を前提にした理想像を尋ねない。
 - ユーザー自身の言葉で方向性が言い切られるまで、proposal.objectiveを提案しない。`;
+
+const PHASE_ADDENDUM = `
+
+【対話の進め方(セッションフェーズ)】(このスレッドは目標確定済みの通常スレッド)
+- 対話は内部的に4つの段階を経て進み、レスポンスのphaseフィールドに現在の段階を返す: "theme"(テーマ確認)→"reality"(現状と理想)→"insight"(深掘り)→"action"(次の一歩)。この段階はユーザーには一切見せない内部状態であり、「今はどの段階か」のような発言は絶対にしない。
+- 各段階の狙い: theme=今日話したい主題・関心を確認する。reality=現状はどうか、理想の状態は何かを事実ベースで確認する。insight=なぜそう思うか、何が本当のブレーキか、本人の言葉で核心を掘る。action=掘れた洞察を踏まえ、具体的な行動に落とす。
+- まだ同一段階に留まって掘るべきと判断した場合は、直前のsession_stateに示された現在のphaseと同じ値をそのまま返す。ユーザーが核心的な話を始めた場面では、機械的に次の段階へ進めず、その場に留まって掘り続けてよい。
+- 1ターンで進めるのは1段階までとする。2段階以上先のphaseを一度に返さない。
+- 段階を戻す必要がある場合も、"reality"より前("theme")へは戻さない。
+- "action"の段階では、明日試せる粒度(1回・15分以内が目安)の単発TODOを必ず1つ以上提案する。`;
 
 const SYSTEM_INSTRUCTIONS: Record<CoachPersona, string> = {
 	calmMentor: `あなたはペンギンのAIコーチだ。ユーザーの目標達成を支援する。事実に基づいた率直で踏み込んだ指摘を行うこと。
@@ -109,5 +123,7 @@ export function getChatSystemInstruction(
 	objectiveStatus: "decided" | "undecided" = "decided",
 ): string {
 	const base = SYSTEM_INSTRUCTIONS[persona];
-	return objectiveStatus === "undecided" ? `${base}${EXPLORATION_ADDENDUM}` : base;
+	return objectiveStatus === "undecided"
+		? `${base}${EXPLORATION_ADDENDUM}`
+		: `${base}${PHASE_ADDENDUM}`;
 }

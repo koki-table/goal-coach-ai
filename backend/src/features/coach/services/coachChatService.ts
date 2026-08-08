@@ -21,12 +21,14 @@ import { MilestoneRepository } from "../../../common/repositories/milestoneRepos
 import { TodoLogRepository } from "../../../common/repositories/todoLogRepository";
 import { TodoRepository } from "../../../common/repositories/todoRepository";
 import type { Database } from "../../../db";
+import type { CoachSessionPhase, ObjectiveStatus } from "../../../db/schema/constants";
 import type { Bindings } from "../../../types/env";
 import { mapGoalToResponse } from "../../goals/helpers/categoryMapping.helper";
 import { mapMilestoneToResponse } from "../../milestones/helpers/milestoneMapper.helper";
 import { mapTodoToResponse } from "../../todos/helpers/todoMapper.helper";
 import type { CoachChatPromptMessage } from "../helpers/coachChatPrompt.helper";
 import { buildChatUserPrompt } from "../helpers/coachChatPrompt.helper";
+import { resolveNextPhase } from "../helpers/coachPhase.helper";
 import type { ProposalEnvelope } from "../helpers/coachProposal.helper";
 import { parseProposalPayload, toPromptMessage } from "../helpers/coachProposal.helper";
 import { buildGoalSnapshot } from "../helpers/goalSnapshot.helper";
@@ -133,9 +135,13 @@ export class CoachChatService {
 			? await this.goalRepo.findByIdAndUserId(conversation.goalId, userId)
 			: undefined;
 
+		// GROWフェーズはobjectiveStatus="decided"(通常スレッド)のみ問い合わせる。探索スレッドは
+		// 既存のEXPLORATION_ADDENDUM(4ビート誘導)が同種の目的を担保しているため対象外
+		const phase = conversation.objectiveStatus === "decided" ? conversation.phase : undefined;
+
 		const { prompt, existingKeyResultTitles } =
 			conversation.goalId && goal
-				? await this.buildLivingGoalPrompt(goal, history)
+				? await this.buildLivingGoalPrompt(goal, history, phase)
 				: {
 						// goalスレッドで目標が削除済みの場合、および探索スレッド(目標未確定)の
 						// 両方がこの分岐に入る。探索スレッドでは「削除済み」の注記は不適切なため
@@ -153,6 +159,7 @@ export class CoachChatService {
 								conversation.objectiveStatus === "undecided"
 									? await this.goalRepo.countActiveByUserId(userId)
 									: undefined,
+							phase,
 						}),
 						existingKeyResultTitles: [] as string[],
 					};
@@ -166,19 +173,47 @@ export class CoachChatService {
 			objectiveStatus: conversation.objectiveStatus,
 		});
 
-		const persistTurn = () => this.persistCompletedTurn(conversationId, content, turnResult);
+		const persistTurn = () =>
+			this.persistCompletedTurn(conversationId, content, turnResult, {
+				objectiveStatus: conversation.objectiveStatus,
+				phase: conversation.phase,
+				turnsInPhase: conversation.turnsInPhase,
+			});
 
 		return { uiStream, persistTurn };
 	}
 
-	// ストリーム完了後にuser・assistantの2メッセージとupdatedAt更新をアトミックに
-	// 書き込む。LLM呼び出しがエラーで終わった場合はuser行も書き込まず、孤立行を残さない。
+	// ストリーム完了後にuser・assistantの2メッセージと、conversationの更新(phase遷移または
+	// updatedAtのみ)をアトミックに書き込む。LLM呼び出しがエラーで終わった場合はuser行も
+	// 書き込まず、孤立行を残さない。
 	private async persistCompletedTurn(
 		conversationId: string,
 		userContent: string,
 		turnResult: CoachTurnResult["turnResult"],
+		phaseState: {
+			objectiveStatus: ObjectiveStatus;
+			phase: CoachSessionPhase;
+			turnsInPhase: number;
+		},
 	) {
-		const { reply, proposal } = await turnResult;
+		const { reply, proposal, phase: declaredPhase } = await turnResult;
+
+		// undecided(探索)スレッドはGROWフェーズを適用しないため既存どおりtouchStmtのみ行う
+		const conversationUpdateStmt =
+			phaseState.objectiveStatus === "decided"
+				? (() => {
+						const resolved = resolveNextPhase(
+							phaseState.phase,
+							declaredPhase,
+							phaseState.turnsInPhase,
+						);
+						return this.conversationRepo.setPhaseStmt(
+							conversationId,
+							resolved.phase,
+							resolved.turnsInPhase,
+						);
+					})()
+				: this.conversationRepo.touchStmt(conversationId);
 
 		const [, [assistantMessage]] = await this.db.batch([
 			this.messageRepo.insertStmt({ conversationId, role: "user", content: userContent }),
@@ -190,7 +225,7 @@ export class CoachChatService {
 					proposal: proposal ? JSON.stringify(proposal) : null,
 				})
 				.returning(),
-			this.conversationRepo.touchStmt(conversationId),
+			conversationUpdateStmt,
 		]);
 
 		return assistantMessage;
@@ -511,6 +546,7 @@ export class CoachChatService {
 	private async buildLivingGoalPrompt(
 		goal: { title: string; dueDate: string | null; id: string },
 		history: CoachChatPromptMessage[],
+		phase: CoachSessionPhase | undefined,
 	): Promise<{ prompt: string; existingKeyResultTitles: string[] }> {
 		const [milestones, todos] = await Promise.all([
 			this.milestoneRepo.findAllByGoalId(goal.id),
@@ -529,6 +565,7 @@ export class CoachChatService {
 			history,
 			today: CoachChatService.todayIsoDate(),
 			// goalスレッドではactiveGoalCountを渡さない(呼び出し元のコメント参照)
+			phase,
 		});
 
 		return { prompt, existingKeyResultTitles: milestones.map((m) => m.title) };
