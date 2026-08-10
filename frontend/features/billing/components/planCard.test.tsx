@@ -52,4 +52,51 @@ describe("PlanCard", () => {
 
 		expect(screen.getByText(/お支払いに問題が発生しています/)).toBeInTheDocument();
 	});
+
+	it("shows the monthly plan label for a pro tier user on the monthly interval", () => {
+		render(
+			<PlanCard
+				tier="pro"
+				status="active"
+				interval="monthly"
+				isCheckoutLoading={false}
+				isPortalLoading={false}
+				onUpgrade={vi.fn()}
+				onManage={vi.fn()}
+			/>,
+		);
+
+		expect(screen.getByText("(月額プラン)")).toBeInTheDocument();
+	});
+
+	it("shows the yearly plan label for a pro tier user on the yearly interval", () => {
+		render(
+			<PlanCard
+				tier="pro"
+				status="active"
+				interval="yearly"
+				isCheckoutLoading={false}
+				isPortalLoading={false}
+				onUpgrade={vi.fn()}
+				onManage={vi.fn()}
+			/>,
+		);
+
+		expect(screen.getByText("(年額プラン)")).toBeInTheDocument();
+	});
+
+	it("does not show a plan interval label when interval is unknown", () => {
+		render(
+			<PlanCard
+				tier="pro"
+				status="active"
+				isCheckoutLoading={false}
+				isPortalLoading={false}
+				onUpgrade={vi.fn()}
+				onManage={vi.fn()}
+			/>,
+		);
+
+		expect(screen.queryByText(/月額プラン|年額プラン/)).not.toBeInTheDocument();
+	});
 });

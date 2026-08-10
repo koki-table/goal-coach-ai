@@ -15,6 +15,7 @@ function BillingPageContent() {
 	const {
 		tier,
 		status,
+		interval,
 		isLoading,
 		decidedMessagesUsedToday,
 		freeDailyDecidedLimit,
@@ -59,6 +60,7 @@ function BillingPageContent() {
 			<PlanCard
 				tier={tier}
 				status={status}
+				interval={interval}
 				usageLabel={usageLabel}
 				isCheckoutLoading={isCheckoutLoading}
 				isPortalLoading={isPortalLoading}

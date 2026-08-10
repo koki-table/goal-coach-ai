@@ -57,7 +57,7 @@ export class BillingService {
 		return { url: session.url };
 	}
 
-	async getStatus(userId: string) {
+	async getStatus(userId: string, priceIds: { monthly?: string; yearly?: string }) {
 		const subscription = await this.subscriptionRepo.findByUserId(userId);
 		const decidedMessagesUsedToday = await this.usageRepo.getCount(userId, todayIsoDate());
 
@@ -69,6 +69,23 @@ export class BillingService {
 			// フロントは独自にこの値をハードコードせず、常にこのAPIレスポンスの値を使う
 			// (バックエンド側の定数変更とフロント表示の値がズレることを防ぐ)
 			freeDailyDecidedLimit: FREE_DAILY_DECIDED_LIMIT,
+			interval: resolveInterval(subscription?.stripePriceId, priceIds),
 		};
 	}
+}
+
+// stripePriceIdから月額/年額を判定する。free tier(行なし)や未知のpriceId(価格移行等)の
+// 場合はundefinedを返し、フロント側で契約区分の表示を出さない。
+// このメソッドはSTRIPE_SECRET_KEY等を必要としないため、呼び出し元(billingRoute.ts)から
+// env全体ではなく必要な2値のみを受け取る(最小権限。他featureがenv全体を渡す既存の
+// createCheckoutSession/createPortalSessionはStripe APIクライアント生成にSTRIPE_SECRET_KEYが
+// 必要なため対象外)
+function resolveInterval(
+	stripePriceId: string | null | undefined,
+	priceIds: { monthly?: string; yearly?: string },
+): BillingInterval | undefined {
+	if (!stripePriceId) return undefined;
+	if (stripePriceId === priceIds.monthly) return "monthly";
+	if (stripePriceId === priceIds.yearly) return "yearly";
+	return undefined;
 }
