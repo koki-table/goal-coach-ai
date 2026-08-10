@@ -56,6 +56,9 @@ billingRoute.get("/status", async (c) => {
 	const db = createDb(c.env.DB);
 	const service = new BillingService(db);
 
-	const status = await service.getStatus(userId);
+	const status = await service.getStatus(userId, {
+		monthly: c.env.STRIPE_PRICE_ID_MONTHLY,
+		yearly: c.env.STRIPE_PRICE_ID_YEARLY,
+	});
 	return c.json(status);
 });

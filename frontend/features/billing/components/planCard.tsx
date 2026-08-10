@@ -6,9 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card
 import { MONTHLY_PRICE_JPY, YEARLY_PRICE_JPY } from "../config/billingConfig";
 import type { BillingInterval, SubscriptionStatus, SubscriptionTier } from "../types";
 
+const INTERVAL_LABELS: Record<BillingInterval, string> = {
+	monthly: "月額プラン",
+	yearly: "年額プラン",
+};
+
 type PlanCardProps = {
 	tier: SubscriptionTier;
 	status: SubscriptionStatus;
+	// tier="pro"の時のみ値が入る。free tierや未知のpriceIdではundefined
+	interval?: BillingInterval;
 	// freeプランの時のみ渡す。proでは"無制限"訴求を守るため常に非表示にする
 	usageLabel?: string;
 	isCheckoutLoading: boolean;
@@ -20,6 +27,7 @@ type PlanCardProps = {
 export function PlanCard({
 	tier,
 	status,
+	interval,
 	usageLabel,
 	isCheckoutLoading,
 	isPortalLoading,
@@ -30,7 +38,12 @@ export function PlanCard({
 		<Card>
 			<CardHeader>
 				<div className="flex items-center justify-between gap-2">
-					<CardTitle>{tier === "pro" ? "Proプラン" : "無料プラン"}</CardTitle>
+					<div className="flex items-center gap-2">
+						<CardTitle>{tier === "pro" ? "Proプラン" : "無料プラン"}</CardTitle>
+						{tier === "pro" && interval && (
+							<span className="text-sm text-muted-foreground">({INTERVAL_LABELS[interval]})</span>
+						)}
+					</div>
 					<Badge variant={tier === "pro" ? "default" : "secondary"}>
 						{tier === "pro" ? "Pro" : "Free"}
 					</Badge>
