@@ -22,6 +22,10 @@ export const userSubscriptions = sqliteTable(
 		tier: text("tier", { enum: subscriptionTiers }).notNull().default("free"),
 		status: text("status", { enum: subscriptionStatuses }).notNull().default("active"),
 		currentPeriodEnd: text("currentPeriodEnd"),
+		// Stripeのevent.created(unix seconds)をISO化して保持。Stripeはwebhookの配信順序を
+		// 保証しないため、この行より古いevent.createdのcustomer.subscription.updatedは
+		// 無視する(古いイベントによる新しい状態の巻き戻りを防ぐ)
+		lastEventCreatedAt: text("lastEventCreatedAt"),
 		createdAt: text("createdAt")
 			.notNull()
 			.$defaultFn(() => new Date().toISOString()),

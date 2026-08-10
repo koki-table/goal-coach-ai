@@ -11,6 +11,7 @@ type BillingContextValue = {
 	status: SubscriptionStatus;
 	isLoading: boolean;
 	decidedMessagesUsedToday: number;
+	freeDailyDecidedLimit: number;
 	startCheckout: (interval: BillingInterval) => Promise<void>;
 	isCheckoutLoading: boolean;
 	openPortal: () => Promise<void>;
@@ -33,6 +34,9 @@ export function BillingProvider({ children }: BillingProviderProps) {
 		status: data?.status ?? "active",
 		isLoading,
 		decidedMessagesUsedToday: data?.decidedMessagesUsedToday ?? 0,
+		// data未取得時(isLoading中)のみ使うフォールバック。呼び出し側はisLoadingを
+		// 見てから表示するため、この値自体が画面に出ることはない
+		freeDailyDecidedLimit: data?.freeDailyDecidedLimit ?? 0,
 		startCheckout,
 		isCheckoutLoading,
 		openPortal,

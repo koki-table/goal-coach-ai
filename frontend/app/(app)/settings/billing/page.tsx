@@ -2,11 +2,7 @@
 
 import { Skeleton } from "@/components/atom/skeleton";
 import { PlanCard } from "@/features/billing/components/planCard";
-import {
-	FREE_DAILY_DECIDED_LIMIT,
-	MONTHLY_PRICE_JPY,
-	YEARLY_PRICE_JPY,
-} from "@/features/billing/config/billingConfig";
+import { MONTHLY_PRICE_JPY, YEARLY_PRICE_JPY } from "@/features/billing/config/billingConfig";
 import { BillingProvider, useBillingContext } from "@/features/billing/contexts/billingContext";
 import { formatFreeTierUsageLabel } from "@/features/billing/helpers/usageDisplay.helper";
 import { useSearchParams } from "next/navigation";
@@ -21,6 +17,7 @@ function BillingPageContent() {
 		status,
 		isLoading,
 		decidedMessagesUsedToday,
+		freeDailyDecidedLimit,
 		startCheckout,
 		isCheckoutLoading,
 		openPortal,
@@ -38,7 +35,7 @@ function BillingPageContent() {
 
 	const usageLabel =
 		tier === "free"
-			? formatFreeTierUsageLabel(decidedMessagesUsedToday, FREE_DAILY_DECIDED_LIMIT)
+			? formatFreeTierUsageLabel(decidedMessagesUsedToday, freeDailyDecidedLimit)
 			: undefined;
 
 	return (

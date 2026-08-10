@@ -81,7 +81,6 @@ describe("CoachChatService", () => {
 			const messageRepo = (
 				service as unknown as {
 					messageRepo: {
-						countUserMessagesByUserIdSince: (...args: unknown[]) => unknown;
 						findRecentByConversationId: (...args: unknown[]) => unknown;
 						insertStmt: (...args: unknown[]) => unknown;
 					};
@@ -111,7 +110,6 @@ describe("CoachChatService", () => {
 				createdAt: "",
 				updatedAt: "",
 			});
-			vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(0);
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
@@ -182,7 +180,6 @@ describe("CoachChatService", () => {
 			const messageRepo = (
 				service as unknown as {
 					messageRepo: {
-						countUserMessagesByUserIdSince: (...args: unknown[]) => unknown;
 						findRecentByConversationId: (...args: unknown[]) => unknown;
 						insertStmt: (...args: unknown[]) => unknown;
 					};
@@ -224,7 +221,6 @@ describe("CoachChatService", () => {
 				createdAt: "",
 				updatedAt: "",
 			});
-			vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(0);
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue({
 				id: goalId,
@@ -295,7 +291,6 @@ describe("CoachChatService", () => {
 			const messageRepo = (
 				service as unknown as {
 					messageRepo: {
-						countUserMessagesByUserIdSince: (...args: unknown[]) => unknown;
 						findRecentByConversationId: (...args: unknown[]) => unknown;
 					};
 				}
@@ -324,7 +319,6 @@ describe("CoachChatService", () => {
 				createdAt: "",
 				updatedAt: "",
 			});
-			vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(0);
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
@@ -346,6 +340,96 @@ describe("CoachChatService", () => {
 			await expect(persistTurn()).rejects.toThrow("Coach chat model failed");
 
 			expect(batchSpy).not.toHaveBeenCalled();
+		});
+
+		it("releases the daily usage reservation when the LLM call fails on a decided thread (so a failed turn doesn't cost the user a message)", async () => {
+			const db = createDb(createUnusedD1());
+			const service = new CoachChatService(db);
+
+			const conversationId = "conv-1";
+			const userId = "user-1";
+			const goalId = "goal-1";
+
+			const conversationRepo = (
+				service as unknown as {
+					conversationRepo: { findByIdAndUserId: (...args: unknown[]) => unknown };
+				}
+			).conversationRepo;
+			const messageRepo = (
+				service as unknown as {
+					messageRepo: { findRecentByConversationId: (...args: unknown[]) => unknown };
+				}
+			).messageRepo;
+			const goalRepo = (
+				service as unknown as {
+					goalRepo: { findByIdAndUserId: (...args: unknown[]) => unknown };
+				}
+			).goalRepo;
+			const milestoneRepo = (
+				service as unknown as {
+					milestoneRepo: { findAllByGoalId: (...args: unknown[]) => unknown };
+				}
+			).milestoneRepo;
+			const todoRepo = (
+				service as unknown as { todoRepo: { findAllByGoalId: (...args: unknown[]) => unknown } }
+			).todoRepo;
+			const todoLogRepo = (
+				service as unknown as {
+					todoLogRepo: { findAllByTodoIds: (...args: unknown[]) => unknown };
+				}
+			).todoLogRepo;
+			const chatGate = (
+				service as unknown as {
+					chatGate: {
+						resolveForDecidedMessage: (...args: unknown[]) => unknown;
+						releaseDecidedMessageReservation: (...args: unknown[]) => unknown;
+					};
+				}
+			).chatGate;
+
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "資格を取得する",
+				goalDeadlineSnapshot: "2026-12-31",
+				phase: "reality",
+				turnsInPhase: 0,
+				createdAt: "",
+				updatedAt: "",
+			});
+			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
+			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue({
+				id: goalId,
+				title: "資格を取得する",
+				dueDate: "2026-12-31",
+			});
+			vi.spyOn(milestoneRepo, "findAllByGoalId").mockResolvedValue([]);
+			vi.spyOn(todoRepo, "findAllByGoalId").mockResolvedValue([]);
+			vi.spyOn(todoLogRepo, "findAllByTodoIds").mockResolvedValue([]);
+			vi.spyOn(chatGate, "resolveForDecidedMessage").mockResolvedValue({
+				modelId: "gemini-3.5-flash-lite",
+				blocked: false,
+			});
+			const releaseSpy = vi
+				.spyOn(chatGate, "releaseDecidedMessageReservation")
+				.mockResolvedValue(undefined);
+
+			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
+			vi.spyOn(coachModel, "createCoachModel").mockReturnValue(model);
+
+			const { uiStream, persistTurn } = await service.startMessageStream(
+				userId,
+				conversationId,
+				"最近進んでいない",
+				{ GEMINI_API_KEY: "dummy" } as Bindings,
+			);
+
+			await drainStream(uiStream);
+			await expect(persistTurn()).rejects.toThrow("Coach chat model failed");
+
+			expect(releaseSpy).toHaveBeenCalledWith(userId, expect.any(String));
 		});
 	});
 

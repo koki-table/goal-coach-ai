@@ -12,6 +12,7 @@ import {
 } from "../../../common/errors";
 import { getCategoryNameFromKey } from "../../../common/helpers/categoryMapping.helper";
 import { resolveCategoryId } from "../../../common/helpers/categoryResolution.helper";
+import { todayIsoDate } from "../../../common/helpers/date.helper";
 import { MAX_ACTIVE_GOALS } from "../../../common/helpers/goalLimit.helper";
 import { CoachConversationRepository } from "../../../common/repositories/coachConversationRepository";
 import { CoachMessageRepository } from "../../../common/repositories/coachMessageRepository";
@@ -45,8 +46,6 @@ export type AdoptPlanItemTarget =
 export class CoachChatService {
 	// プロンプトに渡す直近履歴の件数
 	private static readonly CHAT_HISTORY_LIMIT = 20;
-	// tier-aware課金ゲート(CoachChatGate)のカウント基準ウィンドウ
-	private static readonly RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 	// メッセージ取得のページサイズ方針（コントローラではなくドメインが持つ）
 	private static readonly DEFAULT_MESSAGE_PAGE_SIZE = 30;
 	private static readonly MIN_MESSAGE_PAGE_SIZE = 1;
@@ -116,10 +115,12 @@ export class CoachChatService {
 			throw new CoachConversationNotFoundError(conversationId);
 		}
 
-		const since = new Date(Date.now() - CoachChatService.RATE_LIMIT_WINDOW_MS).toISOString();
+		// decided会話の場合、この時点で当日カウンタをatomicにincrement&チェックする
+		// (予約)。LLM呼び出しが失敗した場合はpersistTurn側で解放(decrement)する
+		const todayIso = todayIsoDate();
 		const { modelId, blocked } =
 			conversation.objectiveStatus === "decided"
-				? await this.chatGate.resolveForDecidedMessage(userId, since)
+				? await this.chatGate.resolveForDecidedMessage(userId, todayIso)
 				: { modelId: await this.chatGate.resolveForUndecidedMessage(userId), blocked: false };
 		if (blocked) {
 			throw new CoachChatRateLimitError(userId);
@@ -159,7 +160,7 @@ export class CoachChatService {
 							goalDeadline: conversation.goalDeadlineSnapshot,
 							goalDeleted: conversation.objectiveStatus === "decided",
 							history,
-							today: CoachChatService.todayIsoDate(),
+							today: todayIsoDate(),
 							activeGoalCount:
 								conversation.objectiveStatus === "undecided"
 									? await this.goalRepo.countActiveByUserId(userId)
@@ -183,6 +184,8 @@ export class CoachChatService {
 				objectiveStatus: conversation.objectiveStatus,
 				phase: conversation.phase,
 				turnsInPhase: conversation.turnsInPhase,
+				userId,
+				todayIso,
 			});
 
 		return { uiStream, persistTurn };
@@ -190,7 +193,9 @@ export class CoachChatService {
 
 	// ストリーム完了後にuser・assistantの2メッセージと、conversationの更新(phase遷移または
 	// updatedAtのみ)をアトミックに書き込む。LLM呼び出しがエラーで終わった場合はuser行も
-	// 書き込まず、孤立行を残さない。
+	// 書き込まず、孤立行を残さない。decided会話の場合はstartMessageStream側で既に
+	// 日次カウンタをincrement(予約)済みのため、LLM失敗時はここで解放(decrement)する
+	// (呼ばないと失敗するたびに残り回数が実際より早く減っていく)。
 	private async persistCompletedTurn(
 		conversationId: string,
 		userContent: string,
@@ -200,9 +205,23 @@ export class CoachChatService {
 			objectiveStatus: ObjectiveStatus;
 			phase: CoachSessionPhase;
 			turnsInPhase: number;
+			userId: string;
+			todayIso: string;
 		},
 	) {
-		const { reply, proposal, phase: declaredPhase } = await turnResult;
+		const {
+			reply,
+			proposal,
+			phase: declaredPhase,
+		} = await turnResult.catch(async (error) => {
+			if (phaseState.objectiveStatus === "decided") {
+				await this.chatGate.releaseDecidedMessageReservation(
+					phaseState.userId,
+					phaseState.todayIso,
+				);
+			}
+			throw error;
+		});
 
 		// undecided(探索)スレッドはGROWフェーズを適用しないため既存どおりtouchStmtのみ行う
 		const conversationUpdateStmt =
@@ -416,7 +435,7 @@ export class CoachChatService {
 				goalDeadline: conversation.goalDeadlineSnapshot,
 				goalDeleted: false,
 				history: [],
-				today: CoachChatService.todayIsoDate(),
+				today: todayIsoDate(),
 				activeGoalCount,
 			}),
 			existingKeyResultTitles: [],
@@ -497,8 +516,7 @@ export class CoachChatService {
 		// LLMがdeadlineを本日より過去の日付で返した場合に備えたサーバー側の安全網。
 		// プロンプトのハードルールだけに依存せず、DBに不正な期限が入ることを確実に防ぐ
 		const isPastDeadline =
-			envelope.objective.deadline !== null &&
-			envelope.objective.deadline < CoachChatService.todayIsoDate();
+			envelope.objective.deadline !== null && envelope.objective.deadline < todayIsoDate();
 		const deadline =
 			envelope.objective.deadline && !isPastDeadline
 				? envelope.objective.deadline
@@ -573,15 +591,11 @@ export class CoachChatService {
 			snapshot,
 			milestones: milestones.map((m) => ({ title: m.title, isCompleted: m.isCompleted === 1 })),
 			history,
-			today: CoachChatService.todayIsoDate(),
+			today: todayIsoDate(),
 			// goalスレッドではactiveGoalCountを渡さない(呼び出し元のコメント参照)
 			phase,
 		});
 
 		return { prompt, existingKeyResultTitles: milestones.map((m) => m.title) };
-	}
-
-	private static todayIsoDate(): string {
-		return new Date().toISOString().slice(0, 10);
 	}
 }

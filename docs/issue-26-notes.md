@@ -12,6 +12,8 @@ Stripeで課金導線を作成する。プランは2つ:
 
 決済方式: Stripe Checkout（ホスト型）+ Customer Portal。Stripe Elements（埋め込みUI）は不採用。
 
+**解約・返金方針**: 解約はStripe Customer Portalの標準機能に委任し、独自の解約ボタン/フローは実装しない。解約後も現在の課金期間終了までPro権限を保持する（`cancel_at_period_end`のデフォルト挙動、`customer.subscription.deleted`が実際に発火した時点でtier=freeに切り替える）。**返金は基本的に行わない**（返金ロジック・返金申請UIはスコープ外）。個別事情はStripeダッシュボードから手動対応。
+
 ## 既存の仕組みの再利用
 
 - `coachConversations.objectiveStatus`（`"undecided"`/`"decided"`）の区別が、そのまま「探索は無制限／確定後は制限」の境界になる。新しい区分は不要。
