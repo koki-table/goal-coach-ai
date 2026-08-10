@@ -8,6 +8,7 @@ export { coachConversations } from "./coachConversations";
 export { coachMessages } from "./coachMessages";
 export { userSubscriptions } from "./userSubscriptions";
 export { processedStripeEvents } from "./processedStripeEvents";
+export { coachDailyUsage } from "./coachDailyUsage";
 export {
 	defaultCategories,
 	todoLogTypes,

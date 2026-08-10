@@ -1,5 +1,7 @@
 import { NoStripeCustomerError } from "../../../common/errors";
-import { CoachMessageRepository } from "../../../common/repositories/coachMessageRepository";
+import { FREE_DAILY_DECIDED_LIMIT } from "../../../common/helpers/coachChatLimit.helper";
+import { todayIsoDate } from "../../../common/helpers/date.helper";
+import { CoachDailyUsageRepository } from "../../../common/repositories/coachDailyUsageRepository";
 import { SubscriptionRepository } from "../../../common/repositories/subscriptionRepository";
 import type { Database } from "../../../db";
 import type { Bindings } from "../../../types/env";
@@ -8,16 +10,12 @@ import { createStripeClient } from "../lib/stripeClient";
 export type BillingInterval = "monthly" | "yearly";
 
 export class BillingService {
-	// free tierの1日あたりdecided会話メッセージ上限。CoachChatGateと値を一致させる
-	private static readonly FREE_DAILY_DECIDED_LIMIT = 3;
-	private static readonly RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
-
 	private subscriptionRepo: SubscriptionRepository;
-	private messageRepo: CoachMessageRepository;
+	private usageRepo: CoachDailyUsageRepository;
 
 	constructor(private db: Database) {
 		this.subscriptionRepo = new SubscriptionRepository(db);
-		this.messageRepo = new CoachMessageRepository(db);
+		this.usageRepo = new CoachDailyUsageRepository(db);
 	}
 
 	async createCheckoutSession(userId: string, interval: BillingInterval, env: Bindings) {
@@ -61,18 +59,16 @@ export class BillingService {
 
 	async getStatus(userId: string) {
 		const subscription = await this.subscriptionRepo.findByUserId(userId);
-		const since = new Date(Date.now() - BillingService.RATE_LIMIT_WINDOW_MS).toISOString();
-		const decidedMessagesUsedToday = await this.messageRepo.countUserMessagesByUserIdSince(
-			userId,
-			since,
-			"decided",
-		);
+		const decidedMessagesUsedToday = await this.usageRepo.getCount(userId, todayIsoDate());
 
 		return {
 			tier: subscription?.tier ?? ("free" as const),
 			status: subscription?.status ?? ("active" as const),
 			currentPeriodEnd: subscription?.currentPeriodEnd ?? undefined,
 			decidedMessagesUsedToday,
+			// フロントは独自にこの値をハードコードせず、常にこのAPIレスポンスの値を使う
+			// (バックエンド側の定数変更とフロント表示の値がズレることを防ぐ)
+			freeDailyDecidedLimit: FREE_DAILY_DECIDED_LIMIT,
 		};
 	}
 }

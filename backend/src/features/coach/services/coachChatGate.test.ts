@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CoachMessageRepository } from "../../../common/repositories/coachMessageRepository";
+import type { CoachDailyUsageRepository } from "../../../common/repositories/coachDailyUsageRepository";
 import type { SubscriptionRepository } from "../../../common/repositories/subscriptionRepository";
 import { createDb } from "../../../db";
 import { COACH_MODEL_FREE, COACH_MODEL_PRO } from "../config/coachModelConfig";
@@ -23,8 +23,24 @@ function buildGate() {
 	const gate = new CoachChatGate(db);
 	const subscriptionRepo = (gate as unknown as { subscriptionRepo: SubscriptionRepository })
 		.subscriptionRepo;
-	const messageRepo = (gate as unknown as { messageRepo: CoachMessageRepository }).messageRepo;
-	return { gate, subscriptionRepo, messageRepo };
+	const usageRepo = (gate as unknown as { usageRepo: CoachDailyUsageRepository }).usageRepo;
+	return { gate, subscriptionRepo, usageRepo };
+}
+
+function subscriptionRow(tier: "free" | "pro") {
+	return {
+		id: "s1",
+		userId: "user-1",
+		stripeCustomerId: "cus_1",
+		stripeSubscriptionId: tier === "pro" ? "sub_1" : null,
+		stripePriceId: tier === "pro" ? "price_1" : null,
+		tier,
+		status: "active" as const,
+		currentPeriodEnd: null,
+		lastEventCreatedAt: null,
+		createdAt: "",
+		updatedAt: "",
+	};
 }
 
 describe("CoachChatGate", () => {
@@ -33,153 +49,106 @@ describe("CoachChatGate", () => {
 	});
 
 	describe("resolveForDecidedMessage", () => {
-		it.each([0, 1, 2])(
-			"does not block a free tier user with %i decided messages today",
-			async (count) => {
-				const { gate, subscriptionRepo, messageRepo } = buildGate();
-				vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue({
-					id: "s1",
-					userId: "user-1",
-					stripeCustomerId: "cus_1",
-					stripeSubscriptionId: null,
-					stripePriceId: null,
-					tier: "free",
-					status: "active",
-					currentPeriodEnd: null,
-					createdAt: "",
-					updatedAt: "",
-				});
-				vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(count);
+		it.each([1, 2, 3])(
+			"does not block a free tier user when the atomic increment returns %i (under the limit of 3)",
+			async (newCount) => {
+				const { gate, subscriptionRepo, usageRepo } = buildGate();
+				vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(subscriptionRow("free"));
+				const incrementSpy = vi
+					.spyOn(usageRepo, "incrementIfUnderLimit")
+					.mockResolvedValue(newCount);
 
-				const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01T00:00:00.000Z");
+				const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01");
 
 				expect(result).toEqual({ modelId: COACH_MODEL_FREE, blocked: false });
+				expect(incrementSpy).toHaveBeenCalledWith("user-1", "2026-01-01", 3);
 			},
 		);
 
-		it.each([3, 4])("blocks a free tier user at the %ith decided message today", async (count) => {
-			const { gate, subscriptionRepo, messageRepo } = buildGate();
-			vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue({
-				id: "s1",
-				userId: "user-1",
-				stripeCustomerId: "cus_1",
-				stripeSubscriptionId: null,
-				stripePriceId: null,
-				tier: "free",
-				status: "active",
-				currentPeriodEnd: null,
-				createdAt: "",
-				updatedAt: "",
-			});
-			vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(count);
+		it("blocks a free tier user when the atomic increment is a no-op (limit already reached)", async () => {
+			const { gate, subscriptionRepo, usageRepo } = buildGate();
+			vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(subscriptionRow("free"));
+			vi.spyOn(usageRepo, "incrementIfUnderLimit").mockResolvedValue(undefined);
 
-			const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01T00:00:00.000Z");
+			const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01");
 
 			expect(result).toEqual({ modelId: COACH_MODEL_FREE, blocked: true });
 		});
 
 		it("treats a user with no subscription row as free tier", async () => {
-			const { gate, subscriptionRepo, messageRepo } = buildGate();
+			const { gate, subscriptionRepo, usageRepo } = buildGate();
 			vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(undefined);
-			vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(3);
+			const incrementSpy = vi
+				.spyOn(usageRepo, "incrementIfUnderLimit")
+				.mockResolvedValue(undefined);
 
-			const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01T00:00:00.000Z");
+			const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01");
 
 			expect(result).toEqual({ modelId: COACH_MODEL_FREE, blocked: true });
+			expect(incrementSpy).toHaveBeenCalledWith("user-1", "2026-01-01", 3);
 		});
 
-		it.each([0, 99])(
-			"uses the pro model without blocking at %i decided messages today",
-			async (count) => {
-				const { gate, subscriptionRepo, messageRepo } = buildGate();
-				vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue({
-					id: "s1",
-					userId: "user-1",
-					stripeCustomerId: "cus_1",
-					stripeSubscriptionId: "sub_1",
-					stripePriceId: "price_1",
-					tier: "pro",
-					status: "active",
-					currentPeriodEnd: null,
-					createdAt: "",
-					updatedAt: "",
-				});
-				vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(count);
+		it.each([1, 99, 100])(
+			"uses the pro model without blocking when the unconditional increment returns %i (at or below the soft limit)",
+			async (newCount) => {
+				const { gate, subscriptionRepo, usageRepo } = buildGate();
+				vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(subscriptionRow("pro"));
+				const incrementSpy = vi.spyOn(usageRepo, "increment").mockResolvedValue(newCount);
 
-				const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01T00:00:00.000Z");
+				const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01");
 
 				expect(result).toEqual({ modelId: COACH_MODEL_PRO, blocked: false });
+				expect(incrementSpy).toHaveBeenCalledWith("user-1", "2026-01-01");
 			},
 		);
 
-		it.each([100, 150])(
-			"downgrades to the free model without blocking at %i decided messages today (soft limit)",
-			async (count) => {
-				const { gate, subscriptionRepo, messageRepo } = buildGate();
-				vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue({
-					id: "s1",
-					userId: "user-1",
-					stripeCustomerId: "cus_1",
-					stripeSubscriptionId: "sub_1",
-					stripePriceId: "price_1",
-					tier: "pro",
-					status: "active",
-					currentPeriodEnd: null,
-					createdAt: "",
-					updatedAt: "",
-				});
-				vi.spyOn(messageRepo, "countUserMessagesByUserIdSince").mockResolvedValue(count);
+		it.each([101, 150])(
+			"downgrades to the free model without blocking once the increment exceeds the soft limit at %i",
+			async (newCount) => {
+				const { gate, subscriptionRepo, usageRepo } = buildGate();
+				vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(subscriptionRow("pro"));
+				vi.spyOn(usageRepo, "increment").mockResolvedValue(newCount);
 
-				const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01T00:00:00.000Z");
+				const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01");
 
 				expect(result).toEqual({ modelId: COACH_MODEL_FREE, blocked: false });
 			},
 		);
+
+		it("never blocks a pro tier user regardless of count", async () => {
+			const { gate, subscriptionRepo, usageRepo } = buildGate();
+			vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(subscriptionRow("pro"));
+			vi.spyOn(usageRepo, "increment").mockResolvedValue(10_000);
+
+			const result = await gate.resolveForDecidedMessage("user-1", "2026-01-01");
+
+			expect(result.blocked).toBe(false);
+		});
 	});
 
 	describe("resolveForUndecidedMessage", () => {
-		it("does not count messages and returns the free model for a free tier user", async () => {
-			const { gate, subscriptionRepo, messageRepo } = buildGate();
-			vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue({
-				id: "s1",
-				userId: "user-1",
-				stripeCustomerId: "cus_1",
-				stripeSubscriptionId: null,
-				stripePriceId: null,
-				tier: "free",
-				status: "active",
-				currentPeriodEnd: null,
-				createdAt: "",
-				updatedAt: "",
-			});
-			const countSpy = vi.spyOn(messageRepo, "countUserMessagesByUserIdSince");
+		it("does not touch the usage counter and returns the free model for a free tier user", async () => {
+			const { gate, subscriptionRepo, usageRepo } = buildGate();
+			vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(subscriptionRow("free"));
+			const incrementSpy = vi.spyOn(usageRepo, "incrementIfUnderLimit");
+			const unconditionalIncrementSpy = vi.spyOn(usageRepo, "increment");
 
 			const modelId = await gate.resolveForUndecidedMessage("user-1");
 
 			expect(modelId).toBe(COACH_MODEL_FREE);
-			expect(countSpy).not.toHaveBeenCalled();
+			expect(incrementSpy).not.toHaveBeenCalled();
+			expect(unconditionalIncrementSpy).not.toHaveBeenCalled();
 		});
 
-		it("does not count messages and returns the pro model for a pro tier user", async () => {
-			const { gate, subscriptionRepo, messageRepo } = buildGate();
-			vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue({
-				id: "s1",
-				userId: "user-1",
-				stripeCustomerId: "cus_1",
-				stripeSubscriptionId: "sub_1",
-				stripePriceId: "price_1",
-				tier: "pro",
-				status: "active",
-				currentPeriodEnd: null,
-				createdAt: "",
-				updatedAt: "",
-			});
-			const countSpy = vi.spyOn(messageRepo, "countUserMessagesByUserIdSince");
+		it("does not touch the usage counter and returns the pro model for a pro tier user", async () => {
+			const { gate, subscriptionRepo, usageRepo } = buildGate();
+			vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(subscriptionRow("pro"));
+			const incrementSpy = vi.spyOn(usageRepo, "increment");
 
 			const modelId = await gate.resolveForUndecidedMessage("user-1");
 
 			expect(modelId).toBe(COACH_MODEL_PRO);
-			expect(countSpy).not.toHaveBeenCalled();
+			expect(incrementSpy).not.toHaveBeenCalled();
 		});
 
 		it("treats a user with no subscription row as free tier", async () => {
@@ -189,6 +158,17 @@ describe("CoachChatGate", () => {
 			const modelId = await gate.resolveForUndecidedMessage("user-1");
 
 			expect(modelId).toBe(COACH_MODEL_FREE);
+		});
+	});
+
+	describe("releaseDecidedMessageReservation", () => {
+		it("delegates to the usage repository's decrement", async () => {
+			const { gate, usageRepo } = buildGate();
+			const decrementSpy = vi.spyOn(usageRepo, "decrement").mockResolvedValue(undefined);
+
+			await gate.releaseDecidedMessageReservation("user-1", "2026-01-01");
+
+			expect(decrementSpy).toHaveBeenCalledWith("user-1", "2026-01-01");
 		});
 	});
 });

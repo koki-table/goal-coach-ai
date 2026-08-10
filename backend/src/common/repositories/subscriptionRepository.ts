@@ -32,6 +32,7 @@ export class SubscriptionRepository {
 		tier: SubscriptionTier;
 		status: SubscriptionStatus;
 		currentPeriodEnd?: string;
+		lastEventCreatedAt?: string;
 	}) {
 		return this.db.insert(userSubscriptions).values(data).returning().get();
 	}
@@ -48,6 +49,7 @@ export class SubscriptionRepository {
 			tier: SubscriptionTier;
 			status: SubscriptionStatus;
 			currentPeriodEnd: string | null;
+			lastEventCreatedAt: string;
 		}>,
 	) {
 		return this.db

@@ -1,6 +1,5 @@
 "use client";
 
-import { FREE_DAILY_DECIDED_LIMIT } from "@/features/billing/config/billingConfig";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import type { SubscriptionTier } from "@/features/billing/types";
 import { useGoals } from "@/features/goals/hooks/useGoals";
@@ -67,8 +66,8 @@ export function CoachProvider({
 	const { data: subscription } = useSubscription();
 	const tier = subscription?.tier ?? "free";
 	const decidedMessagesRemainingToday =
-		tier === "free"
-			? Math.max(FREE_DAILY_DECIDED_LIMIT - (subscription?.decidedMessagesUsedToday ?? 0), 0)
+		tier === "free" && subscription
+			? Math.max(subscription.freeDailyDecidedLimit - subscription.decidedMessagesUsedToday, 0)
 			: undefined;
 
 	const { conversation, isNew, error: conversationError } = useCoachConversation(threadTarget);
