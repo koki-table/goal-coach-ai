@@ -81,3 +81,17 @@ export class ExplorationThreadAlreadyLinkedError extends Error {
 		this.name = "ExplorationThreadAlreadyLinkedError";
 	}
 }
+
+export class BillingNotConfiguredError extends Error {
+	constructor() {
+		super("Billing is not configured: STRIPE_SECRET_KEY is missing");
+		this.name = "BillingNotConfiguredError";
+	}
+}
+
+export class NoStripeCustomerError extends Error {
+	constructor(userId: string) {
+		super(`No Stripe customer found for user: ${userId}`);
+		this.name = "NoStripeCustomerError";
+	}
+}

@@ -93,3 +93,7 @@ export const coachAdoptPlanItemSchema = z.union([
 	z.object({ target: z.literal("keyResult"), keyResultIndex: z.number().int().min(0) }),
 	z.object({ target: z.literal("todo"), todoIndex: z.number().int().min(0) }),
 ]);
+
+export const billingCheckoutSchema = z.object({
+	interval: z.enum(["monthly", "yearly"]),
+});
