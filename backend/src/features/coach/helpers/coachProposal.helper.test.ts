@@ -176,6 +176,7 @@ describe("parseProposalPayload", () => {
 				{
 					milestoneId: "m1",
 					milestoneTitle: "模試900点",
+					baselineCurrentValue: 500,
 					suggestedCurrentValue: 700,
 					reason: "直近のペースだと700点相当",
 					adopted: false,
@@ -325,6 +326,7 @@ describe("toDailyReviewProposalEnvelope", () => {
 			{
 				milestoneId: "m1",
 				milestoneTitle: "模試900点",
+				baselineCurrentValue: 500,
 				suggestedCurrentValue: 700,
 				reason: "ペースが良い",
 				adopted: false,
@@ -342,6 +344,18 @@ describe("toDailyReviewProposalEnvelope", () => {
 			milestones,
 		);
 		expect(result.milestoneUpdates).toEqual([]);
+	});
+
+	it("baselineCurrentValueに提案生成時点のmilestone.currentValueを記録する(採用時の楽観的ロックに使う)", () => {
+		const result = toDailyReviewProposalEnvelope(
+			{
+				reply: "レビュー結果",
+				milestoneUpdates: [{ milestoneId: "m1", suggestedCurrentValue: 700, reason: "順調" }],
+				todos: [],
+			},
+			milestones,
+		);
+		expect(result.milestoneUpdates[0].baselineCurrentValue).toBe(500);
 	});
 
 	it("suggestedCurrentValueを[startValue, targetValue]にクランプする", () => {

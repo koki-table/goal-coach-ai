@@ -6,6 +6,7 @@ export type CoachErrorKind =
 	| "planItemNotFound"
 	| "alreadyAdopted"
 	| "milestoneNotAdoptedYet"
+	| "milestoneUpdateStale"
 	| "goalLimitExceeded"
 	| "rateLimit"
 	| "notConfigured"
@@ -60,6 +61,15 @@ export function mapCoachError(error: unknown): CoachErrorInfo {
 				kind: "goalLimitExceeded",
 				message:
 					"目標は同時に2件までしか設定できません。既存の目標を完了するか削除してから、新しい相談を始めてください。",
+			};
+		}
+
+		// 提案生成後にユーザーが「+更新」で値を手動変更していた場合の専用文言。
+		// 汎用の「既に採用済み」文言では、なぜ反映できないのかが伝わらないため区別する
+		if (error.status === 409 && extractReason(error.info) === "milestoneUpdateStale") {
+			return {
+				kind: "milestoneUpdateStale",
+				message: "この提案の後に値が更新されているため反映できません。最新の状態をご確認ください。",
 			};
 		}
 

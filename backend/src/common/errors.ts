@@ -61,6 +61,13 @@ export class MilestoneNotAdoptedYetError extends Error {
 	}
 }
 
+export class MilestoneUpdateStaleError extends Error {
+	constructor(messageId: number) {
+		super(`Milestone current value changed since the proposal was generated: ${messageId}`);
+		this.name = "MilestoneUpdateStaleError";
+	}
+}
+
 export class CoachChatRateLimitError extends Error {
 	constructor(userId: string) {
 		super(`Coach chat rate limit exceeded for user: ${userId}`);

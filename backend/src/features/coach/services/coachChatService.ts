@@ -6,6 +6,7 @@ import {
 	GoalLimitExceededError,
 	GoalNotFoundError,
 	MilestoneNotAdoptedYetError,
+	MilestoneUpdateStaleError,
 	ObjectiveAlreadyAdoptedError,
 	PlanItemAlreadyAdoptedError,
 	PlanItemNotFoundError,
@@ -357,6 +358,11 @@ export class CoachChatService {
 			// milestoneが別goal所属/削除済みの場合は「存在しない」と同一応答にする(IDOR安全側)
 			if (!milestone || milestone.goalId !== goalId) {
 				throw new PlanItemNotFoundError(messageId);
+			}
+			// 提案生成時点(baselineCurrentValue)からユーザーが「+更新」等で手動変更していた場合、
+			// 古い提案の値で上書きしてしまう事故を防ぐための楽観的ロック。値が一致する場合のみ反映する
+			if (milestone.currentValue !== update.baselineCurrentValue) {
+				throw new MilestoneUpdateStaleError(messageId);
 			}
 
 			const completed = isKrCompleted(

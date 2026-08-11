@@ -140,6 +140,7 @@ export type ProposalKeyResultPayload = {
 export type ProposalMilestoneUpdatePayload = {
 	milestoneId: string;
 	milestoneTitle: string;
+	baselineCurrentValue: number;
 	suggestedCurrentValue: number;
 	reason: string;
 	adopted: boolean;

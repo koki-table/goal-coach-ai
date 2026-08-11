@@ -6,6 +6,7 @@ import { MilestoneUpdateProposalWidget } from "./milestoneUpdateProposalWidget";
 const UPDATE: ProposalMilestoneUpdate = {
 	milestoneId: "m-1",
 	milestoneTitle: "模試900点",
+	baselineCurrentValue: 500,
 	suggestedCurrentValue: 700,
 	reason: "TODOの完了ペースから推定",
 	adopted: false,
@@ -87,6 +88,7 @@ describe("MilestoneUpdateProposalWidget", () => {
 		const second: ProposalMilestoneUpdate = {
 			milestoneId: "m-2",
 			milestoneTitle: "TOEIC800点",
+			baselineCurrentValue: 400,
 			suggestedCurrentValue: 600,
 			reason: "期限超過が続いている",
 			adopted: false,

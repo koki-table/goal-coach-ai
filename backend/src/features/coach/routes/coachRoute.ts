@@ -8,6 +8,7 @@ import {
 	GoalLimitExceededError,
 	GoalNotFoundError,
 	MilestoneNotAdoptedYetError,
+	MilestoneUpdateStaleError,
 	ObjectiveAlreadyAdoptedError,
 	PlanItemAlreadyAdoptedError,
 	PlanItemNotFoundError,
@@ -239,6 +240,15 @@ coachRoute.post("/messages/:id/adopt-plan-item", async (c) => {
 		}
 		if (e instanceof MilestoneNotAdoptedYetError) {
 			return c.json({ message: "Milestone must be adopted first" }, 409);
+		}
+		if (e instanceof MilestoneUpdateStaleError) {
+			return c.json(
+				{
+					message: "Milestone current value has changed since the proposal",
+					reason: "milestoneUpdateStale",
+				},
+				409,
+			);
 		}
 		if (e instanceof CoachConversationNotFoundError) {
 			return c.json({ message: "Conversation not found" }, 404);

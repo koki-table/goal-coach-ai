@@ -45,9 +45,13 @@ export type ProposalKeyResult = {
 
 // 日次レビューがAIの推定として提案する、既存KR(milestones行)のcurrentValue更新案。
 // 新規KRを作るkeyResultsとは異なり、既存のmilestoneIdを対象にするため作成系のcreatedXxxIdは持たない。
+// baselineCurrentValueは提案生成時点のcurrentValueのスナップショット。採用時にDBの最新値と
+// 比較し、その間にユーザーが「+更新」で手動変更していないかを検証するための楽観的ロックに使う
+// (古いチャットメッセージから提案を採用して、後からの手動更新を上書きしてしまう事故を防ぐ)。
 export type ProposalMilestoneUpdate = {
 	milestoneId: string;
 	milestoneTitle: string;
+	baselineCurrentValue: number;
 	suggestedCurrentValue: number;
 	reason: string;
 	adopted: boolean;
@@ -233,6 +237,7 @@ export function toDailyReviewProposalEnvelope(
 			{
 				milestoneId: milestone.id,
 				milestoneTitle: milestone.title,
+				baselineCurrentValue: milestone.currentValue,
 				suggestedCurrentValue: clamped,
 				reason: update.reason,
 				adopted: false,

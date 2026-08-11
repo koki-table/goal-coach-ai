@@ -29,6 +29,17 @@ describe("mapCoachError", () => {
 		expect(result.message).toContain("目標は同時に2件までしか設定できません");
 	});
 
+	it("reason:milestoneUpdateStaleを持つ409はmilestoneUpdateStaleとして扱う", () => {
+		const result = mapCoachError(
+			new ApiClientError(409, "milestone current value has changed", {
+				message: "Milestone current value has changed since the proposal",
+				reason: "milestoneUpdateStale",
+			}),
+		);
+		expect(result.kind).toBe("milestoneUpdateStale");
+		expect(result.message).toContain("反映できません");
+	});
+
 	it("429はrateLimitとして扱う", () => {
 		const result = mapCoachError(new ApiClientError(429, "Rate limit exceeded"));
 		expect(result.kind).toBe("rateLimit");

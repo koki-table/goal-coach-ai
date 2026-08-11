@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	ExplorationThreadAlreadyLinkedError,
 	GoalLimitExceededError,
+	MilestoneUpdateStaleError,
 	ObjectiveAlreadyAdoptedError,
 	PlanItemAlreadyAdoptedError,
 	PlanItemNotFoundError,
@@ -1221,7 +1222,7 @@ describe("CoachChatService", () => {
 			};
 		}
 
-		function proposalWithMilestoneUpdate() {
+		function proposalWithMilestoneUpdate(baselineCurrentValue = 500) {
 			return JSON.stringify({
 				version: 1,
 				objective: null,
@@ -1231,6 +1232,7 @@ describe("CoachChatService", () => {
 					{
 						milestoneId: "milestone-1",
 						milestoneTitle: "模試900点",
+						baselineCurrentValue,
 						suggestedCurrentValue: 700,
 						reason: "TODOの完了ペースから推定",
 						adopted: false,
@@ -1313,6 +1315,7 @@ describe("CoachChatService", () => {
 			expect(result.proposal.milestoneUpdates[0]).toEqual({
 				milestoneId,
 				milestoneTitle: "模試900点",
+				baselineCurrentValue: 500,
 				suggestedCurrentValue: 700,
 				reason: "TODOの完了ペースから推定",
 				adopted: true,
@@ -1349,6 +1352,7 @@ describe("CoachChatService", () => {
 						{
 							milestoneId,
 							milestoneTitle: "模試900点",
+							baselineCurrentValue: 500,
 							suggestedCurrentValue: 900,
 							reason: "既に目標水準に到達",
 							adopted: false,
@@ -1418,6 +1422,7 @@ describe("CoachChatService", () => {
 						{
 							milestoneId: "milestone-1",
 							milestoneTitle: "模試900点",
+							baselineCurrentValue: 500,
 							suggestedCurrentValue: 700,
 							reason: "TODOの完了ペースから推定",
 							adopted: true,
@@ -1533,6 +1538,60 @@ describe("CoachChatService", () => {
 					milestoneUpdateIndex: 5,
 				}),
 			).rejects.toThrow(PlanItemNotFoundError);
+		});
+
+		it("提案生成後にcurrentValueが手動更新されている場合はMilestoneUpdateStaleErrorにする(古い提案での上書き事故を防ぐ)", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				milestoneId,
+				messageRepo,
+				conversationRepo,
+				milestoneRepo,
+			} = setupAdoptPlanItem();
+
+			// baselineCurrentValue(提案生成時点)は500だが、その後ユーザーが「+更新」で800に変更済み
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "現在のペースだと推定700点だ。",
+				proposal: proposalWithMilestoneUpdate(500),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "TOEIC800点を取る",
+				goalDeadlineSnapshot: "2026-12-31",
+				createdAt: "",
+				updatedAt: "",
+			});
+			vi.spyOn(milestoneRepo, "findById").mockResolvedValue({
+				id: milestoneId,
+				goalId,
+				title: "模試900点",
+				startValue: 0,
+				currentValue: 800,
+				targetValue: 900,
+				unit: "点",
+				isCompleted: 0,
+			});
+			const batchSpy = vi.spyOn(db, "batch");
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "milestoneUpdate",
+					milestoneUpdateIndex: 0,
+				}),
+			).rejects.toThrow(MilestoneUpdateStaleError);
+			expect(batchSpy).not.toHaveBeenCalled();
 		});
 	});
 });
