@@ -34,6 +34,17 @@ describe("mapCoachError", () => {
 		expect(result.kind).toBe("rateLimit");
 	});
 
+	it("reason:freeTierDailyLimitを持つ429はPro案内を含む専用文言にする", () => {
+		const result = mapCoachError(
+			new ApiClientError(429, "Rate limit exceeded", {
+				message: "Rate limit exceeded",
+				reason: "freeTierDailyLimit",
+			}),
+		);
+		expect(result.kind).toBe("rateLimit");
+		expect(result.message).toContain("Proプラン");
+	});
+
 	it("502はmodelUnavailableとして扱う", () => {
 		const result = mapCoachError(new ApiClientError(502, "Coach model request failed"));
 		expect(result.kind).toBe("modelUnavailable");

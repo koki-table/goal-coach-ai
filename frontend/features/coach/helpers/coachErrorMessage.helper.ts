@@ -33,8 +33,7 @@ const STATUS_MESSAGES: Record<number, CoachErrorInfo> = {
 	},
 	429: {
 		kind: "rateLimit",
-		message:
-			"AIコーチとの会話回数が上限（24時間で50件）に達しました。時間を置いて再度お試しください。",
+		message: "AIコーチとの会話回数が上限に達しました。時間を置いて再度お試しください。",
 	},
 	502: {
 		kind: "modelUnavailable",
@@ -61,6 +60,16 @@ export function mapCoachError(error: unknown): CoachErrorInfo {
 				kind: "goalLimitExceeded",
 				message:
 					"目標は同時に2件までしか設定できません。既存の目標を完了するか削除してから、新しい相談を始めてください。",
+			};
+		}
+
+		// free tierの1日3回制限に達した場合の専用文言。Proは実質ブロックされないため
+		// このreasonは常にfree tierユーザーにのみ発生する
+		if (error.status === 429 && extractReason(error.info) === "freeTierDailyLimit") {
+			return {
+				kind: "rateLimit",
+				message:
+					"本日の相談回数が上限（3回）に達しました。Proプランなら実質無制限でご利用いただけます。",
 			};
 		}
 

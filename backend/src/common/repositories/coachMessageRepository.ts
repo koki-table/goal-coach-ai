@@ -1,7 +1,7 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import type { Database } from "../../db";
-import { coachConversations, coachMessages } from "../../db/schema";
-import type { CoachMessageRole, ObjectiveStatus } from "../../db/schema";
+import { coachMessages } from "../../db/schema";
+import type { CoachMessageRole } from "../../db/schema";
 
 export class CoachMessageRepository {
 	constructor(private db: Database) {}
@@ -82,29 +82,5 @@ export class CoachMessageRepository {
 	// db.batch() 用のステートメント（実行しない）
 	updateProposalStmt(id: number, proposal: string) {
 		return this.db.update(coachMessages).set({ proposal }).where(eq(coachMessages.id, id));
-	}
-
-	// レート制限用: userロールメッセージ数を期間内カウント（coachConversationsとJOINして所有者を判定）。
-	// objectiveStatus指定時はdecided/undecidedを絞り込む(tier-aware課金ゲートがdecided限定で使う)
-	async countUserMessagesByUserIdSince(
-		userId: string,
-		isoSince: string,
-		objectiveStatus?: ObjectiveStatus,
-	): Promise<number> {
-		const result = await this.db
-			.select({ count: sql<number>`count(*)`.as("count") })
-			.from(coachMessages)
-			.innerJoin(coachConversations, eq(coachMessages.conversationId, coachConversations.id))
-			.where(
-				and(
-					eq(coachConversations.userId, userId),
-					eq(coachMessages.role, "user"),
-					gte(coachMessages.createdAt, isoSince),
-					objectiveStatus ? eq(coachConversations.objectiveStatus, objectiveStatus) : undefined,
-				),
-			)
-			.get();
-
-		return result?.count ?? 0;
 	}
 }

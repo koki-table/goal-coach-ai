@@ -36,14 +36,19 @@ billingWebhookRoute.post("/", async (c) => {
 	}
 
 	const db = createDb(c.env.DB);
-	const isNewEvent = await new ProcessedStripeEventRepository(db).markProcessed(
-		event.id,
-		event.type,
-	);
-	if (!isNewEvent) {
+	const eventRepo = new ProcessedStripeEventRepository(db);
+
+	// 既処理イベントは即200で終える(重複配信の高速スキップ)。ただしこのチェックと
+	// 直後のhandleEvent実行の間には僅かなレース窓があるため、handleEvent自体は
+	// stripeCustomerIdをキーにしたupsert的な書き込みで冪等に作られている前提。
+	if (await eventRepo.isProcessed(event.id)) {
 		return c.json({ received: true });
 	}
 
+	// 処理が成功した後にのみ既処理マークを書き込む。handleEventが例外を投げた場合は
+	// マークが残らず、Stripeの再送で再処理できる(処理失敗を「重複」と誤魔化さない)
 	await new StripeWebhookService(db).handleEvent(event, c.env);
+	await eventRepo.markProcessed(event.id, event.type);
+
 	return c.json({ received: true });
 });

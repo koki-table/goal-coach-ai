@@ -1,5 +1,7 @@
 "use client";
 
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import type { SubscriptionTier } from "@/features/billing/types";
 import { useGoals } from "@/features/goals/hooks/useGoals";
 import type { Goal } from "@/features/goals/types";
 import { createContext, useCallback, useContext } from "react";
@@ -35,6 +37,9 @@ type CoachContextValue = {
 	adoptingKey: string | undefined;
 	isAdoptingObjective: boolean;
 	adoptError: CoachErrorInfo | undefined;
+	// free tierのみUIで表示する残数バッジ用。proは"無制限"訴求を守るため常にundefined
+	tier: SubscriptionTier;
+	decidedMessagesRemainingToday: number | undefined;
 };
 
 const CoachContext = createContext<CoachContextValue | undefined>(undefined);
@@ -57,6 +62,13 @@ export function CoachProvider({
 	const { data: goals, isLoading: goalsLoading } = useGoals();
 	const activeGoalCount = (goals ?? []).filter((g) => g.status === "active").length;
 	const isGoalLimitReached = activeGoalCount >= maxActiveGoals;
+
+	const { data: subscription } = useSubscription();
+	const tier = subscription?.tier ?? "free";
+	const decidedMessagesRemainingToday =
+		tier === "free" && subscription
+			? Math.max(subscription.freeDailyDecidedLimit - subscription.decidedMessagesUsedToday, 0)
+			: undefined;
 
 	const { conversation, isNew, error: conversationError } = useCoachConversation(threadTarget);
 
@@ -117,6 +129,8 @@ export function CoachProvider({
 		adoptingKey,
 		isAdoptingObjective,
 		adoptError: adoptError ?? adoptObjectiveError,
+		tier,
+		decidedMessagesRemainingToday,
 	};
 
 	return <CoachContext.Provider value={value}>{children}</CoachContext.Provider>;
