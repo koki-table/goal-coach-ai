@@ -139,7 +139,9 @@ coachRoute.post("/conversations/:id/messages", async (c) => {
 			return c.json({ message: "Conversation not found" }, 404);
 		}
 		if (e instanceof CoachChatRateLimitError) {
-			return c.json({ message: "Rate limit exceeded" }, 429);
+			// blockedになるのはfree tierのみ(pro tierはダウングレードするがブロックしない)。
+			// 既存の409 goalLimitExceededと同じreasonパターンでフロントの文言分岐を可能にする
+			return c.json({ message: "Rate limit exceeded", reason: "freeTierDailyLimit" }, 429);
 		}
 		if (e instanceof CoachNotConfiguredError) {
 			return c.json({ message: "Coach chat is not configured" }, 503);

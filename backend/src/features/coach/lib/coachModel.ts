@@ -4,8 +4,6 @@ import type { Bindings } from "../../../types/env";
 import { coachChatReplySchema } from "../prompts/coachPrompts";
 import type { CoachChatReplyResult } from "../prompts/coachPrompts";
 
-const MODEL_ID = "gemini-3.5-flash-lite";
-
 // AI_GATEWAY_ACCOUNT_ID/NAMEが両方揃えばCloudflare AI Gateway経由、無ければ既定のgoogleapisへ直叩き。
 function buildBaseURL(env: Bindings): string | undefined {
 	if (!env.AI_GATEWAY_ACCOUNT_ID || !env.AI_GATEWAY_NAME) return undefined;
@@ -19,12 +17,13 @@ export class CoachModelError extends Error {
 	}
 }
 
-export function createCoachModel(env: Bindings) {
+// modelIdはCoachChatGateがtier/使用量から決定する(coachModelConfig.tsのCOACH_MODEL_FREE/PRO)
+export function createCoachModel(env: Bindings, modelId: string) {
 	const google = createGoogleGenerativeAI({
 		apiKey: env.GEMINI_API_KEY,
 		baseURL: buildBaseURL(env),
 	});
-	return google(MODEL_ID);
+	return google(modelId);
 }
 
 // generateObjectの1発生成ではreply全体が確定するまでユーザーが無言待ちになるため、
