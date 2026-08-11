@@ -1,7 +1,14 @@
 import { LegalPage } from "@/features/marketing/components/legalPage";
 import { SUPPORT_EMAIL } from "@/features/marketing/config/marketingConfig";
 import { resolvePrimaryCtaTarget } from "@/features/marketing/helpers/ctaTarget.helper";
+import { buildPageMetadata } from "@/features/marketing/helpers/pageMetadata.helper";
 import { auth } from "@clerk/nextjs/server";
+
+export const metadata = buildPageMetadata(
+	"プライバシーポリシー | AIコーチ ペンタ君",
+	"AIコーチ ペンタ君における利用者情報の取り扱いについて定めたプライバシーポリシーです。",
+	"/privacy",
+);
 
 export default async function PrivacyPage() {
 	const { userId } = await auth();

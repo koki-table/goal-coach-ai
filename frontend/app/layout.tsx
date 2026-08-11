@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+	metadataBase: new URL("https://goal-coach.app"),
 	title: "AIコーチ ペンタ君",
 	description: "AIコーチ ペンタ君があなたの目標達成を支援します",
 };

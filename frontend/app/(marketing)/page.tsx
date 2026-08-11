@@ -8,7 +8,14 @@ import { HowItWorks } from "@/features/marketing/components/howItWorks";
 import { Pricing } from "@/features/marketing/components/pricing";
 import { Testimonials } from "@/features/marketing/components/testimonials";
 import { resolvePrimaryCtaTarget } from "@/features/marketing/helpers/ctaTarget.helper";
+import { buildPageMetadata } from "@/features/marketing/helpers/pageMetadata.helper";
 import { auth } from "@clerk/nextjs/server";
+
+export const metadata = buildPageMetadata(
+	"AIコーチ ペンタ君 | 目標をOKRで分解し、AIコーチと一緒に達成する",
+	"学ぶ意思はあっても、続ける仕組みがない。ペンタ君が目標をOKRに分解し、毎日のTODOと対話で挫折を防ぎます。",
+	"/",
+);
 
 export default async function MarketingPage() {
 	const { userId } = await auth();
