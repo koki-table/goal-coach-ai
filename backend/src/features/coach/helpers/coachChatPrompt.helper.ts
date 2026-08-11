@@ -19,6 +19,7 @@ export type CoachChatPromptProposal = {
 	objective: { title: string; adopted: boolean } | null;
 	keyResults: { title: string; adopted: boolean }[];
 	todos: { title: string; adopted: boolean }[];
+	milestoneUpdates: { title: string; adopted: boolean }[];
 };
 
 export type CoachChatPromptMessage = {
@@ -106,6 +107,9 @@ function buildProposalNote(proposal: CoachChatPromptProposal | undefined): strin
 	}
 	for (const todo of proposal.todos) {
 		parts.push(`TODO『${todo.title}』(${adoptedLabel(todo.adopted)})`);
+	}
+	for (const update of proposal.milestoneUpdates) {
+		parts.push(`主要な成果の進捗推定『${update.title}』(${adoptedLabel(update.adopted)})`);
 	}
 
 	if (parts.length === 0) return "";

@@ -90,8 +90,15 @@ export const coachMessageCreateSchema = z.object({
 // 新規コードは"keyResult"を使う
 export const coachAdoptPlanItemSchema = z.union([
 	z.object({ target: z.literal("milestone") }),
-	z.object({ target: z.literal("keyResult"), keyResultIndex: z.number().int().min(0) }),
+	z.object({
+		target: z.literal("keyResult"),
+		keyResultIndex: z.number().int().min(0),
+	}),
 	z.object({ target: z.literal("todo"), todoIndex: z.number().int().min(0) }),
+	z.object({
+		target: z.literal("milestoneUpdate"),
+		milestoneUpdateIndex: z.number().int().min(0),
+	}),
 ]);
 
 export const billingCheckoutSchema = z.object({

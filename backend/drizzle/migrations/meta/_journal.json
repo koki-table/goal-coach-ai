@@ -78,6 +78,13 @@
       "when": 1786365489999,
       "tag": "0010_robust_arclight",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1786425629815,
+      "tag": "0011_careful_scourge",
+      "breakpoints": true
     }
   ]
 }

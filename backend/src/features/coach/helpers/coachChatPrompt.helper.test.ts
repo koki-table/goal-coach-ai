@@ -108,6 +108,7 @@ describe("buildChatUserPrompt", () => {
 							{ title: "毎日30分学習する", adopted: true },
 							{ title: "参考書を1冊読み終える", adopted: false },
 						],
+						milestoneUpdates: [],
 					},
 				},
 			],
@@ -132,12 +133,36 @@ describe("buildChatUserPrompt", () => {
 						objective: { title: "資格を取得する", adopted: false },
 						keyResults: [],
 						todos: [],
+						milestoneUpdates: [],
 					},
 				},
 			],
 		});
 
 		expect(prompt).toContain("目標(Objective)『資格を取得する』(未採用)");
+	});
+
+	it("annotates a milestone update proposal with its adoption state", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			today: "2026-08-05",
+			milestones: [],
+			history: [
+				{
+					role: "assistant",
+					content: "現在のペースだと推定700点だ。",
+					proposal: {
+						objective: null,
+						keyResults: [],
+						todos: [],
+						milestoneUpdates: [{ title: "模試900点", adopted: false }],
+					},
+				},
+			],
+		});
+
+		expect(prompt).toContain("主要な成果の進捗推定『模試900点』(未採用)");
 	});
 
 	it("includes the active goal count in user_state when provided", () => {

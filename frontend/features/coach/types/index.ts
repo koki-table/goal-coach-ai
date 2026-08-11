@@ -33,11 +33,21 @@ export type ProposalTodo = {
 	createdTodoId?: string;
 };
 
+export type ProposalMilestoneUpdate = {
+	milestoneId: string;
+	milestoneTitle: string;
+	suggestedCurrentValue: number;
+	reason: string;
+	adopted: boolean;
+	appliedCurrentValue?: number;
+};
+
 export type PlanProposal = {
 	version: 1;
 	objective: ProposalObjective;
 	keyResults: ProposalKeyResult[];
 	todos: ProposalTodo[];
+	milestoneUpdates: ProposalMilestoneUpdate[];
 };
 
 export type CoachMessageRole = "user" | "assistant";
@@ -58,4 +68,5 @@ export type CoachMessagePage = {
 
 export type AdoptPlanItemTarget =
 	| { target: "keyResult"; keyResultIndex: number }
-	| { target: "todo"; todoIndex: number };
+	| { target: "todo"; todoIndex: number }
+	| { target: "milestoneUpdate"; milestoneUpdateIndex: number };

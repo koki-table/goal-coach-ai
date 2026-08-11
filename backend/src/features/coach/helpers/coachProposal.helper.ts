@@ -43,6 +43,17 @@ export type ProposalKeyResult = {
 	createdMilestoneId?: string;
 };
 
+// 日次レビューがAIの推定として提案する、既存KR(milestones行)のcurrentValue更新案。
+// 新規KRを作るkeyResultsとは異なり、既存のmilestoneIdを対象にするため作成系のcreatedXxxIdは持たない。
+export type ProposalMilestoneUpdate = {
+	milestoneId: string;
+	milestoneTitle: string;
+	suggestedCurrentValue: number;
+	reason: string;
+	adopted: boolean;
+	appliedCurrentValue?: number;
+};
+
 // coach_messages.proposal の現行フォーマット。KR(Key Results)は既存のmilestonesテーブル/
 // MilestoneRepositoryの呼称変更であり、新規DBエンティティではない(採用時にmilestones行を作る)。
 export type ProposalEnvelope = {
@@ -50,6 +61,7 @@ export type ProposalEnvelope = {
 	objective: ProposalObjective;
 	keyResults: ProposalKeyResult[];
 	todos: ProposalTodo[];
+	milestoneUpdates: ProposalMilestoneUpdate[];
 };
 
 // 保存済みJSON(レガシー{milestone,todos}、または現行{version:1,...})を読み取り時に
@@ -59,7 +71,7 @@ export function parseProposalPayload(raw: string): ProposalEnvelope {
 	const parsed: unknown = JSON.parse(raw);
 	// nullやプリミティブ("in"演算子がTypeErrorになる)を弾き、空エンベロープにフォールバック
 	if (typeof parsed !== "object" || parsed === null) {
-		return { version: 1, objective: null, keyResults: [], todos: [] };
+		return { version: 1, objective: null, keyResults: [], todos: [], milestoneUpdates: [] };
 	}
 
 	if ("version" in parsed && (parsed as ProposalEnvelope).version === 1) {
@@ -69,6 +81,9 @@ export function parseProposalPayload(raw: string): ProposalEnvelope {
 			objective: envelope.objective ?? null,
 			keyResults: envelope.keyResults ?? [],
 			todos: envelope.todos ?? [],
+			// milestoneUpdatesは日次レビュー機能追加前に保存された既存行に存在しないため、
+			// 欠損時は空配列にフォールバックする(後方互換)
+			milestoneUpdates: envelope.milestoneUpdates ?? [],
 		};
 	}
 
@@ -78,6 +93,7 @@ export function parseProposalPayload(raw: string): ProposalEnvelope {
 		objective: null,
 		keyResults: legacy.milestone ? [{ ...legacy.milestone }] : [],
 		todos: legacy.todos ?? [],
+		milestoneUpdates: [],
 	};
 }
 
@@ -108,6 +124,10 @@ export function toPromptMessage(message: {
 				: null,
 			keyResults: envelope.keyResults.map((kr) => ({ title: kr.title, adopted: kr.adopted })),
 			todos: envelope.todos.map((t) => ({ title: t.title, adopted: t.adopted })),
+			milestoneUpdates: envelope.milestoneUpdates.map((u) => ({
+				title: u.milestoneTitle,
+				adopted: u.adopted,
+			})),
 		},
 	};
 }
@@ -169,5 +189,62 @@ export function toProposalEnvelope(
 			taskType: t.taskType,
 			adopted: false,
 		})),
+		// 通常チャットの提案はKR新規作成/TODO提案のみを扱い、既存KRの数値更新は
+		// 日次レビュー専用のtoDailyReviewProposalEnvelopeが担う
+		milestoneUpdates: [],
+	};
+}
+
+export type DailyReviewMilestoneCandidate = {
+	id: string;
+	title: string;
+	startValue: number;
+	currentValue: number;
+	targetValue: number;
+	isCompleted: boolean;
+};
+
+export type DailyReviewResult = {
+	reply: string;
+	milestoneUpdates: { milestoneId: string; suggestedCurrentValue: number; reason: string }[];
+	todos: { title: string; taskType: "daily" | "once" }[];
+};
+
+// 日次レビューのLLM出力をProposalEnvelopeへ変換する。プロンプトの指示だけに頼らず、
+// サーバー側で安全網を敷く: (1)実在しないmilestoneIdは除外、(2)既に完了済みのKRは
+// 提案対象から除外(ユーザーの目に見える形で完了済みの値を後退させない)、
+// (3)suggestedCurrentValueは[startValue, targetValue]にクランプする。
+export function toDailyReviewProposalEnvelope(
+	result: DailyReviewResult,
+	milestones: DailyReviewMilestoneCandidate[],
+): ProposalEnvelope {
+	const milestoneById = new Map(milestones.map((m) => [m.id, m]));
+
+	const milestoneUpdates = result.milestoneUpdates.flatMap((update) => {
+		const milestone = milestoneById.get(update.milestoneId);
+		if (!milestone || milestone.isCompleted) return [];
+
+		const clamped = Math.min(
+			Math.max(update.suggestedCurrentValue, milestone.startValue),
+			milestone.targetValue,
+		);
+
+		return [
+			{
+				milestoneId: milestone.id,
+				milestoneTitle: milestone.title,
+				suggestedCurrentValue: clamped,
+				reason: update.reason,
+				adopted: false,
+			},
+		];
+	});
+
+	return {
+		version: 1,
+		objective: null,
+		keyResults: [],
+		todos: result.todos.map((t) => ({ title: t.title, taskType: t.taskType, adopted: false })),
+		milestoneUpdates,
 	};
 }

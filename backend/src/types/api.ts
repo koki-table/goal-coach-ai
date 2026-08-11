@@ -137,11 +137,21 @@ export type ProposalKeyResultPayload = {
 	createdMilestoneId?: string;
 };
 
+export type ProposalMilestoneUpdatePayload = {
+	milestoneId: string;
+	milestoneTitle: string;
+	suggestedCurrentValue: number;
+	reason: string;
+	adopted: boolean;
+	appliedCurrentValue?: number;
+};
+
 export type ProposalEnvelopePayload = {
 	version: 1;
 	objective: ProposalObjectivePayload;
 	keyResults: ProposalKeyResultPayload[];
 	todos: PlanProposalTodoPayload[];
+	milestoneUpdates: ProposalMilestoneUpdatePayload[];
 };
 
 export type CoachMessageRoleValue = "user" | "assistant";
