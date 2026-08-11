@@ -8,13 +8,14 @@ import type { CtaTarget } from "../types";
 
 type HeaderProps = {
 	primaryCta: CtaTarget;
+	logoHref: string;
 };
 
-export function Header({ primaryCta }: HeaderProps) {
+export function Header({ primaryCta, logoHref }: HeaderProps) {
 	return (
 		<header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-sm">
 			<div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 md:px-6">
-				<div className="flex items-center gap-2">
+				<Link href={logoHref} className="flex items-center gap-2">
 					<Image
 						src="/penguin-icon.png"
 						alt={APP_NAME}
@@ -23,7 +24,7 @@ export function Header({ primaryCta }: HeaderProps) {
 						className="rounded-full"
 					/>
 					<span className="font-bold">{APP_NAME}</span>
-				</div>
+				</Link>
 
 				<nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
 					{NAV_LINKS.map((link) => (

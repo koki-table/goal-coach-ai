@@ -1,6 +1,9 @@
 import { LegalPage } from "@/features/marketing/components/legalPage";
 import { SUPPORT_EMAIL } from "@/features/marketing/config/marketingConfig";
-import { resolvePrimaryCtaTarget } from "@/features/marketing/helpers/ctaTarget.helper";
+import {
+	resolveLogoHref,
+	resolvePrimaryCtaTarget,
+} from "@/features/marketing/helpers/ctaTarget.helper";
 import { buildPageMetadata } from "@/features/marketing/helpers/pageMetadata.helper";
 import { auth } from "@clerk/nextjs/server";
 
@@ -12,10 +15,15 @@ export const metadata = buildPageMetadata(
 
 export default async function PrivacyPage() {
 	const { userId } = await auth();
-	const primaryCta = resolvePrimaryCtaTarget(Boolean(userId));
+	const isSignedIn = Boolean(userId);
+	const primaryCta = resolvePrimaryCtaTarget(isSignedIn);
 
 	return (
-		<LegalPage primaryCta={primaryCta} title="プライバシーポリシー">
+		<LegalPage
+			primaryCta={primaryCta}
+			logoHref={resolveLogoHref(isSignedIn)}
+			title="プライバシーポリシー"
+		>
 			<p>
 				「AIコーチ
 				ペンタ君」(以下「本サービス」)における利用者情報の取り扱いについて、以下のとおり定めます。

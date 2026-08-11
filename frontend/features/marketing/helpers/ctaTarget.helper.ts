@@ -10,3 +10,12 @@ export function resolvePrimaryCtaTarget(isSignedIn: boolean): CtaTarget {
 		? { label: "アプリを開く", href: "/goals" }
 		: { label: "無料で始める", href: "/sign-up" };
 }
+
+/**
+ * ヘッダーロゴのリンク先をログイン状態に応じて切り替える
+ * @param isSignedIn - ログイン済みかどうか
+ * @returns 未ログイン時はLP自身、ログイン済みならログイン後のデフォルトページ
+ */
+export function resolveLogoHref(isSignedIn: boolean): string {
+	return isSignedIn ? "/goals" : "/";
+}

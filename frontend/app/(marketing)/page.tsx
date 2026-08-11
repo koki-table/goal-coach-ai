@@ -7,7 +7,10 @@ import { Hero } from "@/features/marketing/components/hero";
 import { HowItWorks } from "@/features/marketing/components/howItWorks";
 import { Pricing } from "@/features/marketing/components/pricing";
 import { Testimonials } from "@/features/marketing/components/testimonials";
-import { resolvePrimaryCtaTarget } from "@/features/marketing/helpers/ctaTarget.helper";
+import {
+	resolveLogoHref,
+	resolvePrimaryCtaTarget,
+} from "@/features/marketing/helpers/ctaTarget.helper";
 import { buildPageMetadata } from "@/features/marketing/helpers/pageMetadata.helper";
 import { auth } from "@clerk/nextjs/server";
 
@@ -19,11 +22,12 @@ export const metadata = buildPageMetadata(
 
 export default async function MarketingPage() {
 	const { userId } = await auth();
-	const primaryCta = resolvePrimaryCtaTarget(Boolean(userId));
+	const isSignedIn = Boolean(userId);
+	const primaryCta = resolvePrimaryCtaTarget(isSignedIn);
 
 	return (
 		<div>
-			<Header primaryCta={primaryCta} />
+			<Header primaryCta={primaryCta} logoHref={resolveLogoHref(isSignedIn)} />
 			<main>
 				<Hero primaryCta={primaryCta} />
 				<FeatureGrid />

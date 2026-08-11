@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolvePrimaryCtaTarget } from "./ctaTarget.helper";
+import { resolveLogoHref, resolvePrimaryCtaTarget } from "./ctaTarget.helper";
 
 describe("resolvePrimaryCtaTarget", () => {
 	it("directs signed-out visitors to sign-up", () => {
@@ -14,5 +14,15 @@ describe("resolvePrimaryCtaTarget", () => {
 			label: "アプリを開く",
 			href: "/goals",
 		});
+	});
+});
+
+describe("resolveLogoHref", () => {
+	it("keeps signed-out visitors on the LP itself", () => {
+		expect(resolveLogoHref(false)).toBe("/");
+	});
+
+	it("sends signed-in users to the default post-login page", () => {
+		expect(resolveLogoHref(true)).toBe("/goals");
 	});
 });

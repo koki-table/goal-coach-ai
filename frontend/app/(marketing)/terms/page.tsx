@@ -1,6 +1,9 @@
 import { LegalPage } from "@/features/marketing/components/legalPage";
 import { SUPPORT_EMAIL } from "@/features/marketing/config/marketingConfig";
-import { resolvePrimaryCtaTarget } from "@/features/marketing/helpers/ctaTarget.helper";
+import {
+	resolveLogoHref,
+	resolvePrimaryCtaTarget,
+} from "@/features/marketing/helpers/ctaTarget.helper";
 import { buildPageMetadata } from "@/features/marketing/helpers/pageMetadata.helper";
 import { auth } from "@clerk/nextjs/server";
 
@@ -12,10 +15,11 @@ export const metadata = buildPageMetadata(
 
 export default async function TermsPage() {
 	const { userId } = await auth();
-	const primaryCta = resolvePrimaryCtaTarget(Boolean(userId));
+	const isSignedIn = Boolean(userId);
+	const primaryCta = resolvePrimaryCtaTarget(isSignedIn);
 
 	return (
-		<LegalPage primaryCta={primaryCta} title="利用規約">
+		<LegalPage primaryCta={primaryCta} logoHref={resolveLogoHref(isSignedIn)} title="利用規約">
 			<p>本規約は、「AIコーチ ペンタ君」(以下「本サービス」)の利用条件を定めるものです。</p>
 
 			<h2>1. サービス概要</h2>
