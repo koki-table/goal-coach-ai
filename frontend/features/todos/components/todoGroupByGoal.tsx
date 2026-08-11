@@ -75,7 +75,7 @@ export function TodoGroupByGoal({
 	}
 
 	return (
-		<div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2 xl:grid-cols-3">
+		<div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
 			{groups.map((group) => {
 				const isExpanded = !isMobile || !collapsedIds.has(group.goalId);
 				return (
