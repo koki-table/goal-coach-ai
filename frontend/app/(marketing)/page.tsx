@@ -7,12 +7,10 @@ import { Hero } from "@/features/marketing/components/hero";
 import { HowItWorks } from "@/features/marketing/components/howItWorks";
 import { Pricing } from "@/features/marketing/components/pricing";
 import { Testimonials } from "@/features/marketing/components/testimonials";
-import {
-	resolveLogoHref,
-	resolvePrimaryCtaTarget,
-} from "@/features/marketing/helpers/ctaTarget.helper";
+import { resolvePrimaryCtaTarget } from "@/features/marketing/helpers/ctaTarget.helper";
 import { buildPageMetadata } from "@/features/marketing/helpers/pageMetadata.helper";
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 export const metadata = buildPageMetadata(
 	"AIコーチ ペンタ君 | 目標をOKRで分解し、AIコーチと一緒に達成する",
@@ -22,12 +20,15 @@ export const metadata = buildPageMetadata(
 
 export default async function MarketingPage() {
 	const { userId } = await auth();
-	const isSignedIn = Boolean(userId);
-	const primaryCta = resolvePrimaryCtaTarget(isSignedIn);
+	if (userId) {
+		redirect("/goals");
+	}
+
+	const primaryCta = resolvePrimaryCtaTarget(false);
 
 	return (
 		<div>
-			<Header primaryCta={primaryCta} logoHref={resolveLogoHref(isSignedIn)} />
+			<Header primaryCta={primaryCta} logoHref="/" />
 			<main>
 				<Hero primaryCta={primaryCta} />
 				<FeatureGrid />
