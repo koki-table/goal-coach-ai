@@ -109,6 +109,8 @@ export const FAQ_ITEMS: FaqItem[] = [
 export const FINAL_CTA_HEADLINE = "「学びが続かない」を、ペンタ君の伴走で終わらせる。";
 export const FINAL_CTA_SUBHEADLINE = "今日、目標を1つ伝えるだけで始まります。";
 
+export const SUPPORT_EMAIL = "goal.coach.ai@gmail.com";
+
 export const FOOTER_LINK_COLUMNS = [
 	{
 		heading: "プロダクト",
@@ -121,9 +123,9 @@ export const FOOTER_LINK_COLUMNS = [
 	{
 		heading: "サポート",
 		links: [
-			{ label: "お問い合わせ", href: "#" },
-			{ label: "利用規約(準備中)", href: "#" },
-			{ label: "プライバシーポリシー(準備中)", href: "#" },
+			{ label: "お問い合わせ", href: "/contact" },
+			{ label: "利用規約", href: "/terms" },
+			{ label: "プライバシーポリシー", href: "/privacy" },
 		],
 	},
 ] as const;
