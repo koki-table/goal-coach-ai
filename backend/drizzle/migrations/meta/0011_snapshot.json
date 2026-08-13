@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "41ec6b90-c26d-4579-ac72-7327a5f6067c",
+  "id": "38b8bb68-516d-4f09-ac72-e7452a1edce0",
   "prevId": "c980346b-f772-4a20-9e18-e1652a1c6337",
   "tables": {
     "coach_conversations": {
@@ -146,6 +146,87 @@
           "value": "\"coach_conversations\".\"phase\" IN ('theme', 'reality', 'insight', 'action', 'closed')"
         }
       }
+    },
+    "coach_daily_reviews": {
+      "name": "coach_daily_reviews",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "goalId": {
+          "name": "goalId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reviewDate": {
+          "name": "reviewDate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "messageId": {
+          "name": "messageId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_coach_daily_reviews_goal_date": {
+          "name": "idx_coach_daily_reviews_goal_date",
+          "columns": [
+            "goalId",
+            "reviewDate"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "coach_daily_reviews_goalId_goals_id_fk": {
+          "name": "coach_daily_reviews_goalId_goals_id_fk",
+          "tableFrom": "coach_daily_reviews",
+          "tableTo": "goals",
+          "columnsFrom": [
+            "goalId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "coach_daily_reviews_messageId_coach_messages_id_fk": {
+          "name": "coach_daily_reviews_messageId_coach_messages_id_fk",
+          "tableFrom": "coach_daily_reviews",
+          "tableTo": "coach_messages",
+          "columnsFrom": [
+            "messageId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "coach_daily_usage": {
       "name": "coach_daily_usage",
@@ -998,14 +1079,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "cancelAtPeriodEnd": {
-          "name": "cancelAtPeriodEnd",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         },
         "lastEventCreatedAt": {
           "name": "lastEventCreatedAt",

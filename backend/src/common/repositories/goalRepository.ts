@@ -26,6 +26,17 @@ export class GoalRepository {
 			.get();
 	}
 
+	// 日次レビュージョブ専用。全ユーザー横断でactive(進行中)なgoalを列挙する
+	// (通常のCRUDはIDOR対策でuserIdスコープが必須だが、これはバッチ処理でありユーザー入力に
+	// 応答するものではないため例外的に全件対象とする)。
+	async findAllActiveForDailyReview() {
+		return this.db
+			.select({ id: goals.id, userId: goals.userId, title: goals.title, dueDate: goals.dueDate })
+			.from(goals)
+			.where(eq(goals.status, "active"))
+			.all();
+	}
+
 	async create(data: {
 		userId: string;
 		title: string;

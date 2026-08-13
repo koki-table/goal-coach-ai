@@ -56,6 +56,23 @@ export const coachChatReplySchema = z.object({
 
 export type CoachChatReplyResult = z.infer<typeof coachChatReplySchema>;
 
+// 日次レビュー専用の出力スキーマ。objective/phaseを扱わないため、通常チャットの
+// coachChatReplySchemaとは責務を分離する(混在させると不要なフィールドが増え意図が濁る)。
+export const dailyReviewMilestoneUpdateSchema = z.object({
+	milestoneId: z.string(),
+	// 推定した現在値。サーバー側で[startValue, targetValue]にクランプする(toDailyReviewProposalEnvelope参照)
+	suggestedCurrentValue: z.number(),
+	reason: z.string(),
+});
+
+export const dailyReviewReplySchema = z.object({
+	reply: z.string(),
+	milestoneUpdates: z.array(dailyReviewMilestoneUpdateSchema),
+	todos: z.array(planProposalTodoSchema),
+});
+
+export type DailyReviewReplyResult = z.infer<typeof dailyReviewReplySchema>;
+
 const EXPLORATION_ADDENDUM = `
 
 【目標を決める対話】(このスレッドは目標未確定の探索スレッド)
@@ -126,4 +143,19 @@ export function getChatSystemInstruction(
 	return objectiveStatus === "undecided"
 		? `${base}${EXPLORATION_ADDENDUM}`
 		: `${base}${PHASE_ADDENDUM}`;
+}
+
+// 日次レビュー(cronから毎日1回自動実行)専用のシステム指示。calmMentorペルソナの口調を
+// 継承しつつ、対話ではなく「今日のレビュー結果を一言添えて報告する」という一方向の
+// 発言であることを明示する(ユーザーの発言を待たずに送るため、通常チャットの
+// 「事実提示→問い」のキャッチボール構造をそのまま使うと不自然になる)。
+export function getDailyReviewSystemInstruction(persona: CoachPersona): string {
+	return `${SYSTEM_INSTRUCTIONS[persona]}
+
+【日次レビュー(自動実行)】(このメッセージはユーザーの発言を待たず、毎日1回自動で送る一方向の報告であり、通常の対話ではない)
+- goal_dataの実データ(TODO完了率・主要な成果の現在値/目標値・期限超過数・直近7日の活動量)から、未完了の主要な成果(Key Results)ごとに、現在のペースだと現在値がどの程度に達していると推定できるかをmilestoneUpdatesとして返す。
+- 推定が現状のcurrentValueとほぼ変わらない、または判断材料が乏しく推定できないKRはmilestoneUpdatesに含めない(何もしない)。無理に全KRに値を返さない。
+- 推定の根拠(reason)は1文で簡潔に述べる。「TODOの完了ペースだと〜」のように、参照したデータの種類を明示する。
+- 今のTODOのペースでは目標達成が難しいと判断した場合のみ、不足を補う新規TODOをtodosに1〜3件提案する。それ以外はtodosを空にする。
+- replyは「今日のレビュー」として1〜3文程度で簡潔に述べる。返信の中で問いかけは行わない(ユーザーの応答を前提にしないため)。`;
 }

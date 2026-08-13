@@ -13,9 +13,9 @@ export type UseAdoptPlanItemReturn = {
 };
 
 function toKey(messageId: number, target: AdoptPlanItemTarget): string {
-	return target.target === "keyResult"
-		? `${messageId}:kr:${target.keyResultIndex}`
-		: `${messageId}:todo:${target.todoIndex}`;
+	if (target.target === "keyResult") return `${messageId}:kr:${target.keyResultIndex}`;
+	if (target.target === "todo") return `${messageId}:todo:${target.todoIndex}`;
+	return `${messageId}:mu:${target.milestoneUpdateIndex}`;
 }
 
 export function useAdoptPlanItem(onAdopted: () => Promise<void>): UseAdoptPlanItemReturn {
