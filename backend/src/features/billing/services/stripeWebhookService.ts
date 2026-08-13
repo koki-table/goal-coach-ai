@@ -52,6 +52,13 @@ function isStaleEvent(eventCreatedIso: string, existingLastEventCreatedAt: strin
 	return existingLastEventCreatedAt !== null && eventCreatedIso < existingLastEventCreatedAt;
 }
 
+// Customer Portalの「期間終了時にキャンセル」は、Portal設定(mode: "at_period_end")によっては
+// cancel_at_period_endではなくcancel_at(期間終了時刻と同じ未来のタイムスタンプ)で表現される。
+// 両方のケースを網羅するため、cancel_atが設定されていることもキャンセル予約の判定に使う
+function isScheduledToCancel(subscription: Stripe.Subscription): boolean {
+	return subscription.cancel_at_period_end || typeof subscription.cancel_at === "number";
+}
+
 export class StripeWebhookService {
 	private subscriptionRepo: SubscriptionRepository;
 
@@ -116,6 +123,7 @@ export class StripeWebhookService {
 		const currentPeriodEnd = subscription?.items.data[0]?.current_period_end
 			? new Date(subscription.items.data[0].current_period_end * 1000).toISOString()
 			: undefined;
+		const cancelAtPeriodEnd = subscription && isScheduledToCancel(subscription) ? 1 : 0;
 
 		const existing = await this.subscriptionRepo.findByUserId(userId);
 		const tier = resolveTier(priceId, mappedStatus, existing?.tier ?? "free", env);
@@ -128,6 +136,7 @@ export class StripeWebhookService {
 				tier,
 				status: mappedStatus,
 				currentPeriodEnd,
+				cancelAtPeriodEnd,
 				lastEventCreatedAt: eventCreatedIso,
 			});
 			return;
@@ -141,6 +150,7 @@ export class StripeWebhookService {
 			tier,
 			status: mappedStatus,
 			currentPeriodEnd,
+			cancelAtPeriodEnd,
 			lastEventCreatedAt: eventCreatedIso,
 		});
 	}
@@ -157,6 +167,7 @@ export class StripeWebhookService {
 			? new Date(subscription.items.data[0].current_period_end * 1000).toISOString()
 			: undefined;
 		const mappedStatus = mapStripeStatus(subscription.status);
+		const cancelAtPeriodEnd = isScheduledToCancel(subscription) ? 1 : 0;
 
 		const existing = await this.subscriptionRepo.findByStripeCustomerId(stripeCustomerId);
 		if (!existing) {
@@ -174,6 +185,7 @@ export class StripeWebhookService {
 			tier,
 			status: mappedStatus,
 			currentPeriodEnd,
+			cancelAtPeriodEnd,
 			lastEventCreatedAt: eventCreatedIso,
 		});
 	}
@@ -202,6 +214,7 @@ export class StripeWebhookService {
 			stripeSubscriptionId: null,
 			stripePriceId: null,
 			currentPeriodEnd: null,
+			cancelAtPeriodEnd: 0,
 			lastEventCreatedAt: eventCreatedIso,
 		});
 	}
