@@ -3,6 +3,7 @@
 import { Badge } from "@/components/atom/badge";
 import { buttonVariants } from "@/components/atom/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
+import type { PlanFeature } from "@/features/billing/types";
 import { cn } from "@/lib/utils";
 import { Check } from "@phosphor-icons/react";
 import Link from "next/link";
@@ -11,7 +12,7 @@ type PricingCardProps = {
 	planName: string;
 	priceLabel: string;
 	priceUnit?: string;
-	features: { label: string; comingSoon?: boolean }[];
+	features: PlanFeature[];
 	ctaLabel: string;
 	ctaHref: string;
 	highlighted?: boolean;

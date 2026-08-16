@@ -13,6 +13,8 @@ type BillingContextValue = {
 	decidedMessagesUsedToday: number;
 	freeDailyDecidedLimit: number;
 	interval?: BillingInterval;
+	currentPeriodEnd?: string;
+	cancelAtPeriodEnd: boolean;
 	startCheckout: (interval: BillingInterval) => Promise<void>;
 	isCheckoutLoading: boolean;
 	openPortal: () => Promise<void>;
@@ -39,6 +41,8 @@ export function BillingProvider({ children }: BillingProviderProps) {
 		// 見てから表示するため、この値自体が画面に出ることはない
 		freeDailyDecidedLimit: data?.freeDailyDecidedLimit ?? 0,
 		interval: data?.interval,
+		currentPeriodEnd: data?.currentPeriodEnd,
+		cancelAtPeriodEnd: data?.cancelAtPeriodEnd ?? false,
 		startCheckout,
 		isCheckoutLoading,
 		openPortal,

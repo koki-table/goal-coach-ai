@@ -6,7 +6,14 @@ export type CoachPersona = "calmMentor";
 
 export const planProposalTodoSchema = z.object({
 	title: z.string(),
-	taskType: z.enum(["daily", "once"]),
+	// "daily"=毎日繰り返す習慣的行動(0時に完了状態がリセットされる)、
+	// "once"=一度実行すれば完結する単発の作業。判定基準はSYSTEM_INSTRUCTIONSの
+	// 【TODOの種別判定】を参照
+	taskType: z
+		.enum(["daily", "once"])
+		.describe(
+			"daily=毎日繰り返す習慣的行動(例:毎日30分学習する)。once=一度実行すれば完結する単発の作業(例:参考書を1冊読み終える、模試を受ける)",
+		),
 });
 
 export const planProposalSchema = z.object({
@@ -55,6 +62,23 @@ export const coachChatReplySchema = z.object({
 });
 
 export type CoachChatReplyResult = z.infer<typeof coachChatReplySchema>;
+
+// 日次レビュー専用の出力スキーマ。objective/phaseを扱わないため、通常チャットの
+// coachChatReplySchemaとは責務を分離する(混在させると不要なフィールドが増え意図が濁る)。
+export const dailyReviewMilestoneUpdateSchema = z.object({
+	milestoneId: z.string(),
+	// 推定した現在値。サーバー側で[startValue, targetValue]にクランプする(toDailyReviewProposalEnvelope参照)
+	suggestedCurrentValue: z.number(),
+	reason: z.string(),
+});
+
+export const dailyReviewReplySchema = z.object({
+	reply: z.string(),
+	milestoneUpdates: z.array(dailyReviewMilestoneUpdateSchema),
+	todos: z.array(planProposalTodoSchema),
+});
+
+export type DailyReviewReplyResult = z.infer<typeof dailyReviewReplySchema>;
 
 const EXPLORATION_ADDENDUM = `
 
@@ -115,7 +139,12 @@ const SYSTEM_INSTRUCTIONS: Record<CoachPersona, string> = {
 - 目標(Objective)が定性的な方向性になっているか、数を絞れているかを見る。タイトルや期限自体に無理があると判断した場合、または既存Key Resultsが定量的でない・数が多すぎる等の改善余地があると判断した場合は、replyの自然文の中で率直に指摘・提案する。この提言は構造化データ(proposal)にはしない。
 
 【計画の落とし込み】
-- 目標(Objective)→主要な成果(Key Results)→TODOという段階的な計画の落とし込みを常に意識し、単発の作業リストではなく、その人の成長に繋がる筋道を示す。`,
+- 目標(Objective)→主要な成果(Key Results)→TODOという段階的な計画の落とし込みを常に意識し、単発の作業リストではなく、その人の成長に繋がる筋道を示す。
+
+【TODOの種別判定】
+- TODOを提案する時は必ずtaskTypeを"daily"(毎日繰り返す習慣的行動)と"once"(一度実行すれば完結する単発の作業)のどちらか正確に判定する。
+- 判定基準: 「毎日」「日々」「習慣」など継続を前提にした行動、または頻度を指定せず繰り返し行うべき行動(例:「毎日30分学習する」「単語を10個覚える」)は"daily"。日付・回数が決まった1回限りの作業(例:「模試を受ける」「参考書を1冊読み終える」「願書を提出する」)は"once"。
+- goal_dataに既存TODOの種別(daily/once)が示されている場合、同種の行動を新たに提案する時は既存の種別と矛盾しないようにする(例:既に"毎日30分学習する"がdailyで登録済みなら、類似の学習系TODOを提案する時にonceで出さない)。`,
 };
 
 export function getChatSystemInstruction(
@@ -126,4 +155,19 @@ export function getChatSystemInstruction(
 	return objectiveStatus === "undecided"
 		? `${base}${EXPLORATION_ADDENDUM}`
 		: `${base}${PHASE_ADDENDUM}`;
+}
+
+// 日次レビュー(cronから毎日1回自動実行)専用のシステム指示。calmMentorペルソナの口調を
+// 継承しつつ、対話ではなく「今日のレビュー結果を一言添えて報告する」という一方向の
+// 発言であることを明示する(ユーザーの発言を待たずに送るため、通常チャットの
+// 「事実提示→問い」のキャッチボール構造をそのまま使うと不自然になる)。
+export function getDailyReviewSystemInstruction(persona: CoachPersona): string {
+	return `${SYSTEM_INSTRUCTIONS[persona]}
+
+【日次レビュー(自動実行)】(このメッセージはユーザーの発言を待たず、毎日1回自動で送る一方向の報告であり、通常の対話ではない)
+- goal_dataの実データ(TODO完了率・主要な成果の現在値/目標値・期限超過数・直近7日の活動量)から、未完了の主要な成果(Key Results)ごとに、現在のペースだと現在値がどの程度に達していると推定できるかをmilestoneUpdatesとして返す。
+- 推定が現状のcurrentValueとほぼ変わらない、または判断材料が乏しく推定できないKRはmilestoneUpdatesに含めない(何もしない)。無理に全KRに値を返さない。
+- 推定の根拠(reason)は1文で簡潔に述べる。「TODOの完了ペースだと〜」のように、参照したデータの種類を明示する。
+- 今のTODOのペースでは目標達成が難しいと判断した場合のみ、不足を補う新規TODOをtodosに1〜3件提案する。それ以外はtodosを空にする。
+- replyは「今日のレビュー」として1〜3文程度で簡潔に述べる。返信の中で問いかけは行わない(ユーザーの応答を前提にしないため)。`;
 }

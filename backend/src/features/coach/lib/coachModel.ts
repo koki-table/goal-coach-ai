@@ -1,5 +1,6 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { streamObject } from "ai";
+import { generateObject, streamObject } from "ai";
+import type { z } from "zod";
 import type { Bindings } from "../../../types/env";
 import { coachChatReplySchema } from "../prompts/coachPrompts";
 import type { CoachChatReplyResult } from "../prompts/coachPrompts";
@@ -62,6 +63,29 @@ export async function streamChat(
 			}
 		}
 		return await stream.object;
+	} catch (error) {
+		throw new CoachModelError(error);
+	}
+}
+
+// 日次レビュー等、ストリーミングUIを持たないバッチ処理向けの1発生成。streamChat()と同じ
+// モデルを使うが、部分文字列のコールバックを持たず結果を一括で返す(SSE用の
+// createUIMessageStream/coachOrchestratorを経由する必要がないバッチ呼び出し専用)。
+export async function generateStructured<T>(params: {
+	model: ReturnType<typeof createCoachModel>;
+	system: string;
+	prompt: string;
+	schema: z.ZodType<T>;
+}): Promise<T> {
+	try {
+		const result = await generateObject({
+			model: params.model,
+			system: params.system,
+			prompt: params.prompt,
+			schema: params.schema,
+			temperature: 0.7,
+		});
+		return result.object;
 	} catch (error) {
 		throw new CoachModelError(error);
 	}

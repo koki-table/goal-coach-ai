@@ -37,6 +37,7 @@ function subscriptionRow(tier: "free" | "pro") {
 		tier,
 		status: "active" as const,
 		currentPeriodEnd: null,
+		cancelAtPeriodEnd: 0,
 		lastEventCreatedAt: null,
 		createdAt: "",
 		updatedAt: "",

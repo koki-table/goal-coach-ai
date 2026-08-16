@@ -1,6 +1,7 @@
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
-import { streamChat } from "./coachModel";
+import { z } from "zod";
+import { generateStructured, streamChat } from "./coachModel";
 
 // MockLanguageModelV4は文字列をそのまま返せないため、objectTextを
 // 1つのtext-deltaチャンクとして流すストリームを組み立てる。
@@ -97,6 +98,48 @@ describe("coachModel", () => {
 			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
 
 			await expect(collectReplyDeltas(model)).rejects.toThrow("Coach chat model failed");
+		});
+	});
+
+	describe("generateStructured", () => {
+		function mockGenerateModelReturning(objectText: string) {
+			return new MockLanguageModelV4({
+				doGenerate: async () => ({
+					content: [{ type: "text", text: objectText }],
+					finishReason: { unified: "stop", raw: undefined },
+					usage: {
+						inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+						outputTokens: { total: 10, text: 10, reasoning: undefined },
+					},
+					warnings: [],
+				}),
+			});
+		}
+
+		it("returns the parsed object matching the given schema", async () => {
+			const model = mockGenerateModelReturning(JSON.stringify({ reply: "レビュー結果" }));
+
+			const result = await generateStructured({
+				model,
+				system: "calm mentor persona",
+				prompt: "goal data",
+				schema: z.object({ reply: z.string() }),
+			});
+
+			expect(result).toEqual({ reply: "レビュー結果" });
+		});
+
+		it("throws CoachModelError when the model output does not match the schema", async () => {
+			const model = mockGenerateModelReturning(JSON.stringify({ unexpected: "shape" }));
+
+			await expect(
+				generateStructured({
+					model,
+					system: "calm mentor persona",
+					prompt: "goal data",
+					schema: z.object({ reply: z.string() }),
+				}),
+			).rejects.toThrow("Coach chat model failed");
 		});
 	});
 });

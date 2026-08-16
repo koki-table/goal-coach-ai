@@ -3,6 +3,7 @@
 import { Avatar, AvatarImage } from "@/components/atom/avatar";
 import { cn } from "@/lib/utils";
 import type { CoachMessage } from "../types";
+import { MilestoneUpdateProposalWidget } from "./milestoneUpdateProposalWidget";
 import { ObjectiveProposalWidget } from "./objectiveProposalWidget";
 import { PlanProposalWidget } from "./planProposalWidget";
 
@@ -11,6 +12,7 @@ type ChatMessageBubbleProps = {
 	onAdoptKeyResult: (messageId: number, keyResultIndex: number) => Promise<void>;
 	onAdoptTodo: (messageId: number, todoIndex: number) => Promise<void>;
 	onAdoptObjective: (messageId: number) => Promise<void>;
+	onAdoptMilestoneUpdate: (messageId: number, milestoneUpdateIndex: number) => Promise<void>;
 	adoptingKey: string | undefined;
 	isAdoptingObjective: boolean;
 	isGoalLimitReached: boolean;
@@ -21,6 +23,7 @@ export function ChatMessageBubble({
 	onAdoptKeyResult,
 	onAdoptTodo,
 	onAdoptObjective,
+	onAdoptMilestoneUpdate,
 	adoptingKey,
 	isAdoptingObjective,
 	isGoalLimitReached,
@@ -53,13 +56,23 @@ export function ChatMessageBubble({
 					/>
 				)}
 				{message.proposal && !message.proposal.objective && (
-					<PlanProposalWidget
-						proposal={message.proposal}
-						messageId={message.id}
-						adoptingKey={adoptingKey}
-						onAdoptKeyResult={(keyResultIndex) => onAdoptKeyResult(message.id, keyResultIndex)}
-						onAdoptTodo={(todoIndex) => onAdoptTodo(message.id, todoIndex)}
-					/>
+					<>
+						<PlanProposalWidget
+							proposal={message.proposal}
+							messageId={message.id}
+							adoptingKey={adoptingKey}
+							onAdoptKeyResult={(keyResultIndex) => onAdoptKeyResult(message.id, keyResultIndex)}
+							onAdoptTodo={(todoIndex) => onAdoptTodo(message.id, todoIndex)}
+						/>
+						<MilestoneUpdateProposalWidget
+							milestoneUpdates={message.proposal.milestoneUpdates}
+							messageId={message.id}
+							adoptingKey={adoptingKey}
+							onAdopt={(milestoneUpdateIndex) =>
+								onAdoptMilestoneUpdate(message.id, milestoneUpdateIndex)
+							}
+						/>
+					</>
 				)}
 			</div>
 		</div>

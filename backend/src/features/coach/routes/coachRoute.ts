@@ -8,6 +8,7 @@ import {
 	GoalLimitExceededError,
 	GoalNotFoundError,
 	MilestoneNotAdoptedYetError,
+	MilestoneUpdateStaleError,
 	ObjectiveAlreadyAdoptedError,
 	PlanItemAlreadyAdoptedError,
 	PlanItemNotFoundError,
@@ -24,7 +25,10 @@ import { mapConversationToResponse, mapMessageToResponse } from "../helpers/coac
 import { CoachModelError } from "../lib/coachModel";
 import { CoachChatService } from "../services/coachChatService";
 
-export const coachRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+export const coachRoute = new Hono<{
+	Bindings: Bindings;
+	Variables: Variables;
+}>();
 
 // POST /coach/conversations
 coachRoute.post("/conversations", async (c) => {
@@ -34,7 +38,13 @@ coachRoute.post("/conversations", async (c) => {
 
 	const parsed = coachConversationCreateSchema.safeParse(await c.req.json());
 	if (!parsed.success) {
-		return c.json({ message: "Validation error", errors: parsed.error.flatten().fieldErrors }, 400);
+		return c.json(
+			{
+				message: "Validation error",
+				errors: parsed.error.flatten().fieldErrors,
+			},
+			400,
+		);
 	}
 
 	try {
@@ -118,7 +128,13 @@ coachRoute.post("/conversations/:id/messages", async (c) => {
 
 	const parsed = coachMessageCreateSchema.safeParse(await c.req.json());
 	if (!parsed.success) {
-		return c.json({ message: "Validation error", errors: parsed.error.flatten().fieldErrors }, 400);
+		return c.json(
+			{
+				message: "Validation error",
+				errors: parsed.error.flatten().fieldErrors,
+			},
+			400,
+		);
 	}
 
 	try {
@@ -202,10 +218,15 @@ coachRoute.post("/messages/:id/adopt-plan-item", async (c) => {
 	const target =
 		parsed.data.target === "todo"
 			? { type: "todo" as const, todoIndex: parsed.data.todoIndex }
-			: {
-					type: "keyResult" as const,
-					keyResultIndex: parsed.data.target === "keyResult" ? parsed.data.keyResultIndex : 0,
-				};
+			: parsed.data.target === "milestoneUpdate"
+				? {
+						type: "milestoneUpdate" as const,
+						milestoneUpdateIndex: parsed.data.milestoneUpdateIndex,
+					}
+				: {
+						type: "keyResult" as const,
+						keyResultIndex: parsed.data.target === "keyResult" ? parsed.data.keyResultIndex : 0,
+					};
 
 	try {
 		const result = await service.adoptPlanItem(userId, messageId, target);
@@ -219,6 +240,15 @@ coachRoute.post("/messages/:id/adopt-plan-item", async (c) => {
 		}
 		if (e instanceof MilestoneNotAdoptedYetError) {
 			return c.json({ message: "Milestone must be adopted first" }, 409);
+		}
+		if (e instanceof MilestoneUpdateStaleError) {
+			return c.json(
+				{
+					message: "Milestone current value has changed since the proposal",
+					reason: "milestoneUpdateStale",
+				},
+				409,
+			);
 		}
 		if (e instanceof CoachConversationNotFoundError) {
 			return c.json({ message: "Conversation not found" }, 404);
@@ -250,7 +280,9 @@ coachRoute.post("/messages/:id/adopt-objective", async (c) => {
 		}
 		if (e instanceof GoalLimitExceededError) {
 			return c.json(
-				{ message: "目標は同時に2件までしか設定できません。まず1件に集中しましょう。" },
+				{
+					message: "目標は同時に2件までしか設定できません。まず1件に集中しましょう。",
+				},
 				409,
 			);
 		}

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { subscriptionStatuses, subscriptionTiers } from "./constants";
 import { users } from "./users";
 
@@ -22,6 +22,10 @@ export const userSubscriptions = sqliteTable(
 		tier: text("tier", { enum: subscriptionTiers }).notNull().default("free"),
 		status: text("status", { enum: subscriptionStatuses }).notNull().default("active"),
 		currentPeriodEnd: text("currentPeriodEnd"),
+		// Stripeのcancel_at_period_end。trueの間はstatus="active"のままcurrentPeriodEndまで
+		// pro機能を使い続けられるが、期間終了後は自動でstatus="canceled"に遷移する
+		// (customer.subscription.deleted相当)。フロントで「いつまでProで使えるか」を出すために保持
+		cancelAtPeriodEnd: integer("cancelAtPeriodEnd").notNull().default(0),
 		// Stripeのevent.created(unix seconds)をISO化して保持。Stripeはwebhookの配信順序を
 		// 保証しないため、この行より古いevent.createdのcustomer.subscription.updatedは
 		// 無視する(古いイベントによる新しい状態の巻き戻りを防ぐ)

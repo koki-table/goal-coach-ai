@@ -1,10 +1,10 @@
 "use client";
 
-import { Badge } from "@/components/atom/badge";
 import { Button } from "@/components/atom/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/atom/card";
-import { MONTHLY_PRICE_JPY, YEARLY_PRICE_JPY } from "../config/billingConfig";
+import { MONTHLY_PRICE_JPY, PLAN_FEATURES, YEARLY_PRICE_JPY } from "../config/billingConfig";
+import { formatCancelNotice } from "../helpers/cancelNotice.helper";
 import type { BillingInterval, SubscriptionStatus, SubscriptionTier } from "../types";
+import { PlanFeatureCard } from "./planFeatureCard";
 
 const INTERVAL_LABELS: Record<BillingInterval, string> = {
 	monthly: "月額プラン",
@@ -18,71 +18,95 @@ type PlanCardProps = {
 	interval?: BillingInterval;
 	// freeプランの時のみ渡す。proでは"無制限"訴求を守るため常に非表示にする
 	usageLabel?: string;
+	// trueの間はstatus="active"のままcurrentPeriodEndまでpro機能を使い続けられる
+	cancelAtPeriodEnd: boolean;
+	currentPeriodEnd?: string;
 	isCheckoutLoading: boolean;
 	isPortalLoading: boolean;
 	onUpgrade: (interval: BillingInterval) => void;
 	onManage: () => void;
 };
 
+function UpgradeButtons({
+	isCheckoutLoading,
+	onUpgrade,
+}: {
+	isCheckoutLoading: boolean;
+	onUpgrade: (interval: BillingInterval) => void;
+}) {
+	return (
+		<div className="flex flex-wrap gap-2">
+			<Button disabled={isCheckoutLoading} onClick={() => onUpgrade("monthly")}>
+				月額¥{MONTHLY_PRICE_JPY}でアップグレード
+			</Button>
+			<Button variant="outline" disabled={isCheckoutLoading} onClick={() => onUpgrade("yearly")}>
+				年額¥{YEARLY_PRICE_JPY}でアップグレード
+			</Button>
+		</div>
+	);
+}
+
 export function PlanCard({
 	tier,
 	status,
 	interval,
 	usageLabel,
+	cancelAtPeriodEnd,
+	currentPeriodEnd,
 	isCheckoutLoading,
 	isPortalLoading,
 	onUpgrade,
 	onManage,
 }: PlanCardProps) {
+	const proPriceLabel =
+		tier === "pro" && interval === "yearly" ? `¥${YEARLY_PRICE_JPY}` : `¥${MONTHLY_PRICE_JPY}`;
+	const proPriceUnit = tier === "pro" ? undefined : "/月";
+
 	return (
-		<Card>
-			<CardHeader>
-				<div className="flex items-center justify-between gap-2">
-					<div className="flex items-center gap-2">
-						<CardTitle>{tier === "pro" ? "Proプラン" : "無料プラン"}</CardTitle>
-						{tier === "pro" && interval && (
-							<span className="text-sm text-muted-foreground">({INTERVAL_LABELS[interval]})</span>
-						)}
-					</div>
-					<Badge variant={tier === "pro" ? "default" : "secondary"}>
-						{tier === "pro" ? "Pro" : "Free"}
-					</Badge>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-4">
+		<div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+			<PlanFeatureCard
+				planName="無料プラン"
+				priceLabel="¥0"
+				priceUnit="/月"
+				features={PLAN_FEATURES.free}
+				isCurrentPlan={tier === "free"}
+			>
+				{tier === "free" && (
+					<>
+						{usageLabel && <p className="text-sm text-muted-foreground">{usageLabel}</p>}
+						<UpgradeButtons isCheckoutLoading={isCheckoutLoading} onUpgrade={onUpgrade} />
+					</>
+				)}
+			</PlanFeatureCard>
+
+			<PlanFeatureCard
+				planName="Proプラン"
+				priceLabel={proPriceLabel}
+				priceUnit={proPriceUnit}
+				features={PLAN_FEATURES.pro}
+				isCurrentPlan={tier === "pro"}
+			>
+				{tier === "pro" && interval && (
+					<p className="text-sm text-muted-foreground">{INTERVAL_LABELS[interval]}</p>
+				)}
 				{tier === "pro" && status === "past_due" && (
 					<p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">
 						お支払いに問題が発生しています。お支払い方法を更新してください。
 					</p>
 				)}
-
-				{tier === "free" ? (
-					<>
-						{usageLabel && <p className="text-sm text-muted-foreground">{usageLabel}</p>}
-						<div className="flex flex-wrap gap-2">
-							<Button disabled={isCheckoutLoading} onClick={() => onUpgrade("monthly")}>
-								月額¥{MONTHLY_PRICE_JPY}でアップグレード
-							</Button>
-							<Button
-								variant="outline"
-								disabled={isCheckoutLoading}
-								onClick={() => onUpgrade("yearly")}
-							>
-								年額¥{YEARLY_PRICE_JPY}でアップグレード
-							</Button>
-						</div>
-					</>
-				) : (
-					<>
-						<p className="text-sm text-muted-foreground">
-							AIコーチは実質無制限にご利用いただけます。
-						</p>
-						<Button variant="outline" disabled={isPortalLoading} onClick={onManage}>
-							お支払い方法・請求書を管理
-						</Button>
-					</>
+				{tier === "pro" && cancelAtPeriodEnd && (
+					<p className="rounded-lg bg-warning/10 px-4 py-2 text-sm text-warning-foreground">
+						{formatCancelNotice(currentPeriodEnd)}
+					</p>
 				)}
-			</CardContent>
-		</Card>
+				{tier === "pro" ? (
+					<Button variant="outline" disabled={isPortalLoading} onClick={onManage}>
+						お支払い方法・請求書を管理
+					</Button>
+				) : (
+					<UpgradeButtons isCheckoutLoading={isCheckoutLoading} onUpgrade={onUpgrade} />
+				)}
+			</PlanFeatureCard>
+		</div>
 	);
 }

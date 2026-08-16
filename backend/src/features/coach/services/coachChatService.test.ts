@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	ExplorationThreadAlreadyLinkedError,
 	GoalLimitExceededError,
+	MilestoneUpdateStaleError,
 	ObjectiveAlreadyAdoptedError,
+	PlanItemAlreadyAdoptedError,
 	PlanItemNotFoundError,
 } from "../../../common/errors";
 import { createDb } from "../../../db";
@@ -32,13 +34,22 @@ function mockStreamModelReturning(objectText: string) {
 			stream: new ReadableStream({
 				start(controller) {
 					controller.enqueue({ type: "text-start", id: "1" });
-					controller.enqueue({ type: "text-delta", id: "1", delta: objectText });
+					controller.enqueue({
+						type: "text-delta",
+						id: "1",
+						delta: objectText,
+					});
 					controller.enqueue({ type: "text-end", id: "1" });
 					controller.enqueue({
 						type: "finish",
 						finishReason: { unified: "stop", raw: undefined },
 						usage: {
-							inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+							inputTokens: {
+								total: 10,
+								noCache: 10,
+								cacheRead: undefined,
+								cacheWrite: undefined,
+							},
 							outputTokens: { total: 10, text: 10, reasoning: undefined },
 						},
 					});
@@ -96,7 +107,9 @@ describe("CoachChatService", () => {
 			).goalRepo;
 			const chatGate = (
 				service as unknown as {
-					chatGate: { resolveForUndecidedMessage: (...args: unknown[]) => unknown };
+					chatGate: {
+						resolveForUndecidedMessage: (...args: unknown[]) => unknown;
+					};
 				}
 			).chatGate;
 
@@ -113,7 +126,9 @@ describe("CoachChatService", () => {
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
-			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue(
+				"gemini-3.5-flash-lite",
+			);
 
 			const insertStmtSpy = vi.spyOn(messageRepo, "insertStmt");
 			const touchStmtSpy = vi.spyOn(conversationRepo, "touchStmt");
@@ -133,7 +148,9 @@ describe("CoachChatService", () => {
 			};
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<ReturnType<typeof db.batch>>);
+				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<
+					ReturnType<typeof db.batch>
+				>);
 
 			const { uiStream, persistTurn } = await service.startMessageStream(
 				userId,
@@ -146,10 +163,18 @@ describe("CoachChatService", () => {
 			const assistantMessage = await persistTurn();
 
 			expect(insertStmtSpy).toHaveBeenCalledWith(
-				expect.objectContaining({ conversationId, role: "user", content: "こんにちは" }),
+				expect.objectContaining({
+					conversationId,
+					role: "user",
+					content: "こんにちは",
+				}),
 			);
 			expect(insertStmtSpy).toHaveBeenCalledWith(
-				expect.objectContaining({ conversationId, role: "assistant", content: "了解しました。" }),
+				expect.objectContaining({
+					conversationId,
+					role: "assistant",
+					content: "了解しました。",
+				}),
 			);
 			expect(touchStmtSpy).toHaveBeenCalledWith(conversationId);
 
@@ -196,7 +221,9 @@ describe("CoachChatService", () => {
 				}
 			).milestoneRepo;
 			const todoRepo = (
-				service as unknown as { todoRepo: { findAllByGoalId: (...args: unknown[]) => unknown } }
+				service as unknown as {
+					todoRepo: { findAllByGoalId: (...args: unknown[]) => unknown };
+				}
 			).todoRepo;
 			const todoLogRepo = (
 				service as unknown as {
@@ -205,7 +232,9 @@ describe("CoachChatService", () => {
 			).todoLogRepo;
 			const chatGate = (
 				service as unknown as {
-					chatGate: { resolveForDecidedMessage: (...args: unknown[]) => unknown };
+					chatGate: {
+						resolveForDecidedMessage: (...args: unknown[]) => unknown;
+					};
 				}
 			).chatGate;
 
@@ -240,7 +269,11 @@ describe("CoachChatService", () => {
 			const setPhaseStmtSpy = vi.spyOn(conversationRepo, "setPhaseStmt");
 
 			const model = mockStreamModelReturning(
-				JSON.stringify({ reply: "現状を教えてほしい。", proposal: null, phase: "insight" }),
+				JSON.stringify({
+					reply: "現状を教えてほしい。",
+					proposal: null,
+					phase: "insight",
+				}),
 			);
 			vi.spyOn(coachModel, "createCoachModel").mockReturnValue(model);
 
@@ -254,7 +287,9 @@ describe("CoachChatService", () => {
 			};
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<ReturnType<typeof db.batch>>);
+				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<
+					ReturnType<typeof db.batch>
+				>);
 
 			const { uiStream, persistTurn } = await service.startMessageStream(
 				userId,
@@ -267,10 +302,18 @@ describe("CoachChatService", () => {
 			await persistTurn();
 
 			expect(insertStmtSpy).toHaveBeenCalledWith(
-				expect.objectContaining({ conversationId, role: "user", content: "最近進んでいない" }),
+				expect.objectContaining({
+					conversationId,
+					role: "user",
+					content: "最近進んでいない",
+				}),
 			);
 			// declaredPhase("insight")はcurrent("reality")から1段階前進のため矯正されずそのまま適用される
-			expect(setPhaseStmtSpy).toHaveBeenCalledWith(conversationId, "insight", 0);
+			expect(setPhaseStmtSpy).toHaveBeenCalledWith(
+				conversationId,
+				"insight",
+				0,
+			);
 			expect(touchStmtSpy).not.toHaveBeenCalled();
 			expect(batchSpy).toHaveBeenCalledTimes(1);
 			expect(batchSpy.mock.calls[0][0]).toHaveLength(3);
@@ -285,7 +328,9 @@ describe("CoachChatService", () => {
 
 			const conversationRepo = (
 				service as unknown as {
-					conversationRepo: { findByIdAndUserId: (...args: unknown[]) => unknown };
+					conversationRepo: {
+						findByIdAndUserId: (...args: unknown[]) => unknown;
+					};
 				}
 			).conversationRepo;
 			const messageRepo = (
@@ -305,7 +350,9 @@ describe("CoachChatService", () => {
 			).goalRepo;
 			const chatGate = (
 				service as unknown as {
-					chatGate: { resolveForUndecidedMessage: (...args: unknown[]) => unknown };
+					chatGate: {
+						resolveForUndecidedMessage: (...args: unknown[]) => unknown;
+					};
 				}
 			).chatGate;
 
@@ -322,9 +369,13 @@ describe("CoachChatService", () => {
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
-			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue(
+				"gemini-3.5-flash-lite",
+			);
 
-			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
+			const model = mockStreamModelReturning(
+				JSON.stringify({ unexpected: "shape" }),
+			);
 			vi.spyOn(coachModel, "createCoachModel").mockReturnValue(model);
 
 			const batchSpy = vi.spyOn(db, "batch");
@@ -352,12 +403,16 @@ describe("CoachChatService", () => {
 
 			const conversationRepo = (
 				service as unknown as {
-					conversationRepo: { findByIdAndUserId: (...args: unknown[]) => unknown };
+					conversationRepo: {
+						findByIdAndUserId: (...args: unknown[]) => unknown;
+					};
 				}
 			).conversationRepo;
 			const messageRepo = (
 				service as unknown as {
-					messageRepo: { findRecentByConversationId: (...args: unknown[]) => unknown };
+					messageRepo: {
+						findRecentByConversationId: (...args: unknown[]) => unknown;
+					};
 				}
 			).messageRepo;
 			const goalRepo = (
@@ -371,7 +426,9 @@ describe("CoachChatService", () => {
 				}
 			).milestoneRepo;
 			const todoRepo = (
-				service as unknown as { todoRepo: { findAllByGoalId: (...args: unknown[]) => unknown } }
+				service as unknown as {
+					todoRepo: { findAllByGoalId: (...args: unknown[]) => unknown };
+				}
 			).todoRepo;
 			const todoLogRepo = (
 				service as unknown as {
@@ -416,7 +473,9 @@ describe("CoachChatService", () => {
 				.spyOn(chatGate, "releaseDecidedMessageReservation")
 				.mockResolvedValue(undefined);
 
-			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
+			const model = mockStreamModelReturning(
+				JSON.stringify({ unexpected: "shape" }),
+			);
 			vi.spyOn(coachModel, "createCoachModel").mockReturnValue(model);
 
 			const { uiStream, persistTurn } = await service.startMessageStream(
@@ -448,10 +507,15 @@ describe("CoachChatService", () => {
 				}
 			).conversationRepo;
 			const goalRepo = (
-				service as unknown as { goalRepo: { countActiveByUserId: (...args: unknown[]) => unknown } }
+				service as unknown as {
+					goalRepo: { countActiveByUserId: (...args: unknown[]) => unknown };
+				}
 			).goalRepo;
 
-			vi.spyOn(conversationRepo, "findOpenExplorationByUserId").mockResolvedValue(undefined);
+			vi.spyOn(
+				conversationRepo,
+				"findOpenExplorationByUserId",
+			).mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
 			const createExplorationSpy = vi
 				.spyOn(conversationRepo, "createExploration")
@@ -491,17 +555,25 @@ describe("CoachChatService", () => {
 				}
 			).conversationRepo;
 			const goalRepo = (
-				service as unknown as { goalRepo: { countActiveByUserId: (...args: unknown[]) => unknown } }
+				service as unknown as {
+					goalRepo: { countActiveByUserId: (...args: unknown[]) => unknown };
+				}
 			).goalRepo;
 
-			vi.spyOn(conversationRepo, "findOpenExplorationByUserId").mockResolvedValue(undefined);
+			vi.spyOn(
+				conversationRepo,
+				"findOpenExplorationByUserId",
+			).mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(2);
-			const createExplorationSpy = vi.spyOn(conversationRepo, "createExploration");
+			const createExplorationSpy = vi.spyOn(
+				conversationRepo,
+				"createExploration",
+			);
 			const createModelSpy = vi.spyOn(coachModel, "createCoachModel");
 
-			await expect(service.startOrGetExplorationConversation(userId)).rejects.toThrow(
-				GoalLimitExceededError,
-			);
+			await expect(
+				service.startOrGetExplorationConversation(userId),
+			).rejects.toThrow(GoalLimitExceededError);
 
 			expect(createExplorationSpy).not.toHaveBeenCalled();
 			expect(createModelSpy).not.toHaveBeenCalled();
@@ -531,8 +603,14 @@ describe("CoachChatService", () => {
 				createdAt: "",
 				updatedAt: "",
 			};
-			vi.spyOn(conversationRepo, "findOpenExplorationByUserId").mockResolvedValue(existing);
-			const createExplorationSpy = vi.spyOn(conversationRepo, "createExploration");
+			vi.spyOn(
+				conversationRepo,
+				"findOpenExplorationByUserId",
+			).mockResolvedValue(existing);
+			const createExplorationSpy = vi.spyOn(
+				conversationRepo,
+				"createExploration",
+			);
 
 			const result = await service.startOrGetExplorationConversation(userId);
 
@@ -550,12 +628,16 @@ describe("CoachChatService", () => {
 
 			const conversationRepo = (
 				service as unknown as {
-					conversationRepo: { findByIdAndUserId: (...args: unknown[]) => unknown };
+					conversationRepo: {
+						findByIdAndUserId: (...args: unknown[]) => unknown;
+					};
 				}
 			).conversationRepo;
 			const messageRepo = (
 				service as unknown as {
-					messageRepo: { findRecentByConversationId: (...args: unknown[]) => unknown };
+					messageRepo: {
+						findRecentByConversationId: (...args: unknown[]) => unknown;
+					};
 				}
 			).messageRepo;
 
@@ -581,9 +663,13 @@ describe("CoachChatService", () => {
 			]);
 			const createModelSpy = vi.spyOn(coachModel, "createCoachModel");
 
-			const result = await service.startFirstTurnStream(userId, conversationId, {
-				GEMINI_API_KEY: "dummy",
-			} as Bindings);
+			const result = await service.startFirstTurnStream(
+				userId,
+				conversationId,
+				{
+					GEMINI_API_KEY: "dummy",
+				} as Bindings,
+			);
 
 			expect(result).toBeUndefined();
 			expect(createModelSpy).not.toHaveBeenCalled();
@@ -612,11 +698,15 @@ describe("CoachChatService", () => {
 				}
 			).messageRepo;
 			const goalRepo = (
-				service as unknown as { goalRepo: { countActiveByUserId: (...args: unknown[]) => unknown } }
+				service as unknown as {
+					goalRepo: { countActiveByUserId: (...args: unknown[]) => unknown };
+				}
 			).goalRepo;
 			const chatGate = (
 				service as unknown as {
-					chatGate: { resolveForUndecidedMessage: (...args: unknown[]) => unknown };
+					chatGate: {
+						resolveForUndecidedMessage: (...args: unknown[]) => unknown;
+					};
 				}
 			).chatGate;
 
@@ -632,7 +722,9 @@ describe("CoachChatService", () => {
 			});
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
-			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue(
+				"gemini-3.5-flash-lite",
+			);
 			const insertStmtSpy = vi.spyOn(messageRepo, "insertStmt");
 			const touchStmtSpy = vi.spyOn(conversationRepo, "touchStmt");
 
@@ -651,11 +743,17 @@ describe("CoachChatService", () => {
 			};
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[assistantRow]] as unknown as Awaited<ReturnType<typeof db.batch>>);
+				.mockResolvedValue([[assistantRow]] as unknown as Awaited<
+					ReturnType<typeof db.batch>
+				>);
 
-			const result = await service.startFirstTurnStream(userId, conversationId, {
-				GEMINI_API_KEY: "dummy",
-			} as Bindings);
+			const result = await service.startFirstTurnStream(
+				userId,
+				conversationId,
+				{
+					GEMINI_API_KEY: "dummy",
+				} as Bindings,
+			);
 			if (!result) throw new Error("expected a result");
 
 			await drainStream(result.uiStream);
@@ -668,7 +766,9 @@ describe("CoachChatService", () => {
 					content: "何にワクワクするペン",
 				}),
 			);
-			expect(insertStmtSpy).not.toHaveBeenCalledWith(expect.objectContaining({ role: "user" }));
+			expect(insertStmtSpy).not.toHaveBeenCalledWith(
+				expect.objectContaining({ role: "user" }),
+			);
 			expect(touchStmtSpy).toHaveBeenCalledWith(conversationId);
 			expect(batchSpy.mock.calls[0][0]).toHaveLength(2);
 			expect(assistantMessage).toEqual(assistantRow);
@@ -731,8 +831,14 @@ describe("CoachChatService", () => {
 
 		const proposalWithObjective = JSON.stringify({
 			version: 1,
-			objective: { title: "資格を取得する", deadline: "2026-12-31", category: "study" },
-			keyResults: [{ title: "模試900点", targetValue: 900, unit: "点", adopted: false }],
+			objective: {
+				title: "資格を取得する",
+				deadline: "2026-12-31",
+				category: "study",
+			},
+			keyResults: [
+				{ title: "模試900点", targetValue: 900, unit: "点", adopted: false },
+			],
 			todos: [],
 		});
 
@@ -792,7 +898,9 @@ describe("CoachChatService", () => {
 			};
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[createdGoal]] as unknown as Awaited<ReturnType<typeof db.batch>>);
+				.mockResolvedValue([[createdGoal]] as unknown as Awaited<
+					ReturnType<typeof db.batch>
+				>);
 
 			const result = await service.adoptObjective(userId, messageId);
 
@@ -823,8 +931,19 @@ describe("CoachChatService", () => {
 				proposal: JSON.stringify({
 					version: 1,
 					// LLMが過去日付を返した想定
-					objective: { title: "資格を取得する", deadline: "2020-01-01", category: "study" },
-					keyResults: [{ title: "模試900点", targetValue: 900, unit: "点", adopted: false }],
+					objective: {
+						title: "資格を取得する",
+						deadline: "2020-01-01",
+						category: "study",
+					},
+					keyResults: [
+						{
+							title: "模試900点",
+							targetValue: 900,
+							unit: "点",
+							adopted: false,
+						},
+					],
 					todos: [],
 				}),
 				createdAt: "",
@@ -857,7 +976,9 @@ describe("CoachChatService", () => {
 
 			await service.adoptObjective(userId, messageId);
 
-			const insertedGoal = insertStmtSpy.mock.calls[0][0] as { dueDate?: string };
+			const insertedGoal = insertStmtSpy.mock.calls[0][0] as {
+				dueDate?: string;
+			};
 			const today = new Date().toISOString().slice(0, 10);
 			expect(insertedGoal.dueDate).not.toBe("2020-01-01");
 			expect(insertedGoal.dueDate).toBeDefined();
@@ -901,8 +1022,14 @@ describe("CoachChatService", () => {
 		});
 
 		it("throws ObjectiveAlreadyAdoptedError when the key results are already adopted", async () => {
-			const { service, messageId, userId, conversationId, messageRepo, conversationRepo } =
-				setupAdoptObjective();
+			const {
+				service,
+				messageId,
+				userId,
+				conversationId,
+				messageRepo,
+				conversationRepo,
+			} = setupAdoptObjective();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -911,7 +1038,11 @@ describe("CoachChatService", () => {
 				content: "この目標にしましょう。",
 				proposal: JSON.stringify({
 					version: 1,
-					objective: { title: "資格を取得する", deadline: "2026-12-31", category: "study" },
+					objective: {
+						title: "資格を取得する",
+						deadline: "2026-12-31",
+						category: "study",
+					},
 					keyResults: [
 						{
 							title: "模試900点",
@@ -942,8 +1073,14 @@ describe("CoachChatService", () => {
 		});
 
 		it("throws ExplorationThreadAlreadyLinkedError when the conversation is already linked to a goal", async () => {
-			const { service, messageId, userId, conversationId, messageRepo, conversationRepo } =
-				setupAdoptObjective();
+			const {
+				service,
+				messageId,
+				userId,
+				conversationId,
+				messageRepo,
+				conversationRepo,
+			} = setupAdoptObjective();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -970,15 +1107,26 @@ describe("CoachChatService", () => {
 		});
 
 		it("throws PlanItemNotFoundError when the proposal has no objective", async () => {
-			const { service, messageId, userId, conversationId, messageRepo, conversationRepo } =
-				setupAdoptObjective();
+			const {
+				service,
+				messageId,
+				userId,
+				conversationId,
+				messageRepo,
+				conversationRepo,
+			} = setupAdoptObjective();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
 				conversationId,
 				role: "assistant",
 				content: "もう少し聞かせて。",
-				proposal: JSON.stringify({ version: 1, objective: null, keyResults: [], todos: [] }),
+				proposal: JSON.stringify({
+					version: 1,
+					objective: null,
+					keyResults: [],
+					todos: [],
+				}),
 				createdAt: "",
 			});
 			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
@@ -998,8 +1146,14 @@ describe("CoachChatService", () => {
 		});
 
 		it("他人のmessage(所有権不成立)は存在しない場合と同じPlanItemNotFoundErrorにする(列挙オラクル防止)", async () => {
-			const { service, messageId, userId, conversationId, messageRepo, conversationRepo } =
-				setupAdoptObjective();
+			const {
+				service,
+				messageId,
+				userId,
+				conversationId,
+				messageRepo,
+				conversationRepo,
+			} = setupAdoptObjective();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -1010,11 +1164,434 @@ describe("CoachChatService", () => {
 				createdAt: "",
 			});
 			// findByIdAndUserIdがundefined = 他人のmessage(所有権なし)
-			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(undefined);
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				undefined,
+			);
 
 			await expect(service.adoptObjective(userId, messageId)).rejects.toThrow(
 				PlanItemNotFoundError,
 			);
+		});
+	});
+
+	describe("adoptPlanItem (milestoneUpdate)", () => {
+		function setupAdoptPlanItem() {
+			const db = createDb(createUnusedD1());
+			const service = new CoachChatService(db);
+			const messageId = 1;
+			const userId = "user-1";
+			const conversationId = "conv-1";
+			const goalId = "goal-1";
+			const milestoneId = "milestone-1";
+
+			const messageRepo = (
+				service as unknown as {
+					messageRepo: {
+						findById: (...args: unknown[]) => unknown;
+						updateProposalStmt: (...args: unknown[]) => unknown;
+					};
+				}
+			).messageRepo;
+			const conversationRepo = (
+				service as unknown as {
+					conversationRepo: {
+						findByIdAndUserId: (...args: unknown[]) => unknown;
+					};
+				}
+			).conversationRepo;
+			const milestoneRepo = (
+				service as unknown as {
+					milestoneRepo: {
+						findById: (...args: unknown[]) => unknown;
+						updateStmt: (...args: unknown[]) => unknown;
+					};
+				}
+			).milestoneRepo;
+
+			return {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				milestoneId,
+				messageRepo,
+				conversationRepo,
+				milestoneRepo,
+			};
+		}
+
+		function proposalWithMilestoneUpdate(baselineCurrentValue = 500) {
+			return JSON.stringify({
+				version: 1,
+				objective: null,
+				keyResults: [],
+				todos: [],
+				milestoneUpdates: [
+					{
+						milestoneId: "milestone-1",
+						milestoneTitle: "模試900点",
+						baselineCurrentValue,
+						suggestedCurrentValue: 700,
+						reason: "TODOの完了ペースから推定",
+						adopted: false,
+					},
+				],
+			});
+		}
+
+		it("suggestedCurrentValueをmilestoneのcurrentValueに反映し、proposalをadopted=trueに更新する", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				milestoneId,
+				messageRepo,
+				conversationRepo,
+				milestoneRepo,
+			} = setupAdoptPlanItem();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "現在のペースだと推定700点だ。",
+				proposal: proposalWithMilestoneUpdate(),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "TOEIC800点を取る",
+				goalDeadlineSnapshot: "2026-12-31",
+				createdAt: "",
+				updatedAt: "",
+			});
+			vi.spyOn(milestoneRepo, "findById").mockResolvedValue({
+				id: milestoneId,
+				goalId,
+				title: "模試900点",
+				startValue: 0,
+				currentValue: 500,
+				targetValue: 900,
+				unit: "点",
+				isCompleted: 0,
+			});
+
+			const updatedMilestone = {
+				id: milestoneId,
+				goalId,
+				title: "模試900点",
+				startValue: 0,
+				currentValue: 700,
+				targetValue: 900,
+				unit: "点",
+				isCompleted: 0,
+			};
+			const updateStmtSpy = vi.spyOn(milestoneRepo, "updateStmt");
+			const batchSpy = vi
+				.spyOn(db, "batch")
+				.mockResolvedValue([[updatedMilestone]] as unknown as Awaited<
+					ReturnType<typeof db.batch>
+				>);
+
+			const result = await service.adoptPlanItem(userId, messageId, {
+				type: "milestoneUpdate",
+				milestoneUpdateIndex: 0,
+			});
+
+			expect(updateStmtSpy).toHaveBeenCalledWith(milestoneId, {
+				currentValue: 700,
+				isCompleted: 0,
+				completedAt: null,
+			});
+			expect(batchSpy).toHaveBeenCalledTimes(1);
+			expect(result.proposal.milestoneUpdates[0]).toEqual({
+				milestoneId,
+				milestoneTitle: "模試900点",
+				baselineCurrentValue: 500,
+				suggestedCurrentValue: 700,
+				reason: "TODOの完了ペースから推定",
+				adopted: true,
+				appliedCurrentValue: 700,
+			});
+			expect(result.milestone?.currentValue).toBe(700);
+		});
+
+		it("targetValue以上への反映はisCompleted=1・completedAtを設定する", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				milestoneId,
+				messageRepo,
+				conversationRepo,
+				milestoneRepo,
+			} = setupAdoptPlanItem();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "目標達成ペースだ。",
+				proposal: JSON.stringify({
+					version: 1,
+					objective: null,
+					keyResults: [],
+					todos: [],
+					milestoneUpdates: [
+						{
+							milestoneId,
+							milestoneTitle: "模試900点",
+							baselineCurrentValue: 500,
+							suggestedCurrentValue: 900,
+							reason: "既に目標水準に到達",
+							adopted: false,
+						},
+					],
+				}),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "TOEIC800点を取る",
+				goalDeadlineSnapshot: "2026-12-31",
+				createdAt: "",
+				updatedAt: "",
+			});
+			vi.spyOn(milestoneRepo, "findById").mockResolvedValue({
+				id: milestoneId,
+				goalId,
+				title: "模試900点",
+				startValue: 0,
+				currentValue: 500,
+				targetValue: 900,
+				unit: "点",
+				isCompleted: 0,
+			});
+			const updateStmtSpy = vi.spyOn(milestoneRepo, "updateStmt");
+			vi.spyOn(db, "batch").mockResolvedValue([
+				[{ id: milestoneId, currentValue: 900, isCompleted: 1 }],
+			] as unknown as Awaited<ReturnType<typeof db.batch>>);
+
+			await service.adoptPlanItem(userId, messageId, {
+				type: "milestoneUpdate",
+				milestoneUpdateIndex: 0,
+			});
+
+			expect(updateStmtSpy).toHaveBeenCalledWith(
+				milestoneId,
+				expect.objectContaining({ currentValue: 900, isCompleted: 1 }),
+			);
+		});
+
+		it("既に採用済みのmilestoneUpdateはPlanItemAlreadyAdoptedErrorを投げる", async () => {
+			const {
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				messageRepo,
+				conversationRepo,
+			} = setupAdoptPlanItem();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "現在のペースだと推定700点だ。",
+				proposal: JSON.stringify({
+					version: 1,
+					objective: null,
+					keyResults: [],
+					todos: [],
+					milestoneUpdates: [
+						{
+							milestoneId: "milestone-1",
+							milestoneTitle: "模試900点",
+							baselineCurrentValue: 500,
+							suggestedCurrentValue: 700,
+							reason: "TODOの完了ペースから推定",
+							adopted: true,
+							appliedCurrentValue: 700,
+						},
+					],
+				}),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "TOEIC800点を取る",
+				goalDeadlineSnapshot: "2026-12-31",
+				createdAt: "",
+				updatedAt: "",
+			});
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "milestoneUpdate",
+					milestoneUpdateIndex: 0,
+				}),
+			).rejects.toThrow(PlanItemAlreadyAdoptedError);
+		});
+
+		it("milestoneが別goal所属(IDOR)の場合はPlanItemNotFoundErrorにする", async () => {
+			const {
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				milestoneId,
+				messageRepo,
+				conversationRepo,
+				milestoneRepo,
+			} = setupAdoptPlanItem();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "現在のペースだと推定700点だ。",
+				proposal: proposalWithMilestoneUpdate(),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "TOEIC800点を取る",
+				goalDeadlineSnapshot: "2026-12-31",
+				createdAt: "",
+				updatedAt: "",
+			});
+			// milestoneが別のgoalIdに属している(不正なmilestoneId指定を想定)
+			vi.spyOn(milestoneRepo, "findById").mockResolvedValue({
+				id: milestoneId,
+				goalId: "other-goal",
+				title: "模試900点",
+				startValue: 0,
+				currentValue: 500,
+				targetValue: 900,
+				unit: "点",
+				isCompleted: 0,
+			});
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "milestoneUpdate",
+					milestoneUpdateIndex: 0,
+				}),
+			).rejects.toThrow(PlanItemNotFoundError);
+		});
+
+		it("存在しないmilestoneUpdateIndexはPlanItemNotFoundErrorにする", async () => {
+			const {
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				messageRepo,
+				conversationRepo,
+			} = setupAdoptPlanItem();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "現在のペースだと推定700点だ。",
+				proposal: proposalWithMilestoneUpdate(),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "TOEIC800点を取る",
+				goalDeadlineSnapshot: "2026-12-31",
+				createdAt: "",
+				updatedAt: "",
+			});
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "milestoneUpdate",
+					milestoneUpdateIndex: 5,
+				}),
+			).rejects.toThrow(PlanItemNotFoundError);
+		});
+
+		it("提案生成後にcurrentValueが手動更新されている場合はMilestoneUpdateStaleErrorにする(古い提案での上書き事故を防ぐ)", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				milestoneId,
+				messageRepo,
+				conversationRepo,
+				milestoneRepo,
+			} = setupAdoptPlanItem();
+
+			// baselineCurrentValue(提案生成時点)は500だが、その後ユーザーが「+更新」で800に変更済み
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "現在のペースだと推定700点だ。",
+				proposal: proposalWithMilestoneUpdate(500),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue({
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided",
+				goalTitleSnapshot: "TOEIC800点を取る",
+				goalDeadlineSnapshot: "2026-12-31",
+				createdAt: "",
+				updatedAt: "",
+			});
+			vi.spyOn(milestoneRepo, "findById").mockResolvedValue({
+				id: milestoneId,
+				goalId,
+				title: "模試900点",
+				startValue: 0,
+				currentValue: 800,
+				targetValue: 900,
+				unit: "点",
+				isCompleted: 0,
+			});
+			const batchSpy = vi.spyOn(db, "batch");
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "milestoneUpdate",
+					milestoneUpdateIndex: 0,
+				}),
+			).rejects.toThrow(MilestoneUpdateStaleError);
+			expect(batchSpy).not.toHaveBeenCalled();
 		});
 	});
 });

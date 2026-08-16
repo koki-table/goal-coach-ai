@@ -1,7 +1,11 @@
 "use client";
 
 import { Button } from "@/components/atom/button";
-import { MONTHLY_PRICE_JPY, YEARLY_PRICE_JPY } from "@/features/billing/config/billingConfig";
+import {
+	MONTHLY_PRICE_JPY,
+	PLAN_FEATURES,
+	YEARLY_PRICE_JPY,
+} from "@/features/billing/config/billingConfig";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { calculateYearlyDiscount } from "../helpers/yearlyDiscount.helper";
@@ -24,7 +28,7 @@ export function Pricing({ primaryCta }: PricingProps) {
 			<div className="mx-auto max-w-6xl px-4 md:px-6">
 				<div className="mx-auto max-w-2xl text-center">
 					<p className="text-sm font-semibold text-primary">PRICING</p>
-					<h2 className="mt-2 text-2xl font-bold md:text-3xl">シンプルで透明性のある料金プラン</h2>
+					<h2 className="mt-2 text-2xl font-bold md:text-3xl">料金プラン</h2>
 				</div>
 
 				<div className="mt-8 flex justify-center gap-2">
@@ -49,7 +53,7 @@ export function Pricing({ primaryCta }: PricingProps) {
 						planName="Free"
 						priceLabel="¥0"
 						priceUnit="/月"
-						features={[{ label: "目標・TODO管理" }, { label: "ペンタ君との対話 1日3回まで" }]}
+						features={PLAN_FEATURES.free}
 						ctaLabel={primaryCta.label}
 						ctaHref={primaryCta.href}
 					/>
@@ -57,11 +61,7 @@ export function Pricing({ primaryCta }: PricingProps) {
 						planName="Pro"
 						priceLabel={proPrice}
 						priceUnit={proPriceUnit}
-						features={[
-							{ label: "対話・提案 無制限" },
-							{ label: "自律エージェント", comingSoon: true },
-							{ label: "日次レポート", comingSoon: true },
-						]}
+						features={PLAN_FEATURES.pro}
 						ctaLabel={primaryCta.label}
 						ctaHref={primaryCta.href}
 						highlighted

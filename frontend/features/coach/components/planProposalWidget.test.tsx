@@ -6,13 +6,27 @@ import { PlanProposalWidget } from "./planProposalWidget";
 const PROPOSAL_WITH_KEY_RESULT: PlanProposal = {
 	version: 1,
 	objective: null,
-	keyResults: [{ title: "基礎文法を習得する", targetValue: 300, unit: "問", adopted: false }],
+	keyResults: [
+		{
+			title: "基礎文法を習得する",
+			targetValue: 300,
+			unit: "問",
+			adopted: false,
+		},
+	],
 	todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
+	milestoneUpdates: [],
 };
 
 describe("PlanProposalWidget", () => {
 	it("renders nothing when keyResults and todos are both empty", () => {
-		const proposal: PlanProposal = { version: 1, objective: null, keyResults: [], todos: [] };
+		const proposal: PlanProposal = {
+			version: 1,
+			objective: null,
+			keyResults: [],
+			todos: [],
+			milestoneUpdates: [],
+		};
 		const { container } = render(
 			<PlanProposalWidget
 				proposal={proposal}
@@ -37,7 +51,9 @@ describe("PlanProposalWidget", () => {
 			/>,
 		);
 
-		const todoButton = screen.getByRole("button", { name: /主要な成果の採用後/ });
+		const todoButton = screen.getByRole("button", {
+			name: /主要な成果の採用後/,
+		});
 		expect(todoButton).toBeDisabled();
 	});
 
@@ -55,6 +71,7 @@ describe("PlanProposalWidget", () => {
 				},
 			],
 			todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
+			milestoneUpdates: [],
 		};
 
 		render(
@@ -101,8 +118,14 @@ describe("PlanProposalWidget", () => {
 				},
 			],
 			todos: [
-				{ title: "毎日30分学習する", taskType: "daily", adopted: true, createdTodoId: "t-1" },
+				{
+					title: "毎日30分学習する",
+					taskType: "daily",
+					adopted: true,
+					createdTodoId: "t-1",
+				},
 			],
+			milestoneUpdates: [],
 		};
 
 		render(
@@ -133,6 +156,7 @@ describe("PlanProposalWidget", () => {
 				},
 			],
 			todos: [],
+			milestoneUpdates: [],
 		};
 
 		render(
