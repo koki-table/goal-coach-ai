@@ -63,10 +63,11 @@ async function fetchAndThrowApiClientError(
 
 export function useCoachMessages(
 	conversationId: string | undefined,
-	options?: { autoTriggerFirstTurn?: boolean },
+	options?: { autoTriggerFirstTurn?: boolean; onTurnSettled?: () => void },
 ): UseCoachMessagesReturn {
 	const { getToken, isLoaded, isSignedIn } = useAuth();
 	const autoTriggerFirstTurn = options?.autoTriggerFirstTurn ?? false;
+	const onTurnSettled = options?.onTurnSettled;
 
 	const getKey = (pageIndex: number, previousPageData: CoachMessagePage | null) => {
 		if (!isLoaded || !isSignedIn || !conversationId) return null;
@@ -132,6 +133,9 @@ export function useCoachMessages(
 		onFinish: ({ isError }) => {
 			pendingTurnRef.current?.resolve(!isError);
 			pendingTurnRef.current = null;
+			// 成功/失敗を問わず1ターンが確定したことを呼び出し元に通知する。429等の失敗時も
+			// 使用量の再取得は必要なため、isErrorの値にかかわらず呼ぶ
+			onTurnSettled?.();
 		},
 		onError: (chatError) => {
 			setSendError(mapCoachError(chatError));

@@ -37,6 +37,7 @@ function CoachPageContent() {
 		adoptingKey,
 		isAdoptingObjective,
 		decidedMessagesRemainingToday,
+		isDailyLimitReached,
 	} = useCoachContext();
 
 	const router = useRouter();
@@ -125,7 +126,12 @@ function CoachPageContent() {
 										本日の残り: {decidedMessagesRemainingToday}回
 									</p>
 								)}
-								<ChatInputBar onSend={sendMessage} disabled={isSending} />
+								<ChatInputBar onSend={sendMessage} disabled={isSending || isDailyLimitReached} />
+								{isDailyLimitReached && (
+									<p className="border-t px-4 py-1.5 text-xs text-destructive">
+										本日の相談回数が上限に達しました。日付が変わるとリセットされます。Proプランなら実質無制限でご利用いただけます。
+									</p>
+								)}
 							</>
 						)}
 					</div>

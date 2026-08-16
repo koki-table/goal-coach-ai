@@ -1,5 +1,6 @@
 "use client";
 
+import { calcFreeTierRemainingToday } from "@/features/billing/helpers/usageDisplay.helper";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import type { SubscriptionTier } from "@/features/billing/types";
 import { useGoals } from "@/features/goals/hooks/useGoals";
@@ -38,9 +39,12 @@ type CoachContextValue = {
 	adoptingKey: string | undefined;
 	isAdoptingObjective: boolean;
 	adoptError: CoachErrorInfo | undefined;
-	// free tierのみUIで表示する残数バッジ用。proは"無制限"訴求を守るため常にundefined
 	tier: SubscriptionTier;
+	// free tierかつdecided会話(通常の目標スレッド)を見ている時のみ値を持つ残数バッジ用。
+	// pro tierや探索スレッド(無制限・非カウント)ではundefined
 	decidedMessagesRemainingToday: number | undefined;
+	// decided会話かつ本日の残数が0の場合のみtrue。探索スレッドは常にfalse
+	isDailyLimitReached: boolean;
 };
 
 const CoachContext = createContext<CoachContextValue | undefined>(undefined);
@@ -64,14 +68,30 @@ export function CoachProvider({
 	const activeGoalCount = (goals ?? []).filter((g) => g.status === "active").length;
 	const isGoalLimitReached = activeGoalCount >= maxActiveGoals;
 
-	const { data: subscription } = useSubscription();
+	const { data: subscription, mutate: mutateSubscription } = useSubscription();
 	const tier = subscription?.tier ?? "free";
-	const decidedMessagesRemainingToday =
-		tier === "free" && subscription
-			? Math.max(subscription.freeDailyDecidedLimit - subscription.decidedMessagesUsedToday, 0)
-			: undefined;
 
 	const { conversation, isNew, error: conversationError } = useCoachConversation(threadTarget);
+
+	// バッジ・disabled判定はdecided会話(通常の目標スレッド)の時のみ意味を持つ。探索スレッドは
+	// バックエンドが無制限・非カウントなので、制限情報自体を出さない(誤解を防ぐ)
+	const decidedMessagesRemainingToday =
+		tier === "free" && subscription && conversation?.objectiveStatus === "decided"
+			? calcFreeTierRemainingToday(
+					subscription.decidedMessagesUsedToday,
+					subscription.freeDailyDecidedLimit,
+				)
+			: undefined;
+	const isDailyLimitReached =
+		decidedMessagesRemainingToday !== undefined && decidedMessagesRemainingToday <= 0;
+
+	// decided会話の送信ターン確定後にのみ日次カウンタを再取得する。探索スレッドは
+	// バックエンドがカウントしないため残数に変化がなく、再取得しても意味がない
+	const handleTurnSettled = useCallback(() => {
+		if (conversation?.objectiveStatus === "decided") {
+			mutateSubscription();
+		}
+	}, [conversation?.objectiveStatus, mutateSubscription]);
 
 	const {
 		messages,
@@ -84,7 +104,10 @@ export function CoachProvider({
 		isSending,
 		sendError,
 		refresh,
-	} = useCoachMessages(conversation?.id, { autoTriggerFirstTurn: isNew });
+	} = useCoachMessages(conversation?.id, {
+		autoTriggerFirstTurn: isNew,
+		onTurnSettled: handleTurnSettled,
+	});
 
 	const { adoptPlanItem, adoptingKey, error: adoptError } = useAdoptPlanItem(refresh);
 	const {
@@ -143,6 +166,7 @@ export function CoachProvider({
 		adoptError: adoptError ?? adoptObjectiveError,
 		tier,
 		decidedMessagesRemainingToday,
+		isDailyLimitReached,
 	};
 
 	return <CoachContext.Provider value={value}>{children}</CoachContext.Provider>;
