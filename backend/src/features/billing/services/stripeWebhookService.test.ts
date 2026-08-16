@@ -38,6 +38,8 @@ function makeSubscriptionEvent(
 		status: string;
 		customerId: string;
 		created: number;
+		cancelAtPeriodEnd: boolean;
+		cancelAt: number | null;
 	}> = {},
 ) {
 	return {
@@ -49,6 +51,8 @@ function makeSubscriptionEvent(
 				id: "sub_1",
 				customer: overrides.customerId ?? "cus_1",
 				status: overrides.status ?? "active",
+				cancel_at_period_end: overrides.cancelAtPeriodEnd ?? false,
+				cancel_at: overrides.cancelAt ?? null,
 				items: {
 					data: overrides.items ?? [
 						{ price: { id: "price_monthly" }, current_period_end: 1_700_000_000 },
@@ -89,6 +93,8 @@ function makeCheckoutEvent(
 function mockStripeSubscriptionRetrieve(subscription: {
 	status: string;
 	items: { data: { price: { id: string }; current_period_end: number }[] };
+	cancel_at_period_end?: boolean;
+	cancel_at?: number | null;
 }) {
 	vi.spyOn(stripeClientModule, "createStripeClient").mockReturnValue({
 		subscriptions: {
@@ -127,6 +133,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: new Date(1_700_000_000 * 1000).toISOString(),
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: EVENT_CREATED_ISO,
 			});
 		});
@@ -166,6 +173,7 @@ describe("StripeWebhookService", () => {
 				tier: "free",
 				status: "canceled",
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: null,
 				createdAt: "",
 				updatedAt: "",
@@ -184,6 +192,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: new Date(1_700_000_000 * 1000).toISOString(),
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: EVENT_CREATED_ISO,
 			});
 		});
@@ -203,6 +212,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: new Date(2_000_000_000 * 1000).toISOString(),
 				createdAt: "",
 				updatedAt: "",
@@ -235,6 +245,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: null,
 				createdAt: "",
 				updatedAt: "",
@@ -254,8 +265,84 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: new Date(1_700_000_000 * 1000).toISOString(),
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: EVENT_CREATED_ISO,
 			});
+		});
+
+		it("records cancelAtPeriodEnd=1 while the subscription stays active until the period end (user canceled but grace period remains)", async () => {
+			const db = createDb(createUnusedD1());
+			const service = new StripeWebhookService(db);
+			const repo = (service as unknown as { subscriptionRepo: SubscriptionRepository })
+				.subscriptionRepo;
+
+			vi.spyOn(repo, "findByStripeCustomerId").mockResolvedValue({
+				id: "sub-row-1",
+				userId: "user-1",
+				stripeCustomerId: "cus_1",
+				stripeSubscriptionId: "sub_1",
+				stripePriceId: "price_monthly",
+				tier: "pro",
+				status: "active",
+				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
+				lastEventCreatedAt: null,
+				createdAt: "",
+				updatedAt: "",
+			});
+			const updateSpy = vi.spyOn(repo, "updateByStripeCustomerId").mockResolvedValue({} as never);
+
+			const event = makeSubscriptionEvent({
+				items: [{ price: { id: "price_monthly" }, current_period_end: 1_700_000_000 }],
+				status: "active",
+				cancelAtPeriodEnd: true,
+			});
+
+			await service.handleEvent(event, env);
+
+			expect(updateSpy).toHaveBeenCalledWith(
+				"cus_1",
+				expect.objectContaining({ tier: "pro", status: "active", cancelAtPeriodEnd: 1 }),
+			);
+		});
+
+		it("records cancelAtPeriodEnd=1 when the Portal schedules cancellation via cancel_at instead of cancel_at_period_end", async () => {
+			// Stripe Customer Portalの"at_period_end"モードでは、cancel_at_period_endではなく
+			// cancel_at(期間終了時刻と同じ未来のタイムスタンプ)でキャンセル予約が表現されることがある
+			const db = createDb(createUnusedD1());
+			const service = new StripeWebhookService(db);
+			const repo = (service as unknown as { subscriptionRepo: SubscriptionRepository })
+				.subscriptionRepo;
+
+			vi.spyOn(repo, "findByStripeCustomerId").mockResolvedValue({
+				id: "sub-row-1",
+				userId: "user-1",
+				stripeCustomerId: "cus_1",
+				stripeSubscriptionId: "sub_1",
+				stripePriceId: "price_monthly",
+				tier: "pro",
+				status: "active",
+				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
+				lastEventCreatedAt: null,
+				createdAt: "",
+				updatedAt: "",
+			});
+			const updateSpy = vi.spyOn(repo, "updateByStripeCustomerId").mockResolvedValue({} as never);
+
+			const event = makeSubscriptionEvent({
+				items: [{ price: { id: "price_monthly" }, current_period_end: 1_700_000_000 }],
+				status: "active",
+				cancelAtPeriodEnd: false,
+				cancelAt: 1_700_000_000,
+			});
+
+			await service.handleEvent(event, env);
+
+			expect(updateSpy).toHaveBeenCalledWith(
+				"cus_1",
+				expect.objectContaining({ tier: "pro", status: "active", cancelAtPeriodEnd: 1 }),
+			);
 		});
 
 		it("keeps the existing tier (does not silently free-ify) when the price id is not recognized but the subscription is still active", async () => {
@@ -273,6 +360,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: null,
 				createdAt: "",
 				updatedAt: "",
@@ -304,6 +392,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: null,
 				createdAt: "",
 				updatedAt: "",
@@ -356,6 +445,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: new Date(2_000_000_000 * 1000).toISOString(),
 				createdAt: "",
 				updatedAt: "",
@@ -383,6 +473,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: null,
 				createdAt: "",
 				updatedAt: "",
@@ -399,6 +490,7 @@ describe("StripeWebhookService", () => {
 				stripeSubscriptionId: null,
 				stripePriceId: null,
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: EVENT_CREATED_ISO,
 			});
 		});
@@ -433,6 +525,7 @@ describe("StripeWebhookService", () => {
 				tier: "pro",
 				status: "active",
 				currentPeriodEnd: null,
+				cancelAtPeriodEnd: 0,
 				lastEventCreatedAt: null,
 				createdAt: "",
 				updatedAt: "",

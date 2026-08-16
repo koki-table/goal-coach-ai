@@ -65,6 +65,7 @@ export class BillingService {
 			tier: subscription?.tier ?? ("free" as const),
 			status: subscription?.status ?? ("active" as const),
 			currentPeriodEnd: subscription?.currentPeriodEnd ?? undefined,
+			cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd === 1,
 			decidedMessagesUsedToday,
 			// フロントは独自にこの値をハードコードせず、常にこのAPIレスポンスの値を使う
 			// (バックエンド側の定数変更とフロント表示の値がズレることを防ぐ)

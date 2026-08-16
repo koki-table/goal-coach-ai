@@ -29,7 +29,12 @@ function buildService() {
 }
 
 function subscriptionRow(
-	overrides: Partial<{ stripePriceId: string | null; tier: "free" | "pro" }>,
+	overrides: Partial<{
+		stripePriceId: string | null;
+		tier: "free" | "pro";
+		cancelAtPeriodEnd: number;
+		currentPeriodEnd: string | null;
+	}>,
 ) {
 	return {
 		id: "s1",
@@ -39,7 +44,8 @@ function subscriptionRow(
 		stripePriceId: overrides.stripePriceId ?? null,
 		tier: overrides.tier ?? "pro",
 		status: "active" as const,
-		currentPeriodEnd: null,
+		currentPeriodEnd: overrides.currentPeriodEnd ?? null,
+		cancelAtPeriodEnd: overrides.cancelAtPeriodEnd ?? 0,
 		lastEventCreatedAt: null,
 		createdAt: "",
 		updatedAt: "",
@@ -96,5 +102,45 @@ describe("BillingService.getStatus", () => {
 		const status = await service.getStatus("user-1", priceIds);
 
 		expect(status.interval).toBeUndefined();
+	});
+
+	it("returns cancelAtPeriodEnd=true with the currentPeriodEnd when the subscription is set to cancel at period end", async () => {
+		const { service, subscriptionRepo, usageRepo } = buildService();
+		vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(
+			subscriptionRow({
+				stripePriceId: "price_monthly",
+				cancelAtPeriodEnd: 1,
+				currentPeriodEnd: "2026-09-12T00:00:00.000Z",
+			}),
+		);
+		vi.spyOn(usageRepo, "getCount").mockResolvedValue(0);
+
+		const status = await service.getStatus("user-1", priceIds);
+
+		expect(status.cancelAtPeriodEnd).toBe(true);
+		expect(status.currentPeriodEnd).toBe("2026-09-12T00:00:00.000Z");
+		expect(status.tier).toBe("pro");
+	});
+
+	it("returns cancelAtPeriodEnd=false for an ongoing subscription", async () => {
+		const { service, subscriptionRepo, usageRepo } = buildService();
+		vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(
+			subscriptionRow({ stripePriceId: "price_monthly", cancelAtPeriodEnd: 0 }),
+		);
+		vi.spyOn(usageRepo, "getCount").mockResolvedValue(0);
+
+		const status = await service.getStatus("user-1", priceIds);
+
+		expect(status.cancelAtPeriodEnd).toBe(false);
+	});
+
+	it("returns cancelAtPeriodEnd=false for a free tier user with no subscription row", async () => {
+		const { service, subscriptionRepo, usageRepo } = buildService();
+		vi.spyOn(subscriptionRepo, "findByUserId").mockResolvedValue(undefined);
+		vi.spyOn(usageRepo, "getCount").mockResolvedValue(0);
+
+		const status = await service.getStatus("user-1", priceIds);
+
+		expect(status.cancelAtPeriodEnd).toBe(false);
 	});
 });

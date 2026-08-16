@@ -2,7 +2,6 @@
 
 import { Skeleton } from "@/components/atom/skeleton";
 import { PlanCard } from "@/features/billing/components/planCard";
-import { MONTHLY_PRICE_JPY, YEARLY_PRICE_JPY } from "@/features/billing/config/billingConfig";
 import { BillingProvider, useBillingContext } from "@/features/billing/contexts/billingContext";
 import { formatFreeTierUsageLabel } from "@/features/billing/helpers/usageDisplay.helper";
 import { useSearchParams } from "next/navigation";
@@ -19,6 +18,8 @@ function BillingPageContent() {
 		isLoading,
 		decidedMessagesUsedToday,
 		freeDailyDecidedLimit,
+		currentPeriodEnd,
+		cancelAtPeriodEnd,
 		startCheckout,
 		isCheckoutLoading,
 		openPortal,
@@ -62,16 +63,13 @@ function BillingPageContent() {
 				status={status}
 				interval={interval}
 				usageLabel={usageLabel}
+				currentPeriodEnd={currentPeriodEnd}
+				cancelAtPeriodEnd={cancelAtPeriodEnd}
 				isCheckoutLoading={isCheckoutLoading}
 				isPortalLoading={isPortalLoading}
 				onUpgrade={startCheckout}
 				onManage={openPortal}
 			/>
-
-			<div className="rounded-xl border p-4 text-sm text-muted-foreground">
-				<p>月額プラン: ¥{MONTHLY_PRICE_JPY}/月</p>
-				<p>年額プラン: ¥{YEARLY_PRICE_JPY}/年（月額換算で割安）</p>
-			</div>
 		</div>
 	);
 }

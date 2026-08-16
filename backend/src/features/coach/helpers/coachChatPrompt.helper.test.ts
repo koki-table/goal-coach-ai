@@ -20,13 +20,27 @@ describe("buildChatUserPrompt", () => {
 				minutesSpentLast7Days: 60,
 			},
 			milestones: [{ title: "文法基礎を固める", isCompleted: false }],
+			todos: [{ title: "毎日30分学習する", taskType: "daily", isCompleted: false }],
 			history: [{ role: "user", content: "最近全然進んでいません" }],
 		});
 
 		expect(prompt).toContain("TOEIC800点を取る");
 		expect(prompt).toContain("実データに基づく進捗率: 30%");
 		expect(prompt).toContain("[未完了] 文法基礎を固める");
+		expect(prompt).toContain("[毎日/未完了] 毎日30分学習する");
 		expect(prompt).toContain("[ユーザー] 最近全然進んでいません");
+	});
+
+	it("shows a placeholder when there are no existing todos", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			today: "2026-08-05",
+			milestones: [],
+			history: [],
+		});
+
+		expect(prompt).toContain("(既存TODOなし)");
 	});
 
 	it("includes today's date so the LLM does not guess a deadline", () => {

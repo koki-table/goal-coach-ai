@@ -7,6 +7,8 @@ ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3001,https://goal-coac
 FRONTEND_URL = "https://goal-coach.app"
 # STRIPE_PRICE_ID_MONTHLY / STRIPE_PRICE_ID_YEARLY はStripeダッシュボードでPrice作成後にここへ追加する(非シークレット)
 # STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET は `wrangler secret put` で設定する(シークレットのためvarsに書かない)
+STRIPE_PRICE_ID_MONTHLY = "price_1U3Fw68hwib0cKNrlaVWMNYo"
+STRIPE_PRICE_ID_YEARLY = "price_1U3Fw78hwib0cKNr0d2y5ArV"
 
 [[d1_databases]]
 binding = "DB"
