@@ -719,6 +719,11 @@ export class CoachChatService {
 				title: m.title,
 				isCompleted: m.isCompleted === 1,
 			})),
+			todos: todos.map((t) => ({
+				title: t.title,
+				taskType: t.taskType,
+				isCompleted: t.isCompleted === 1,
+			})),
 			history,
 			today: todayIsoDate(),
 			// goalスレッドではactiveGoalCountを渡さない(呼び出し元のコメント参照)

@@ -1,3 +1,4 @@
+import type { TaskType } from "../../../db/schema/constants";
 import type { GoalSnapshot } from "./goalSnapshot.helper";
 
 export type DailyReviewPromptMilestone = {
@@ -9,6 +10,11 @@ export type DailyReviewPromptMilestone = {
 	unit: string;
 };
 
+export type DailyReviewPromptTodo = {
+	title: string;
+	taskType: TaskType;
+};
+
 export type DailyReviewPromptInput = {
 	goalTitle: string;
 	goalDeadline: string | null;
@@ -16,7 +22,9 @@ export type DailyReviewPromptInput = {
 	snapshot: GoalSnapshot;
 	// 未完了のKRのみを渡す(完了済みは推定対象外。呼び出し側でフィルタする)
 	milestones: DailyReviewPromptMilestone[];
-	existingTodoTitles: string[];
+	// AIが不足を補う新規TODOを提案する時、既存TODOのtaskType(daily/once)と
+	// 矛盾しない判定をできるようにするために渡す
+	existingTodos: DailyReviewPromptTodo[];
 };
 
 // 日次レビュー専用のプロンプト文字列を組み立てる。通常チャット(buildChatUserPrompt)と
@@ -36,8 +44,10 @@ export function buildDailyReviewPrompt(input: DailyReviewPromptInput): string {
 			: "  (未完了の主要な成果なし)";
 
 	const existingTodosText =
-		input.existingTodoTitles.length > 0
-			? input.existingTodoTitles.map((title) => `  * ${title}`).join("\n")
+		input.existingTodos.length > 0
+			? input.existingTodos
+					.map((t) => `  * [${t.taskType === "daily" ? "毎日" : "一回のみ"}] ${t.title}`)
+					.join("\n")
 			: "  (既存TODOなし)";
 
 	return `以下のユーザーの目標データを踏まえ、コーチとして日次レビューを行ってください。

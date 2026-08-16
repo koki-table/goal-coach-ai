@@ -1,4 +1,4 @@
-import type { CoachSessionPhase } from "../../../db/schema/constants";
+import type { CoachSessionPhase, TaskType } from "../../../db/schema/constants";
 import type { GoalSnapshot } from "./goalSnapshot.helper";
 
 // フェーズ別の問いメニュー。AIへの参考情報であり、機械的な台本の強制ではない
@@ -12,6 +12,12 @@ const PHASE_QUESTION_MENUS: Record<CoachSessionPhase, string> = {
 
 export type CoachChatPromptMilestone = {
 	title: string;
+	isCompleted: boolean;
+};
+
+export type CoachChatPromptTodo = {
+	title: string;
+	taskType: TaskType;
 	isCompleted: boolean;
 };
 
@@ -36,6 +42,9 @@ export type CoachChatPromptInput = {
 	goalDeleted: boolean;
 	snapshot?: GoalSnapshot;
 	milestones?: CoachChatPromptMilestone[];
+	// AIが既存TODOのtaskType(daily/once)を認識し、類似TODOを再提案する時に
+	// 既存の種別と矛盾しない判定をできるようにするために渡す
+	todos?: CoachChatPromptTodo[];
 	history: CoachChatPromptMessage[];
 	// 本日の日付(ISO, YYYY-MM-DD)。LLMが期限(deadline)を推測で生成し過去日付等の
 	// 不自然な値を返すことを防ぐため、常に明示的に渡す
@@ -131,13 +140,17 @@ function buildLivingGoalDataText(input: CoachChatPromptInput): string {
 		milestones.length > 0
 			? "\n- 注記: 上記の主要な成果(Key Results)は既に確定済みです。同一タイトルまたは類似内容を新規の主要な成果として提案しないでください。"
 			: "";
+	const todos = input.todos ?? [];
+	const todosText = buildTodosText(todos);
 
 	if (!snapshot) {
 		return `- 本日の日付: ${input.today}
 - 目標タイトル: ${input.goalTitle}
 - 達成期限: ${input.goalDeadline ?? "未設定"}
 - 主要な成果(Key Results)の状態:
-${milestonesText}${milestonesNote}`;
+${milestonesText}${milestonesNote}
+- 既存TODOの種別(daily/once):
+${todosText}`;
 	}
 
 	return `- 本日の日付: ${input.today}
@@ -148,5 +161,19 @@ ${milestonesText}${milestonesNote}`;
 - 最終活動日時: ${snapshot.lastActivityAt ?? "活動記録なし"}
 - 直近7日間の完了数: ${snapshot.completedLast7Days}件 / 作業時間: ${snapshot.minutesSpentLast7Days}分
 - 主要な成果(Key Results)の状態:
-${milestonesText}${milestonesNote}`;
+${milestonesText}${milestonesNote}
+- 既存TODOの種別(daily/once):
+${todosText}`;
+}
+
+// AIが新規TODO提案時にtaskTypeを既存の種別と矛盾なく判定できるようにするための一覧。
+// 【TODOの種別判定】(coachPrompts.ts)の指示と対になる
+function buildTodosText(todos: CoachChatPromptTodo[]): string {
+	if (todos.length === 0) return "  (既存TODOなし)";
+	return todos
+		.map(
+			(t) =>
+				`  * [${t.taskType === "daily" ? "毎日" : "一回のみ"}/${t.isCompleted ? "完了" : "未完了"}] ${t.title}`,
+		)
+		.join("\n");
 }

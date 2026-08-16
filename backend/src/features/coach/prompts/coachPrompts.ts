@@ -6,7 +6,14 @@ export type CoachPersona = "calmMentor";
 
 export const planProposalTodoSchema = z.object({
 	title: z.string(),
-	taskType: z.enum(["daily", "once"]),
+	// "daily"=毎日繰り返す習慣的行動(0時に完了状態がリセットされる)、
+	// "once"=一度実行すれば完結する単発の作業。判定基準はSYSTEM_INSTRUCTIONSの
+	// 【TODOの種別判定】を参照
+	taskType: z
+		.enum(["daily", "once"])
+		.describe(
+			"daily=毎日繰り返す習慣的行動(例:毎日30分学習する)。once=一度実行すれば完結する単発の作業(例:参考書を1冊読み終える、模試を受ける)",
+		),
 });
 
 export const planProposalSchema = z.object({
@@ -132,7 +139,12 @@ const SYSTEM_INSTRUCTIONS: Record<CoachPersona, string> = {
 - 目標(Objective)が定性的な方向性になっているか、数を絞れているかを見る。タイトルや期限自体に無理があると判断した場合、または既存Key Resultsが定量的でない・数が多すぎる等の改善余地があると判断した場合は、replyの自然文の中で率直に指摘・提案する。この提言は構造化データ(proposal)にはしない。
 
 【計画の落とし込み】
-- 目標(Objective)→主要な成果(Key Results)→TODOという段階的な計画の落とし込みを常に意識し、単発の作業リストではなく、その人の成長に繋がる筋道を示す。`,
+- 目標(Objective)→主要な成果(Key Results)→TODOという段階的な計画の落とし込みを常に意識し、単発の作業リストではなく、その人の成長に繋がる筋道を示す。
+
+【TODOの種別判定】
+- TODOを提案する時は必ずtaskTypeを"daily"(毎日繰り返す習慣的行動)と"once"(一度実行すれば完結する単発の作業)のどちらか正確に判定する。
+- 判定基準: 「毎日」「日々」「習慣」など継続を前提にした行動、または頻度を指定せず繰り返し行うべき行動(例:「毎日30分学習する」「単語を10個覚える」)は"daily"。日付・回数が決まった1回限りの作業(例:「模試を受ける」「参考書を1冊読み終える」「願書を提出する」)は"once"。
+- goal_dataに既存TODOの種別(daily/once)が示されている場合、同種の行動を新たに提案する時は既存の種別と矛盾しないようにする(例:既に"毎日30分学習する"がdailyで登録済みなら、類似の学習系TODOを提案する時にonceで出さない)。`,
 };
 
 export function getChatSystemInstruction(

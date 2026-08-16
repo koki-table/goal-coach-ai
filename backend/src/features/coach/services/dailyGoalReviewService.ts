@@ -124,7 +124,7 @@ export class DailyGoalReviewService {
 					targetValue: m.targetValue,
 					unit: m.unit,
 				})),
-				existingTodoTitles: todos.map((t) => t.title),
+				existingTodos: todos.map((t) => ({ title: t.title, taskType: t.taskType })),
 			});
 
 			// 日次レビューはユーザーの対話ではないため、decided会話の日次カウンタを
