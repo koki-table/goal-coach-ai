@@ -19,3 +19,12 @@ export const EXPLORATION_THREAD_LABEL = "目標を決める相談";
 // OKRの考え方に基づく目標(Objective)数の上限。goals featureのMAX_ACTIVE_GOALSと同じ値を
 // coach feature独自に持つ(feature間でconfigを直接importしない方針のため)
 export const MAX_ACTIVE_GOALS = 2;
+
+// TODO更新提案(todoUpdateProposalWidget)のpriority表示ラベル。todos featureの
+// todoPriorityConfigと表示上一致させるが、feature間でconfigを直接importしない方針のため
+// coach feature独自に持つ
+export const TODO_PRIORITY_LABELS: Record<string, string> = {
+	high: "高",
+	medium: "中",
+	low: "低",
+};

@@ -124,7 +124,14 @@ export class DailyGoalReviewService {
 					targetValue: m.targetValue,
 					unit: m.unit,
 				})),
-				existingTodos: todos.map((t) => ({ title: t.title, taskType: t.taskType })),
+				existingTodos: todos.map((t) => ({
+					id: t.id,
+					title: t.title,
+					taskType: t.taskType,
+					priority: t.priority,
+					dueDate: t.dueDate,
+					isCompleted: t.isCompleted === 1,
+				})),
 			});
 
 			// 日次レビューはユーザーの対話ではないため、decided会話の日次カウンタを
@@ -150,11 +157,22 @@ export class DailyGoalReviewService {
 					targetValue: m.targetValue,
 					isCompleted: false,
 				})),
+				todos.map((t) => ({
+					id: t.id,
+					title: t.title,
+					isCompleted: t.isCompleted === 1,
+					dueDate: t.dueDate,
+					priority: t.priority,
+				})),
 			);
 
 			// 提案すべき内容が何もなければメッセージを保存せず静かにスキップする
 			// (ユーザーに無意味な通知を送らない)
-			if (envelope.milestoneUpdates.length === 0 && envelope.todos.length === 0) {
+			if (
+				envelope.milestoneUpdates.length === 0 &&
+				envelope.todos.length === 0 &&
+				envelope.todoUpdates.length === 0
+			) {
 				return "skipped";
 			}
 

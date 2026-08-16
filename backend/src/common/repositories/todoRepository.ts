@@ -96,6 +96,28 @@ export class TodoRepository {
 		return this.db.delete(todos).where(eq(todos.id, id)).returning().get();
 	}
 
+	// db.batch() 用のステートメント（実行しない）。所有権検証は呼び出し側(service)が事前に行う
+	updateStmt(
+		id: string,
+		data: Partial<{
+			title: string;
+			dueDate: string | null;
+			priority: string;
+			isCompleted: number;
+			completedAt: string | null;
+		}>,
+	) {
+		return this.db
+			.update(todos)
+			.set({ ...data, updatedAt: new Date().toISOString() })
+			.where(eq(todos.id, id));
+	}
+
+	// db.batch() 用のステートメント（実行しない）
+	deleteStmt(id: string) {
+		return this.db.delete(todos).where(eq(todos.id, id));
+	}
+
 	// db.batch() 用のステートメント（実行しない）。idはアトミック採用のため呼び出し側で採番する
 	insertStmt(data: {
 		id: string;

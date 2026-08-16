@@ -33,6 +33,7 @@ type CoachContextValue = {
 	adoptKeyResult: (messageId: number, keyResultIndex: number) => Promise<void>;
 	adoptTodo: (messageId: number, todoIndex: number) => Promise<void>;
 	adoptMilestoneUpdate: (messageId: number, milestoneUpdateIndex: number) => Promise<void>;
+	adoptTodoUpdate: (messageId: number, todoUpdateIndex: number) => Promise<void>;
 	// 採用に成功すると新規作成されたgoalIdを返す
 	adoptObjective: (messageId: number) => Promise<string | undefined>;
 	adoptingKey: string | undefined;
@@ -117,6 +118,16 @@ export function CoachProvider({
 		[adoptPlanItem],
 	);
 
+	const adoptTodoUpdate = useCallback(
+		async (messageId: number, todoUpdateIndex: number) => {
+			await adoptPlanItem(messageId, {
+				target: "todoUpdate",
+				todoUpdateIndex,
+			});
+		},
+		[adoptPlanItem],
+	);
+
 	const value: CoachContextValue = {
 		goals: goals ?? [],
 		goalsLoading,
@@ -137,6 +148,7 @@ export function CoachProvider({
 		adoptKeyResult,
 		adoptTodo,
 		adoptMilestoneUpdate,
+		adoptTodoUpdate,
 		adoptObjective,
 		adoptingKey,
 		isAdoptingObjective,

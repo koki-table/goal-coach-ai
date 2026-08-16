@@ -7,6 +7,7 @@ export type CoachErrorKind =
 	| "alreadyAdopted"
 	| "milestoneNotAdoptedYet"
 	| "milestoneUpdateStale"
+	| "todoUpdateStale"
 	| "goalLimitExceeded"
 	| "rateLimit"
 	| "notConfigured"
@@ -70,6 +71,16 @@ export function mapCoachError(error: unknown): CoachErrorInfo {
 			return {
 				kind: "milestoneUpdateStale",
 				message: "この提案の後に値が更新されているため反映できません。最新の状態をご確認ください。",
+			};
+		}
+
+		// TODO更新提案の対象フィールドが提案生成後に手動変更されていた場合の専用文言。
+		// milestoneUpdateStaleと同様、汎用の「既に採用済み」文言では理由が伝わらないため区別する
+		if (error.status === 409 && extractReason(error.info) === "todoUpdateStale") {
+			return {
+				kind: "todoUpdateStale",
+				message:
+					"この提案の後にTODOが更新されているため反映できません。最新の状態をご確認ください。",
 			};
 		}
 

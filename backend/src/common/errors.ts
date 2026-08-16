@@ -68,6 +68,13 @@ export class MilestoneUpdateStaleError extends Error {
 	}
 }
 
+export class TodoUpdateStaleError extends Error {
+	constructor(messageId: number) {
+		super(`Todo field changed since the proposal was generated: ${messageId}`);
+		this.name = "TodoUpdateStaleError";
+	}
+}
+
 export class CoachChatRateLimitError extends Error {
 	constructor(userId: string) {
 		super(`Coach chat rate limit exceeded for user: ${userId}`);

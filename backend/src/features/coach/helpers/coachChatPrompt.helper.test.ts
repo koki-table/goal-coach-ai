@@ -123,6 +123,7 @@ describe("buildChatUserPrompt", () => {
 							{ title: "参考書を1冊読み終える", adopted: false },
 						],
 						milestoneUpdates: [],
+						todoUpdates: [],
 					},
 				},
 			],
@@ -148,6 +149,7 @@ describe("buildChatUserPrompt", () => {
 						keyResults: [],
 						todos: [],
 						milestoneUpdates: [],
+						todoUpdates: [],
 					},
 				},
 			],
@@ -171,12 +173,37 @@ describe("buildChatUserPrompt", () => {
 						keyResults: [],
 						todos: [],
 						milestoneUpdates: [{ title: "模試900点", adopted: false }],
+						todoUpdates: [],
 					},
 				},
 			],
 		});
 
 		expect(prompt).toContain("主要な成果の進捗推定『模試900点』(未採用)");
+	});
+
+	it("annotates a todo update proposal with its adoption state", () => {
+		const prompt = buildChatUserPrompt({
+			goalTitle: "TOEIC800点を取る",
+			goalDeleted: false,
+			today: "2026-08-05",
+			milestones: [],
+			history: [
+				{
+					role: "assistant",
+					content: "期限を見直すことを勧める。",
+					proposal: {
+						objective: null,
+						keyResults: [],
+						todos: [],
+						milestoneUpdates: [],
+						todoUpdates: [{ title: "過去問を1日1回演習する", adopted: false }],
+					},
+				},
+			],
+		});
+
+		expect(prompt).toContain("TODOの更新提案『過去問を1日1回演習する』(未採用)");
 	});
 
 	it("includes the active goal count in user_state when provided", () => {

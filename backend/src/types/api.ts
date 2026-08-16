@@ -147,12 +147,30 @@ export type ProposalMilestoneUpdatePayload = {
 	appliedCurrentValue?: number;
 };
 
+export type ProposalTodoUpdateActionValue = "complete" | "delete";
+
+export type ProposalTodoUpdatePayload = {
+	todoId: string;
+	todoTitle: string;
+	baselineDueDate?: string | null;
+	baselinePriority?: string;
+	baselineTitle?: string;
+	suggestedDueDate?: string | null;
+	suggestedPriority?: string;
+	suggestedTitle?: string;
+	suggestedAction?: ProposalTodoUpdateActionValue;
+	reason: string;
+	adopted: boolean;
+	appliedAt?: string;
+};
+
 export type ProposalEnvelopePayload = {
 	version: 1;
 	objective: ProposalObjectivePayload;
 	keyResults: ProposalKeyResultPayload[];
 	todos: PlanProposalTodoPayload[];
 	milestoneUpdates: ProposalMilestoneUpdatePayload[];
+	todoUpdates: ProposalTodoUpdatePayload[];
 };
 
 export type CoachMessageRoleValue = "user" | "assistant";

@@ -11,8 +11,12 @@ export type DailyReviewPromptMilestone = {
 };
 
 export type DailyReviewPromptTodo = {
+	id: string;
 	title: string;
 	taskType: TaskType;
+	priority: string;
+	dueDate: string | null;
+	isCompleted: boolean;
 };
 
 export type DailyReviewPromptInput = {
@@ -22,16 +26,18 @@ export type DailyReviewPromptInput = {
 	snapshot: GoalSnapshot;
 	// 未完了のKRのみを渡す(完了済みは推定対象外。呼び出し側でフィルタする)
 	milestones: DailyReviewPromptMilestone[];
-	// AIが不足を補う新規TODOを提案する時、既存TODOのtaskType(daily/once)と
-	// 矛盾しない判定をできるようにするために渡す
+	// AIが不足を補う新規TODOを提案する時に既存TODOのtaskType(daily/once)と矛盾しない
+	// 判定をできるように、また既存TODOの更新提案(todoUpdates)でidを参照し
+	// 期限超過・停滞・優先度を判断できるように渡す
 	existingTodos: DailyReviewPromptTodo[];
 };
 
 // 日次レビュー専用のプロンプト文字列を組み立てる。通常チャット(buildChatUserPrompt)と
 // 同じXMLタグ区切りの方針を踏襲しつつ、対話履歴を持たない一方向の報告のため
-// conversation_historyは含めない。milestoneUpdatesの応答でmilestoneIdをそのまま
-// 参照できるよう、各KRのidをプロンプトに明示する(サーバー側のtoDailyReviewProposalEnvelope
-// が実在チェックの安全網を持つため、AIが誤ったidを返しても提案から除外される)。
+// conversation_historyは含めない。milestoneUpdates/todoUpdatesの応答でmilestoneId/todoIdを
+// そのまま参照できるよう、各KR・TODOのidをプロンプトに明示する(サーバー側の
+// toDailyReviewProposalEnvelopeが実在チェックの安全網を持つため、AIが誤ったidを
+// 返しても提案から除外される)。
 export function buildDailyReviewPrompt(input: DailyReviewPromptInput): string {
 	const milestonesText =
 		input.milestones.length > 0
@@ -46,7 +52,10 @@ export function buildDailyReviewPrompt(input: DailyReviewPromptInput): string {
 	const existingTodosText =
 		input.existingTodos.length > 0
 			? input.existingTodos
-					.map((t) => `  * [${t.taskType === "daily" ? "毎日" : "一回のみ"}] ${t.title}`)
+					.map(
+						(t) =>
+							`  * todoId: ${t.id} / [${t.taskType === "daily" ? "毎日" : "一回のみ"}/${t.isCompleted ? "完了" : "未完了"}/優先度${t.priority}] ${t.title} / 期限: ${t.dueDate ?? "未設定"}`,
+					)
 					.join("\n")
 			: "  (既存TODOなし)";
 

@@ -74,6 +74,7 @@ describe("mapMessageToResponse", () => {
 			keyResults: [{ title: "基礎文法を習得する", targetValue: 100, unit: "%", adopted: false }],
 			todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
 			milestoneUpdates: [],
+			todoUpdates: [],
 		});
 	});
 

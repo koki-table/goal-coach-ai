@@ -17,6 +17,7 @@ type ChatMessageListProps = {
 	onAdoptTodo: (messageId: number, todoIndex: number) => Promise<void>;
 	onAdoptObjective: (messageId: number) => Promise<void>;
 	onAdoptMilestoneUpdate: (messageId: number, milestoneUpdateIndex: number) => Promise<void>;
+	onAdoptTodoUpdate: (messageId: number, todoUpdateIndex: number) => Promise<void>;
 	adoptingKey: string | undefined;
 	isAdoptingObjective: boolean;
 	isGoalLimitReached: boolean;
@@ -32,6 +33,7 @@ export function ChatMessageList({
 	onAdoptTodo,
 	onAdoptObjective,
 	onAdoptMilestoneUpdate,
+	onAdoptTodoUpdate,
 	adoptingKey,
 	isAdoptingObjective,
 	isGoalLimitReached,
@@ -114,6 +116,7 @@ export function ChatMessageList({
 					onAdoptTodo={onAdoptTodo}
 					onAdoptObjective={onAdoptObjective}
 					onAdoptMilestoneUpdate={onAdoptMilestoneUpdate}
+					onAdoptTodoUpdate={onAdoptTodoUpdate}
 					adoptingKey={adoptingKey}
 					isAdoptingObjective={isAdoptingObjective}
 					isGoalLimitReached={isGoalLimitReached}

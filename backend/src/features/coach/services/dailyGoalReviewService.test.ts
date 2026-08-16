@@ -95,6 +95,7 @@ describe("DailyGoalReviewService", () => {
 				reply: "順調だ。",
 				milestoneUpdates: [],
 				todos: [],
+				todoUpdates: [],
 			});
 			const batchSpy = vi.spyOn(db, "batch");
 
@@ -143,6 +144,7 @@ describe("DailyGoalReviewService", () => {
 					},
 				],
 				todos: [],
+				todoUpdates: [],
 			});
 			const assistantRow = { id: 42, conversationId: "conv-new" };
 			vi.spyOn(db, "batch").mockResolvedValue([[], [assistantRow]] as unknown as Awaited<
@@ -161,6 +163,56 @@ describe("DailyGoalReviewService", () => {
 				goalDeadlineSnapshot: GOAL.dueDate,
 			});
 			expect(linkMessageStmtSpy).toHaveBeenCalledWith("review-1", 42);
+			expect(summary).toEqual({ processed: 1, skipped: 0, failed: 0 });
+		});
+
+		it("todoUpdatesのみ非空の場合もメッセージを保存する", async () => {
+			const db = createDb(createUnusedD1());
+			const service = new DailyGoalReviewService(db);
+			const deps = internals(service);
+
+			vi.spyOn(deps.goalRepo, "findAllActiveForDailyReview").mockResolvedValue([GOAL]);
+			vi.spyOn(deps.reviewRepo, "tryReserve").mockResolvedValue({
+				id: "review-1",
+			});
+			vi.spyOn(deps.conversationRepo, "findByGoalId").mockResolvedValue({
+				id: "conv-1",
+				userId: GOAL.userId,
+				goalId: GOAL.id,
+			});
+			vi.spyOn(deps.milestoneRepo, "findAllByGoalId").mockResolvedValue([]);
+			vi.spyOn(deps.todoRepo, "findAllByGoalId").mockResolvedValue([
+				{
+					id: "t1",
+					title: "過去問を1日1回演習する",
+					taskType: "daily",
+					priority: "medium",
+					dueDate: "2026-08-01",
+					isCompleted: 0,
+				},
+			]);
+			vi.spyOn(deps.todoLogRepo, "findAllByTodoIds").mockResolvedValue([]);
+			vi.spyOn(deps.chatGate, "resolveForUndecidedMessage").mockResolvedValue(
+				"gemini-3.5-flash-lite",
+			);
+			vi.spyOn(coachModel, "generateStructured").mockResolvedValue({
+				reply: "期限を見直すべきだ。",
+				milestoneUpdates: [],
+				todos: [],
+				todoUpdates: [
+					{ todoId: "t1", suggestedDueDate: "2026-09-01", reason: "期限超過が続いている" },
+				],
+			});
+			const assistantRow = { id: 43, conversationId: "conv-1" };
+			vi.spyOn(db, "batch").mockResolvedValue([[], [assistantRow]] as unknown as Awaited<
+				ReturnType<typeof db.batch>
+			>);
+			vi.spyOn(deps.reviewRepo, "linkMessageStmt").mockReturnValue({
+				run: vi.fn().mockResolvedValue(undefined),
+			});
+
+			const summary = await service.runForAllGoals(ENV);
+
 			expect(summary).toEqual({ processed: 1, skipped: 0, failed: 0 });
 		});
 
@@ -222,6 +274,7 @@ describe("DailyGoalReviewService", () => {
 				reply: "順調だ。",
 				milestoneUpdates: [],
 				todos: [],
+				todoUpdates: [],
 			});
 
 			const summary = await service.runForAllGoals(ENV);

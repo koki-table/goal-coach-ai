@@ -99,6 +99,10 @@ export const coachAdoptPlanItemSchema = z.union([
 		target: z.literal("milestoneUpdate"),
 		milestoneUpdateIndex: z.number().int().min(0),
 	}),
+	z.object({
+		target: z.literal("todoUpdate"),
+		todoUpdateIndex: z.number().int().min(0),
+	}),
 ]);
 
 export const billingCheckoutSchema = z.object({

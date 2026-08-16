@@ -10,6 +10,7 @@ import {
 	ObjectiveAlreadyAdoptedError,
 	PlanItemAlreadyAdoptedError,
 	PlanItemNotFoundError,
+	TodoUpdateStaleError,
 } from "../../../common/errors";
 import { getCategoryNameFromKey } from "../../../common/helpers/categoryMapping.helper";
 import { resolveCategoryId } from "../../../common/helpers/categoryResolution.helper";
@@ -23,10 +24,7 @@ import { MilestoneRepository } from "../../../common/repositories/milestoneRepos
 import { TodoLogRepository } from "../../../common/repositories/todoLogRepository";
 import { TodoRepository } from "../../../common/repositories/todoRepository";
 import type { Database } from "../../../db";
-import type {
-	CoachSessionPhase,
-	ObjectiveStatus,
-} from "../../../db/schema/constants";
+import type { CoachSessionPhase, ObjectiveStatus } from "../../../db/schema/constants";
 import type { Bindings } from "../../../types/env";
 import { mapGoalToResponse } from "../../goals/helpers/categoryMapping.helper";
 import { mapMilestoneToResponse } from "../../milestones/helpers/milestoneMapper.helper";
@@ -36,10 +34,7 @@ import type { CoachChatPromptMessage } from "../helpers/coachChatPrompt.helper";
 import { buildChatUserPrompt } from "../helpers/coachChatPrompt.helper";
 import { resolveNextPhase } from "../helpers/coachPhase.helper";
 import type { ProposalEnvelope } from "../helpers/coachProposal.helper";
-import {
-	parseProposalPayload,
-	toPromptMessage,
-} from "../helpers/coachProposal.helper";
+import { parseProposalPayload, toPromptMessage } from "../helpers/coachProposal.helper";
 import { buildGoalSnapshot } from "../helpers/goalSnapshot.helper";
 import { createCoachModel } from "../lib/coachModel";
 import type { CoachTurnResult } from "../lib/coachOrchestrator";
@@ -50,7 +45,8 @@ import { CoachChatGate } from "./coachChatGate";
 export type AdoptPlanItemTarget =
 	| { type: "keyResult"; keyResultIndex: number }
 	| { type: "todo"; todoIndex: number }
-	| { type: "milestoneUpdate"; milestoneUpdateIndex: number };
+	| { type: "milestoneUpdate"; milestoneUpdateIndex: number }
+	| { type: "todoUpdate"; todoUpdateIndex: number };
 
 export class CoachChatService {
 	// プロンプトに渡す直近履歴の件数
@@ -114,20 +110,12 @@ export class CoachChatService {
 	// メッセージを永続化する。db.batch()はLLM呼び出しの結果が確定してからでないと
 	// 組めないため、「アトミックな2メッセージ書き込み」自体はストリーム完了後に行う
 	// （ユーザー入力とLLM結果が両方揃うまで書き込みを遅らせる点は元の実装を維持）。
-	async startMessageStream(
-		userId: string,
-		conversationId: string,
-		content: string,
-		env: Bindings,
-	) {
+	async startMessageStream(userId: string, conversationId: string, content: string, env: Bindings) {
 		if (!env.GEMINI_API_KEY) {
 			throw new CoachNotConfiguredError();
 		}
 
-		const conversation = await this.conversationRepo.findByIdAndUserId(
-			conversationId,
-			userId,
-		);
+		const conversation = await this.conversationRepo.findByIdAndUserId(conversationId, userId);
 		if (!conversation) {
 			throw new CoachConversationNotFoundError(conversationId);
 		}
@@ -163,10 +151,7 @@ export class CoachChatService {
 
 		// GROWフェーズはobjectiveStatus="decided"(通常スレッド)のみ問い合わせる。探索スレッドは
 		// 既存のEXPLORATION_ADDENDUM(4ビート誘導)が同種の目的を担保しているため対象外
-		const phase =
-			conversation.objectiveStatus === "decided"
-				? conversation.phase
-				: undefined;
+		const phase = conversation.objectiveStatus === "decided" ? conversation.phase : undefined;
 
 		const { prompt, existingKeyResultTitles } =
 			conversation.goalId && goal
@@ -196,10 +181,7 @@ export class CoachChatService {
 		const model = createCoachModel(env, modelId);
 		const { uiStream, turnResult } = runCoachTurn({
 			model,
-			system: getChatSystemInstruction(
-				"calmMentor",
-				conversation.objectiveStatus,
-			),
+			system: getChatSystemInstruction("calmMentor", conversation.objectiveStatus),
 			prompt,
 			existingKeyResultTitles,
 			objectiveStatus: conversation.objectiveStatus,
@@ -293,10 +275,7 @@ export class CoachChatService {
 		cursor: number | undefined,
 		limit: number | undefined,
 	) {
-		const conversation = await this.conversationRepo.findByIdAndUserId(
-			conversationId,
-			userId,
-		);
+		const conversation = await this.conversationRepo.findByIdAndUserId(conversationId, userId);
 		if (!conversation) {
 			throw new CoachConversationNotFoundError(conversationId);
 		}
@@ -318,11 +297,7 @@ export class CoachChatService {
 		);
 	}
 
-	async adoptPlanItem(
-		userId: string,
-		messageId: number,
-		target: AdoptPlanItemTarget,
-	) {
+	async adoptPlanItem(userId: string, messageId: number, target: AdoptPlanItemTarget) {
 		const message = await this.messageRepo.findById(messageId);
 		if (!message || !message.proposal) {
 			throw new PlanItemNotFoundError(messageId);
@@ -385,15 +360,74 @@ export class CoachChatService {
 						completedAt: completed ? new Date().toISOString() : null,
 					})
 					.returning(),
-				this.messageRepo.updateProposalStmt(
-					messageId,
-					JSON.stringify(envelope),
-				),
+				this.messageRepo.updateProposalStmt(messageId, JSON.stringify(envelope)),
 			]);
 
 			return {
 				proposal: envelope,
 				milestone: mapMilestoneToResponse(updatedMilestone),
+			};
+		}
+
+		if (target.type === "todoUpdate") {
+			const update = envelope.todoUpdates[target.todoUpdateIndex];
+			if (!update) {
+				throw new PlanItemNotFoundError(messageId);
+			}
+			if (update.adopted) {
+				throw new PlanItemAlreadyAdoptedError(messageId);
+			}
+
+			const todo = await this.todoRepo.findById(update.todoId);
+			// todoが別goal所属/削除済みの場合は「存在しない」と同一応答にする(IDOR安全側)
+			if (!todo || todo.goalId !== goalId) {
+				throw new PlanItemNotFoundError(messageId);
+			}
+
+			// フィールドレベルの楽観的ロック: 提案に含まれるフィールドのみ、生成時点の
+			// スナップショット(baseline*)と現在値を比較する。todos.updatedAt全体を見ると
+			// 並べ替え等の無関係な操作でも誤って競合検知してしまうため、対象フィールドだけを見る
+			const isStale =
+				(update.baselineDueDate !== undefined && todo.dueDate !== update.baselineDueDate) ||
+				(update.baselinePriority !== undefined && todo.priority !== update.baselinePriority) ||
+				(update.baselineTitle !== undefined && todo.title !== update.baselineTitle);
+			if (isStale) {
+				throw new TodoUpdateStaleError(messageId);
+			}
+
+			envelope.todoUpdates[target.todoUpdateIndex] = {
+				...update,
+				adopted: true,
+				appliedAt: new Date().toISOString(),
+			};
+
+			if (update.suggestedAction === "delete") {
+				await this.db.batch([
+					this.todoRepo.deleteStmt(update.todoId),
+					this.messageRepo.updateProposalStmt(messageId, JSON.stringify(envelope)),
+				]);
+				return { proposal: envelope };
+			}
+
+			const [[updatedTodo]] = await this.db.batch([
+				this.todoRepo
+					.updateStmt(update.todoId, {
+						...(update.suggestedAction === "complete" && {
+							isCompleted: 1,
+							completedAt: new Date().toISOString(),
+						}),
+						...(update.suggestedDueDate !== undefined && { dueDate: update.suggestedDueDate }),
+						...(update.suggestedPriority !== undefined && { priority: update.suggestedPriority }),
+						...(update.suggestedTitle !== undefined && { title: update.suggestedTitle }),
+					})
+					.returning(),
+				this.messageRepo.updateProposalStmt(messageId, JSON.stringify(envelope)),
+			]);
+
+			const completionCounts = await this.todoLogRepo.countCompletedByTodoIds([update.todoId]);
+			return {
+				proposal: envelope,
+				todo: mapTodoToResponse(updatedTodo, completionCounts.get(update.todoId) ?? 0),
 			};
 		}
 
@@ -429,10 +463,7 @@ export class CoachChatService {
 						unit: keyResult.unit,
 					})
 					.returning(),
-				this.messageRepo.updateProposalStmt(
-					messageId,
-					JSON.stringify(envelope),
-				),
+				this.messageRepo.updateProposalStmt(messageId, JSON.stringify(envelope)),
 			]);
 
 			return {
@@ -450,10 +481,7 @@ export class CoachChatService {
 		}
 		// このproposalにKey Resultが含まれる場合、全て採用済みになるまでTODOはブロックする
 		// (どのKRに紐づくかの情報を持たないため、todoはmilestoneId未指定で作成する)
-		if (
-			envelope.keyResults.length > 0 &&
-			!envelope.keyResults.every((kr) => kr.adopted)
-		) {
+		if (envelope.keyResults.length > 0 && !envelope.keyResults.every((kr) => kr.adopted)) {
 			throw new MilestoneNotAdoptedYetError(messageId);
 		}
 
@@ -484,8 +512,7 @@ export class CoachChatService {
 	// そのまま返す(LLM呼び出しなし)。新規時はconversation行のみ作成し、第一声の生成は
 	// 呼び出し側がisNewを見てstartFirstTurnStream()を別途呼ぶ(SSEレスポンスの範囲で完結させる)
 	async startOrGetExplorationConversation(userId: string) {
-		const existing =
-			await this.conversationRepo.findOpenExplorationByUserId(userId);
+		const existing = await this.conversationRepo.findOpenExplorationByUserId(userId);
 		if (existing) return { conversation: existing, isNew: false };
 
 		// 上限到達が既に分かっている場合、conversation作成もLLM呼び出し(第一声生成)も
@@ -504,8 +531,7 @@ export class CoachChatService {
 		} catch (e) {
 			// 部分ユニークインデックス(idx_coach_conversations_user_undecided_objective)により、
 			// 並行リクエストで先に作られていた場合はinsertが失敗する。その場合は既存スレッドを返す。
-			const raced =
-				await this.conversationRepo.findOpenExplorationByUserId(userId);
+			const raced = await this.conversationRepo.findOpenExplorationByUserId(userId);
 			if (raced) return { conversation: raced, isNew: false };
 			throw e;
 		}
@@ -513,27 +539,17 @@ export class CoachChatService {
 
 	// 探索スレッドの第一声を生成する。冪等性ガード: 履歴が0件の場合のみ生成し、
 	// 既に何らかのメッセージがある場合は何もしない(再訪ごとに第一声が増えるのを防ぐ)
-	async startFirstTurnStream(
-		userId: string,
-		conversationId: string,
-		env: Bindings,
-	) {
+	async startFirstTurnStream(userId: string, conversationId: string, env: Bindings) {
 		if (!env.GEMINI_API_KEY) {
 			throw new CoachNotConfiguredError();
 		}
 
-		const conversation = await this.conversationRepo.findByIdAndUserId(
-			conversationId,
-			userId,
-		);
+		const conversation = await this.conversationRepo.findByIdAndUserId(conversationId, userId);
 		if (!conversation) {
 			throw new CoachConversationNotFoundError(conversationId);
 		}
 
-		const existing = await this.messageRepo.findRecentByConversationId(
-			conversationId,
-			1,
-		);
+		const existing = await this.messageRepo.findRecentByConversationId(conversationId, 1);
 		if (existing.length > 0) {
 			return undefined;
 		}
@@ -556,8 +572,7 @@ export class CoachChatService {
 			objectiveStatus: "undecided",
 		});
 
-		const persistTurn = () =>
-			this.persistFirstTurn(conversationId, turnResult, modelId);
+		const persistTurn = () => this.persistFirstTurn(conversationId, turnResult, modelId);
 
 		return { uiStream, persistTurn };
 	}
@@ -631,8 +646,7 @@ export class CoachChatService {
 		// LLMがdeadlineを本日より過去の日付で返した場合に備えたサーバー側の安全網。
 		// プロンプトのハードルールだけに依存せず、DBに不正な期限が入ることを確実に防ぐ
 		const isPastDeadline =
-			envelope.objective.deadline !== null &&
-			envelope.objective.deadline < todayIsoDate();
+			envelope.objective.deadline !== null && envelope.objective.deadline < todayIsoDate();
 		const deadline =
 			envelope.objective.deadline && !isPastDeadline
 				? envelope.objective.deadline
@@ -674,10 +688,7 @@ export class CoachChatService {
 				envelope.objective.title,
 				deadline,
 			),
-			this.messageRepo.updateProposalStmt(
-				messageId,
-				JSON.stringify(updatedEnvelope),
-			),
+			this.messageRepo.updateProposalStmt(messageId, JSON.stringify(updatedEnvelope)),
 		]);
 
 		const categoryName = getCategoryNameFromKey(envelope.objective.category);
@@ -689,9 +700,7 @@ export class CoachChatService {
 
 	private defaultObjectiveDeadline(): string {
 		const deadline = new Date();
-		deadline.setDate(
-			deadline.getDate() + CoachChatService.DEFAULT_OBJECTIVE_HORIZON_DAYS,
-		);
+		deadline.setDate(deadline.getDate() + CoachChatService.DEFAULT_OBJECTIVE_HORIZON_DAYS);
 		return deadline.toISOString().slice(0, 10);
 	}
 
@@ -704,9 +713,7 @@ export class CoachChatService {
 			this.milestoneRepo.findAllByGoalId(goal.id),
 			this.todoRepo.findAllByGoalId(goal.id),
 		]);
-		const todoLogs = await this.todoLogRepo.findAllByTodoIds(
-			todos.map((t) => t.id),
-		);
+		const todoLogs = await this.todoLogRepo.findAllByTodoIds(todos.map((t) => t.id));
 
 		const snapshot = buildGoalSnapshot(todos, milestones, todoLogs, new Date());
 

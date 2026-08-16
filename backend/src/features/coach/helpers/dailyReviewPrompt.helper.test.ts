@@ -91,9 +91,43 @@ describe("buildDailyReviewPrompt", () => {
 			today: "2026-08-11",
 			snapshot: SNAPSHOT,
 			milestones: [],
-			existingTodos: [{ title: "過去問を1日1回演習する", taskType: "daily" }],
+			existingTodos: [
+				{
+					id: "t1",
+					title: "過去問を1日1回演習する",
+					taskType: "daily",
+					priority: "medium",
+					dueDate: null,
+					isCompleted: false,
+				},
+			],
 		});
-		expect(prompt).toContain("[毎日] 過去問を1日1回演習する");
+		expect(prompt).toContain("[毎日");
+		expect(prompt).toContain("過去問を1日1回演習する");
+	});
+
+	it("既存TODOのid・優先度・期限・完了状態をtodoUpdatesの参照用にプロンプトへ含める", () => {
+		const prompt = buildDailyReviewPrompt({
+			goalTitle: "資格取得",
+			goalDeadline: null,
+			today: "2026-08-11",
+			snapshot: SNAPSHOT,
+			milestones: [],
+			existingTodos: [
+				{
+					id: "t1",
+					title: "過去問を1日1回演習する",
+					taskType: "daily",
+					priority: "high",
+					dueDate: "2026-08-01",
+					isCompleted: false,
+				},
+			],
+		});
+		expect(prompt).toContain("todoId: t1");
+		expect(prompt).toContain("優先度high");
+		expect(prompt).toContain("期限: 2026-08-01");
+		expect(prompt).toContain("未完了");
 	});
 
 	it("既存TODOが空の場合は「既存TODOなし」と表示する", () => {

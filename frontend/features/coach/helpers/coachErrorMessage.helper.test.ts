@@ -40,6 +40,17 @@ describe("mapCoachError", () => {
 		expect(result.message).toContain("反映できません");
 	});
 
+	it("reason:todoUpdateStaleを持つ409はtodoUpdateStaleとして扱う", () => {
+		const result = mapCoachError(
+			new ApiClientError(409, "todo field has changed", {
+				message: "Todo field has changed since the proposal",
+				reason: "todoUpdateStale",
+			}),
+		);
+		expect(result.kind).toBe("todoUpdateStale");
+		expect(result.message).toContain("反映できません");
+	});
+
 	it("429はrateLimitとして扱う", () => {
 		const result = mapCoachError(new ApiClientError(429, "Rate limit exceeded"));
 		expect(result.kind).toBe("rateLimit");
