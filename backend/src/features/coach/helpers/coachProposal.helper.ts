@@ -6,6 +6,9 @@ import type { CoachChatPromptMessage } from "./coachChatPrompt.helper";
 // 数値目標が無いKRは 0〜100% スケールで扱う（目標100・単位%）。
 const DEFAULT_MILESTONE_TARGET_VALUE = 100;
 const DEFAULT_MILESTONE_UNIT = "%";
+// プロンプト指示(「最大3件まで」)をサーバー側でも強制する。LLMが指示を超えて
+// 返した場合でもUIに表示される件数を確実に制限する
+const MAX_TODO_UPDATES_PER_REVIEW = 3;
 
 // coach_messages.proposal に保存する提案ペイロード(レガシー形式)。採用済みかどうかと、採用時に
 // 作成したエンティティのidを保持し、二重採用の判定と表示に使う。
@@ -313,12 +316,15 @@ export function toDailyReviewProposalEnvelope(
 			if (!todo || todo.isCompleted) return [];
 
 			// actionが指定された場合は他のsuggested*と排他にする(削除/完了する対象の
-			// 内容を直す提案は意味がないため、プロンプトの指示だけに頼らずここで強制する)
+			// 内容を直す提案は意味がないため、プロンプトの指示だけに頼らずここで強制する)。
+			// baselineTitleは楽観的ロック用: 提案生成後にユーザーが対象のタイトルを
+			// 手動編集していた場合、意図した対象と異なるものを削除/完了してしまう事故を防ぐ
 			if (update.suggestedAction) {
 				return [
 					{
 						todoId: todo.id,
 						todoTitle: todo.title,
+						baselineTitle: todo.title,
 						suggestedAction: update.suggestedAction,
 						reason: update.reason,
 						adopted: false,
@@ -361,6 +367,7 @@ export function toDailyReviewProposalEnvelope(
 		keyResults: [],
 		todos: result.todos.map((t) => ({ title: t.title, taskType: t.taskType, adopted: false })),
 		milestoneUpdates,
-		todoUpdates,
+		// プロンプトの指示(最大3件)をサーバー側でも強制する(安全網)
+		todoUpdates: todoUpdates.slice(0, MAX_TODO_UPDATES_PER_REVIEW),
 	};
 }

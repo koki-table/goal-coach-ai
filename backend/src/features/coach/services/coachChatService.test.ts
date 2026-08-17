@@ -1769,6 +1769,57 @@ describe("CoachChatService", () => {
 			expect(result.todo).toBeUndefined();
 		});
 
+		it("suggestedAction=deleteの対象TODOのタイトルが提案生成後に変化している場合はTodoUpdateStaleErrorにする", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+			} = setupAdoptTodoUpdate();
+
+			// baselineTitle(提案生成時点)は「過去問を1日1回演習する」だが、その後
+			// ユーザーが手動でタイトルを変更済み。意図しない対象を削除してしまう事故を防ぐ
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "もう不要なので削除する。",
+				proposal: proposalWithTodoUpdate({
+					baselineDueDate: undefined,
+					suggestedDueDate: undefined,
+					baselineTitle: "過去問を1日1回演習する",
+					suggestedAction: "delete",
+				}),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+			vi.spyOn(todoRepo, "findById").mockResolvedValue({
+				id: todoId,
+				goalId,
+				title: "過去問を2日に1回演習する",
+				dueDate: "2026-08-01",
+				priority: "medium",
+				isCompleted: 0,
+			});
+			const batchSpy = vi.spyOn(db, "batch");
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "todoUpdate",
+					todoUpdateIndex: 0,
+				}),
+			).rejects.toThrow(TodoUpdateStaleError);
+			expect(batchSpy).not.toHaveBeenCalled();
+		});
+
 		it("既に採用済みのtodoUpdateはPlanItemAlreadyAdoptedErrorを投げる", async () => {
 			const { service, messageId, userId, conversationId, goalId, messageRepo, conversationRepo } =
 				setupAdoptTodoUpdate();

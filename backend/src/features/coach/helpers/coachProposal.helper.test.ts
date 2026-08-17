@@ -533,6 +533,7 @@ describe("toDailyReviewProposalEnvelope (todoUpdates)", () => {
 		expect(result.todoUpdates[0]).toEqual({
 			todoId: "t1",
 			todoTitle: "過去問を1日1回演習する",
+			baselineTitle: "過去問を1日1回演習する",
 			suggestedAction: "delete",
 			reason: "もう不要",
 			adopted: false,
@@ -548,5 +549,25 @@ describe("toDailyReviewProposalEnvelope (todoUpdates)", () => {
 			todos,
 		);
 		expect(result.todoUpdates).toEqual([]);
+	});
+
+	it("todoUpdatesが4件以上返ってもプロンプト指示(最大3件)をサーバー側で強制し3件に切り詰める", () => {
+		const result = toDailyReviewProposalEnvelope(
+			baseResult({
+				todoUpdates: [
+					{ todoId: "t1", suggestedDueDate: "2026-09-10", reason: "1" },
+					{ todoId: "t2", suggestedDueDate: "2026-09-11", reason: "2" },
+					{ todoId: "t3", suggestedDueDate: "2026-09-12", reason: "3" },
+					{ todoId: "t4", suggestedDueDate: "2026-09-13", reason: "4" },
+				],
+			}),
+			[],
+			[
+				...todos,
+				{ id: "t3", title: "t3", isCompleted: false, dueDate: null, priority: "medium" },
+				{ id: "t4", title: "t4", isCompleted: false, dueDate: null, priority: "medium" },
+			],
+		);
+		expect(result.todoUpdates).toHaveLength(3);
 	});
 });
