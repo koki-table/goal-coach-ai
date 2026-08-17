@@ -6,6 +6,7 @@ import type { CoachMessage } from "../types";
 import { MilestoneUpdateProposalWidget } from "./milestoneUpdateProposalWidget";
 import { ObjectiveProposalWidget } from "./objectiveProposalWidget";
 import { PlanProposalWidget } from "./planProposalWidget";
+import { TodoUpdateProposalWidget } from "./todoUpdateProposalWidget";
 
 type ChatMessageBubbleProps = {
 	message: CoachMessage;
@@ -13,6 +14,7 @@ type ChatMessageBubbleProps = {
 	onAdoptTodo: (messageId: number, todoIndex: number) => Promise<void>;
 	onAdoptObjective: (messageId: number) => Promise<void>;
 	onAdoptMilestoneUpdate: (messageId: number, milestoneUpdateIndex: number) => Promise<void>;
+	onAdoptTodoUpdate: (messageId: number, todoUpdateIndex: number) => Promise<void>;
 	adoptingKey: string | undefined;
 	isAdoptingObjective: boolean;
 	isGoalLimitReached: boolean;
@@ -24,6 +26,7 @@ export function ChatMessageBubble({
 	onAdoptTodo,
 	onAdoptObjective,
 	onAdoptMilestoneUpdate,
+	onAdoptTodoUpdate,
 	adoptingKey,
 	isAdoptingObjective,
 	isGoalLimitReached,
@@ -71,6 +74,12 @@ export function ChatMessageBubble({
 							onAdopt={(milestoneUpdateIndex) =>
 								onAdoptMilestoneUpdate(message.id, milestoneUpdateIndex)
 							}
+						/>
+						<TodoUpdateProposalWidget
+							todoUpdates={message.proposal.todoUpdates}
+							messageId={message.id}
+							adoptingKey={adoptingKey}
+							onAdopt={(todoUpdateIndex) => onAdoptTodoUpdate(message.id, todoUpdateIndex)}
 						/>
 					</>
 				)}

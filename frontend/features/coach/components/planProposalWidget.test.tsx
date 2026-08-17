@@ -16,6 +16,7 @@ const PROPOSAL_WITH_KEY_RESULT: PlanProposal = {
 	],
 	todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
 	milestoneUpdates: [],
+	todoUpdates: [],
 };
 
 describe("PlanProposalWidget", () => {
@@ -26,6 +27,7 @@ describe("PlanProposalWidget", () => {
 			keyResults: [],
 			todos: [],
 			milestoneUpdates: [],
+			todoUpdates: [],
 		};
 		const { container } = render(
 			<PlanProposalWidget
@@ -72,6 +74,7 @@ describe("PlanProposalWidget", () => {
 			],
 			todos: [{ title: "毎日30分学習する", taskType: "daily", adopted: false }],
 			milestoneUpdates: [],
+			todoUpdates: [],
 		};
 
 		render(
@@ -126,6 +129,7 @@ describe("PlanProposalWidget", () => {
 				},
 			],
 			milestoneUpdates: [],
+			todoUpdates: [],
 		};
 
 		render(
@@ -157,6 +161,7 @@ describe("PlanProposalWidget", () => {
 			],
 			todos: [],
 			milestoneUpdates: [],
+			todoUpdates: [],
 		};
 
 		render(

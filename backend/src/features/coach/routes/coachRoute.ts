@@ -12,6 +12,7 @@ import {
 	ObjectiveAlreadyAdoptedError,
 	PlanItemAlreadyAdoptedError,
 	PlanItemNotFoundError,
+	TodoUpdateStaleError,
 } from "../../../common/errors";
 import {
 	coachAdoptPlanItemSchema,
@@ -223,10 +224,15 @@ coachRoute.post("/messages/:id/adopt-plan-item", async (c) => {
 						type: "milestoneUpdate" as const,
 						milestoneUpdateIndex: parsed.data.milestoneUpdateIndex,
 					}
-				: {
-						type: "keyResult" as const,
-						keyResultIndex: parsed.data.target === "keyResult" ? parsed.data.keyResultIndex : 0,
-					};
+				: parsed.data.target === "todoUpdate"
+					? {
+							type: "todoUpdate" as const,
+							todoUpdateIndex: parsed.data.todoUpdateIndex,
+						}
+					: {
+							type: "keyResult" as const,
+							keyResultIndex: parsed.data.target === "keyResult" ? parsed.data.keyResultIndex : 0,
+						};
 
 	try {
 		const result = await service.adoptPlanItem(userId, messageId, target);
@@ -246,6 +252,15 @@ coachRoute.post("/messages/:id/adopt-plan-item", async (c) => {
 				{
 					message: "Milestone current value has changed since the proposal",
 					reason: "milestoneUpdateStale",
+				},
+				409,
+			);
+		}
+		if (e instanceof TodoUpdateStaleError) {
+			return c.json(
+				{
+					message: "Todo field has changed since the proposal",
+					reason: "todoUpdateStale",
 				},
 				409,
 			);

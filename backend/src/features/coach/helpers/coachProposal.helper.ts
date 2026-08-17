@@ -6,6 +6,9 @@ import type { CoachChatPromptMessage } from "./coachChatPrompt.helper";
 // 数値目標が無いKRは 0〜100% スケールで扱う（目標100・単位%）。
 const DEFAULT_MILESTONE_TARGET_VALUE = 100;
 const DEFAULT_MILESTONE_UNIT = "%";
+// プロンプト指示(「最大3件まで」)をサーバー側でも強制する。LLMが指示を超えて
+// 返した場合でもUIに表示される件数を確実に制限する
+const MAX_TODO_UPDATES_PER_REVIEW = 3;
 
 // coach_messages.proposal に保存する提案ペイロード(レガシー形式)。採用済みかどうかと、採用時に
 // 作成したエンティティのidを保持し、二重採用の判定と表示に使う。
@@ -58,6 +61,34 @@ export type ProposalMilestoneUpdate = {
 	appliedCurrentValue?: number;
 };
 
+// 日次レビューが既存TODO(todos行)に対して提案する更新の種別。
+// "complete"=もう不要なので完了扱いにする、"delete"=削除する。
+export type ProposalTodoUpdateAction = "complete" | "delete";
+
+// 日次レビューがAIの推定として提案する、既存TODO(todos行)の更新案。
+// dueDate/priority/titleは同時に複数提案してよく(例: 期限も粒度も見直すべき場合)、
+// 1クリックで全て一括採用できる。一方suggestedActionは他のsuggested*と排他とする
+// (削除/完了する対象の内容を直す提案は意味がないため)。
+// baseline*は各suggested*に対応するフィールドのみ値を持つ、フィールドレベルの楽観的ロック。
+// todos.updatedAt全体を比較すると、並べ替え(updateSortOrders)やdailyタスクの夜間リセット
+// (resetDailyCompletion)等、提案内容と無関係な操作でも値が変わってしまい誤って
+// 「反映できません」エラーになる。提案対象のフィールドだけをスナップショットして
+// 比較することで、無関係な変更では競合検知が発火しないようにする。
+export type ProposalTodoUpdate = {
+	todoId: string;
+	todoTitle: string;
+	baselineDueDate?: string | null;
+	baselinePriority?: string;
+	baselineTitle?: string;
+	suggestedDueDate?: string | null;
+	suggestedPriority?: string;
+	suggestedTitle?: string;
+	suggestedAction?: ProposalTodoUpdateAction;
+	reason: string;
+	adopted: boolean;
+	appliedAt?: string;
+};
+
 // coach_messages.proposal の現行フォーマット。KR(Key Results)は既存のmilestonesテーブル/
 // MilestoneRepositoryの呼称変更であり、新規DBエンティティではない(採用時にmilestones行を作る)。
 export type ProposalEnvelope = {
@@ -66,6 +97,7 @@ export type ProposalEnvelope = {
 	keyResults: ProposalKeyResult[];
 	todos: ProposalTodo[];
 	milestoneUpdates: ProposalMilestoneUpdate[];
+	todoUpdates: ProposalTodoUpdate[];
 };
 
 // 保存済みJSON(レガシー{milestone,todos}、または現行{version:1,...})を読み取り時に
@@ -75,7 +107,14 @@ export function parseProposalPayload(raw: string): ProposalEnvelope {
 	const parsed: unknown = JSON.parse(raw);
 	// nullやプリミティブ("in"演算子がTypeErrorになる)を弾き、空エンベロープにフォールバック
 	if (typeof parsed !== "object" || parsed === null) {
-		return { version: 1, objective: null, keyResults: [], todos: [], milestoneUpdates: [] };
+		return {
+			version: 1,
+			objective: null,
+			keyResults: [],
+			todos: [],
+			milestoneUpdates: [],
+			todoUpdates: [],
+		};
 	}
 
 	if ("version" in parsed && (parsed as ProposalEnvelope).version === 1) {
@@ -85,9 +124,10 @@ export function parseProposalPayload(raw: string): ProposalEnvelope {
 			objective: envelope.objective ?? null,
 			keyResults: envelope.keyResults ?? [],
 			todos: envelope.todos ?? [],
-			// milestoneUpdatesは日次レビュー機能追加前に保存された既存行に存在しないため、
+			// milestoneUpdates/todoUpdatesは各機能追加前に保存された既存行に存在しないため、
 			// 欠損時は空配列にフォールバックする(後方互換)
 			milestoneUpdates: envelope.milestoneUpdates ?? [],
+			todoUpdates: envelope.todoUpdates ?? [],
 		};
 	}
 
@@ -98,6 +138,7 @@ export function parseProposalPayload(raw: string): ProposalEnvelope {
 		keyResults: legacy.milestone ? [{ ...legacy.milestone }] : [],
 		todos: legacy.todos ?? [],
 		milestoneUpdates: [],
+		todoUpdates: [],
 	};
 }
 
@@ -130,6 +171,10 @@ export function toPromptMessage(message: {
 			todos: envelope.todos.map((t) => ({ title: t.title, adopted: t.adopted })),
 			milestoneUpdates: envelope.milestoneUpdates.map((u) => ({
 				title: u.milestoneTitle,
+				adopted: u.adopted,
+			})),
+			todoUpdates: envelope.todoUpdates.map((u) => ({
+				title: u.todoTitle,
 				adopted: u.adopted,
 			})),
 		},
@@ -193,9 +238,10 @@ export function toProposalEnvelope(
 			taskType: t.taskType,
 			adopted: false,
 		})),
-		// 通常チャットの提案はKR新規作成/TODO提案のみを扱い、既存KRの数値更新は
+		// 通常チャットの提案はKR新規作成/TODO提案のみを扱い、既存KR/既存TODOの更新は
 		// 日次レビュー専用のtoDailyReviewProposalEnvelopeが担う
 		milestoneUpdates: [],
+		todoUpdates: [],
 	};
 }
 
@@ -208,10 +254,26 @@ export type DailyReviewMilestoneCandidate = {
 	isCompleted: boolean;
 };
 
+export type DailyReviewTodoCandidate = {
+	id: string;
+	title: string;
+	isCompleted: boolean;
+	dueDate: string | null;
+	priority: string;
+};
+
 export type DailyReviewResult = {
 	reply: string;
 	milestoneUpdates: { milestoneId: string; suggestedCurrentValue: number; reason: string }[];
 	todos: { title: string; taskType: "daily" | "once" }[];
+	todoUpdates: {
+		todoId: string;
+		suggestedDueDate?: string | null;
+		suggestedPriority?: string;
+		suggestedTitle?: string;
+		suggestedAction?: ProposalTodoUpdateAction;
+		reason: string;
+	}[];
 };
 
 // 日次レビューのLLM出力をProposalEnvelopeへ変換する。プロンプトの指示だけに頼らず、
@@ -221,6 +283,7 @@ export type DailyReviewResult = {
 export function toDailyReviewProposalEnvelope(
 	result: DailyReviewResult,
 	milestones: DailyReviewMilestoneCandidate[],
+	todos: DailyReviewTodoCandidate[],
 ): ProposalEnvelope {
 	const milestoneById = new Map(milestones.map((m) => [m.id, m]));
 
@@ -245,11 +308,66 @@ export function toDailyReviewProposalEnvelope(
 		];
 	});
 
+	const todoById = new Map(todos.map((t) => [t.id, t]));
+
+	const todoUpdates: ProposalTodoUpdate[] = result.todoUpdates.flatMap(
+		(update): ProposalTodoUpdate[] => {
+			const todo = todoById.get(update.todoId);
+			if (!todo || todo.isCompleted) return [];
+
+			// actionが指定された場合は他のsuggested*と排他にする(削除/完了する対象の
+			// 内容を直す提案は意味がないため、プロンプトの指示だけに頼らずここで強制する)。
+			// baselineTitleは楽観的ロック用: 提案生成後にユーザーが対象のタイトルを
+			// 手動編集していた場合、意図した対象と異なるものを削除/完了してしまう事故を防ぐ
+			if (update.suggestedAction) {
+				return [
+					{
+						todoId: todo.id,
+						todoTitle: todo.title,
+						baselineTitle: todo.title,
+						suggestedAction: update.suggestedAction,
+						reason: update.reason,
+						adopted: false,
+					},
+				];
+			}
+
+			const hasSuggestion =
+				update.suggestedDueDate !== undefined ||
+				update.suggestedPriority !== undefined ||
+				update.suggestedTitle !== undefined;
+			if (!hasSuggestion) return [];
+
+			return [
+				{
+					todoId: todo.id,
+					todoTitle: todo.title,
+					...(update.suggestedDueDate !== undefined && {
+						baselineDueDate: todo.dueDate,
+						suggestedDueDate: update.suggestedDueDate,
+					}),
+					...(update.suggestedPriority !== undefined && {
+						baselinePriority: todo.priority,
+						suggestedPriority: update.suggestedPriority,
+					}),
+					...(update.suggestedTitle !== undefined && {
+						baselineTitle: todo.title,
+						suggestedTitle: update.suggestedTitle,
+					}),
+					reason: update.reason,
+					adopted: false,
+				},
+			];
+		},
+	);
+
 	return {
 		version: 1,
 		objective: null,
 		keyResults: [],
 		todos: result.todos.map((t) => ({ title: t.title, taskType: t.taskType, adopted: false })),
 		milestoneUpdates,
+		// プロンプトの指示(最大3件)をサーバー側でも強制する(安全網)
+		todoUpdates: todoUpdates.slice(0, MAX_TODO_UPDATES_PER_REVIEW),
 	};
 }

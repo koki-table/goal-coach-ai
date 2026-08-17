@@ -33,6 +33,7 @@ function CoachPageContent() {
 		adoptKeyResult,
 		adoptTodo,
 		adoptMilestoneUpdate,
+		adoptTodoUpdate,
 		adoptObjective,
 		adoptingKey,
 		isAdoptingObjective,
@@ -117,6 +118,7 @@ function CoachPageContent() {
 									onAdoptTodo={adoptTodo}
 									onAdoptObjective={handleAdoptObjective}
 									onAdoptMilestoneUpdate={adoptMilestoneUpdate}
+									onAdoptTodoUpdate={adoptTodoUpdate}
 									adoptingKey={adoptingKey}
 									isAdoptingObjective={isAdoptingObjective}
 									isGoalLimitReached={isGoalLimitReached}

@@ -43,12 +43,30 @@ export type ProposalMilestoneUpdate = {
 	appliedCurrentValue?: number;
 };
 
+export type ProposalTodoUpdateAction = "complete" | "delete";
+
+export type ProposalTodoUpdate = {
+	todoId: string;
+	todoTitle: string;
+	baselineDueDate?: string | null;
+	baselinePriority?: string;
+	baselineTitle?: string;
+	suggestedDueDate?: string | null;
+	suggestedPriority?: string;
+	suggestedTitle?: string;
+	suggestedAction?: ProposalTodoUpdateAction;
+	reason: string;
+	adopted: boolean;
+	appliedAt?: string;
+};
+
 export type PlanProposal = {
 	version: 1;
 	objective: ProposalObjective;
 	keyResults: ProposalKeyResult[];
 	todos: ProposalTodo[];
 	milestoneUpdates: ProposalMilestoneUpdate[];
+	todoUpdates: ProposalTodoUpdate[];
 };
 
 export type CoachMessageRole = "user" | "assistant";
@@ -70,4 +88,5 @@ export type CoachMessagePage = {
 export type AdoptPlanItemTarget =
 	| { target: "keyResult"; keyResultIndex: number }
 	| { target: "todo"; todoIndex: number }
-	| { target: "milestoneUpdate"; milestoneUpdateIndex: number };
+	| { target: "milestoneUpdate"; milestoneUpdateIndex: number }
+	| { target: "todoUpdate"; todoUpdateIndex: number };

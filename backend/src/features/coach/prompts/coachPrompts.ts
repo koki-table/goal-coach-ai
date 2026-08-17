@@ -72,10 +72,23 @@ export const dailyReviewMilestoneUpdateSchema = z.object({
 	reason: z.string(),
 });
 
+// 既存TODO(todos行)への更新提案。dueDate/priority/titleは同時に複数返してよいが、
+// suggestedActionを返す場合は他のsuggested*を返さない(サーバー側のtoDailyReviewProposalEnvelope
+// でも強制するが、プロンプト指示としても明示する)
+export const dailyReviewTodoUpdateSchema = z.object({
+	todoId: z.string(),
+	suggestedDueDate: z.string().nullable().optional(),
+	suggestedPriority: z.enum(["low", "medium", "high"]).optional(),
+	suggestedTitle: z.string().optional(),
+	suggestedAction: z.enum(["complete", "delete"]).optional(),
+	reason: z.string(),
+});
+
 export const dailyReviewReplySchema = z.object({
 	reply: z.string(),
 	milestoneUpdates: z.array(dailyReviewMilestoneUpdateSchema),
 	todos: z.array(planProposalTodoSchema),
+	todoUpdates: z.array(dailyReviewTodoUpdateSchema),
 });
 
 export type DailyReviewReplyResult = z.infer<typeof dailyReviewReplySchema>;
@@ -169,5 +182,13 @@ export function getDailyReviewSystemInstruction(persona: CoachPersona): string {
 - 推定が現状のcurrentValueとほぼ変わらない、または判断材料が乏しく推定できないKRはmilestoneUpdatesに含めない(何もしない)。無理に全KRに値を返さない。
 - 推定の根拠(reason)は1文で簡潔に述べる。「TODOの完了ペースだと〜」のように、参照したデータの種類を明示する。
 - 今のTODOのペースでは目標達成が難しいと判断した場合のみ、不足を補う新規TODOをtodosに1〜3件提案する。それ以外はtodosを空にする。
+
+【既存TODOの更新提案(todoUpdates)】
+- existing_todosの各TODO(id・期限・優先度・完了状態を含む)を見て、次の基準で見直すべきものがあればtodoUpdatesとして最大3件まで提案する。判断材料が乏しい、または見直す必要がないTODOは含めない(無理に全TODOに提案を作らない)。
+  * 期限超過中、または長期間停滞していると判断できるTODOには、suggestedDueDate(新しい期限)やsuggestedPriority(優先度の見直し)を提案する。
+  * 粒度が大きすぎる、または内容が曖昧で実行に着手できていないと判断できるTODOには、より現実的な粒度・内容に書き換えたsuggestedTitleを提案する。
+  * suggestedDueDate・suggestedPriority・suggestedTitleは同一TODOに対して同時に提案してよい(例: 期限も粒度も見直すべき場合は両方返す)。
+  * 目標達成にもう寄与しない、または既に実質的に不要になったと判断できるTODOには、suggestedAction="complete"(完了扱いにする)または"delete"(削除する)を提案する。suggestedActionを返す場合、そのTODOに対してsuggestedDueDate・suggestedPriority・suggestedTitleは同時に返さない(内容を直す提案と削除/完了の提案は両立させない)。
+  * reasonは1文で簡潔に、参照したデータの種類を明示する(例:「2週間以上進捗が無いため期限を見直す」「対象が広すぎるため単位を小さくする」)。
 - replyは「今日のレビュー」として1〜3文程度で簡潔に述べる。返信の中で問いかけは行わない(ユーザーの応答を前提にしないため)。`;
 }

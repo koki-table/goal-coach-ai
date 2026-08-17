@@ -41,6 +41,7 @@ describe("toPromptMessage", () => {
 					{ title: "参考書を買う", adopted: true },
 				],
 				milestoneUpdates: [],
+				todoUpdates: [],
 			},
 		});
 	});
@@ -151,6 +152,7 @@ describe("parseProposalPayload", () => {
 			keyResults: [{ title: "基礎を固める", targetValue: 100, unit: "%", adopted: false }],
 			todos: [{ title: "毎日30分", taskType: "daily", adopted: false }],
 			milestoneUpdates: [],
+			todoUpdates: [],
 		});
 	});
 
@@ -182,13 +184,23 @@ describe("parseProposalPayload", () => {
 					adopted: false,
 				},
 			],
+			todoUpdates: [
+				{
+					todoId: "t1",
+					todoTitle: "過去問を1日1回演習する",
+					baselineDueDate: "2026-08-10",
+					suggestedDueDate: "2026-09-10",
+					reason: "期限超過が続いている",
+					adopted: false,
+				},
+			],
 		};
 		const raw = JSON.stringify(envelope);
 
 		expect(parseProposalPayload(raw)).toEqual(envelope);
 	});
 
-	it("version:1形式でmilestoneUpdatesが欠損していても空配列にフォールバックする(機能追加前の既存行)", () => {
+	it("version:1形式でmilestoneUpdates/todoUpdatesが欠損していても空配列にフォールバックする(機能追加前の既存行)", () => {
 		const raw = JSON.stringify({
 			version: 1,
 			objective: null,
@@ -196,6 +208,7 @@ describe("parseProposalPayload", () => {
 			todos: [],
 		});
 		expect(parseProposalPayload(raw).milestoneUpdates).toEqual([]);
+		expect(parseProposalPayload(raw).todoUpdates).toEqual([]);
 	});
 
 	it("nullのJSONでも例外を投げず空エンベロープにフォールバックする", () => {
@@ -205,6 +218,7 @@ describe("parseProposalPayload", () => {
 			keyResults: [],
 			todos: [],
 			milestoneUpdates: [],
+			todoUpdates: [],
 		});
 	});
 
@@ -215,6 +229,7 @@ describe("parseProposalPayload", () => {
 			keyResults: [],
 			todos: [],
 			milestoneUpdates: [],
+			todoUpdates: [],
 		});
 	});
 
@@ -318,8 +333,10 @@ describe("toDailyReviewProposalEnvelope", () => {
 					{ milestoneId: "not-exist", suggestedCurrentValue: 50, reason: "存在しない" },
 				],
 				todos: [],
+				todoUpdates: [],
 			},
 			milestones,
+			[],
 		);
 
 		expect(result.milestoneUpdates).toEqual([
@@ -340,8 +357,10 @@ describe("toDailyReviewProposalEnvelope", () => {
 				reply: "レビュー結果",
 				milestoneUpdates: [{ milestoneId: "m2", suggestedCurrentValue: 90, reason: "後退提案" }],
 				todos: [],
+				todoUpdates: [],
 			},
 			milestones,
+			[],
 		);
 		expect(result.milestoneUpdates).toEqual([]);
 	});
@@ -352,8 +371,10 @@ describe("toDailyReviewProposalEnvelope", () => {
 				reply: "レビュー結果",
 				milestoneUpdates: [{ milestoneId: "m1", suggestedCurrentValue: 700, reason: "順調" }],
 				todos: [],
+				todoUpdates: [],
 			},
 			milestones,
+			[],
 		);
 		expect(result.milestoneUpdates[0].baselineCurrentValue).toBe(500);
 	});
@@ -364,8 +385,10 @@ describe("toDailyReviewProposalEnvelope", () => {
 				reply: "レビュー結果",
 				milestoneUpdates: [{ milestoneId: "m1", suggestedCurrentValue: 1500, reason: "上限超過" }],
 				todos: [],
+				todoUpdates: [],
 			},
 			milestones,
+			[],
 		);
 		expect(result.milestoneUpdates[0].suggestedCurrentValue).toBe(900);
 	});
@@ -376,8 +399,10 @@ describe("toDailyReviewProposalEnvelope", () => {
 				reply: "レビュー結果",
 				milestoneUpdates: [{ milestoneId: "m1", suggestedCurrentValue: -50, reason: "下限未満" }],
 				todos: [],
+				todoUpdates: [],
 			},
 			milestones,
+			[],
 		);
 		expect(result.milestoneUpdates[0].suggestedCurrentValue).toBe(0);
 	});
@@ -388,8 +413,10 @@ describe("toDailyReviewProposalEnvelope", () => {
 				reply: "レビュー結果",
 				milestoneUpdates: [],
 				todos: [{ title: "過去問を1日1回演習する", taskType: "daily" }],
+				todoUpdates: [],
 			},
 			milestones,
+			[],
 		);
 		expect(result.todos).toEqual([
 			{ title: "過去問を1日1回演習する", taskType: "daily", adopted: false },
@@ -398,10 +425,149 @@ describe("toDailyReviewProposalEnvelope", () => {
 
 	it("objective/keyResultsは常に空(日次レビューは既存KRの数値更新のみを扱う)", () => {
 		const result = toDailyReviewProposalEnvelope(
-			{ reply: "レビュー結果", milestoneUpdates: [], todos: [] },
+			{ reply: "レビュー結果", milestoneUpdates: [], todos: [], todoUpdates: [] },
 			milestones,
+			[],
 		);
 		expect(result.objective).toBeNull();
 		expect(result.keyResults).toEqual([]);
+	});
+});
+
+describe("toDailyReviewProposalEnvelope (todoUpdates)", () => {
+	const todos = [
+		{
+			id: "t1",
+			title: "過去問を1日1回演習する",
+			isCompleted: false,
+			dueDate: "2026-08-10",
+			priority: "medium",
+		},
+		{ id: "t2", title: "完了済みTODO", isCompleted: true, dueDate: null, priority: "low" },
+	];
+
+	function baseResult(
+		overrides: Partial<Parameters<typeof toDailyReviewProposalEnvelope>[0]> = {},
+	) {
+		return {
+			reply: "レビュー結果",
+			milestoneUpdates: [],
+			todos: [],
+			todoUpdates: [],
+			...overrides,
+		};
+	}
+
+	it("実在するtodoIdの提案のみproposalに含める", () => {
+		const result = toDailyReviewProposalEnvelope(
+			baseResult({
+				todoUpdates: [
+					{ todoId: "t1", suggestedDueDate: "2026-09-10", reason: "期限超過" },
+					{ todoId: "not-exist", suggestedDueDate: "2026-09-10", reason: "存在しない" },
+				],
+			}),
+			[],
+			todos,
+		);
+		expect(result.todoUpdates).toHaveLength(1);
+		expect(result.todoUpdates[0].todoId).toBe("t1");
+	});
+
+	it("完了済みTODOへの提案は除外する", () => {
+		const result = toDailyReviewProposalEnvelope(
+			baseResult({
+				todoUpdates: [{ todoId: "t2", suggestedAction: "delete", reason: "不要" }],
+			}),
+			[],
+			todos,
+		);
+		expect(result.todoUpdates).toEqual([]);
+	});
+
+	it("dueDate/priority/titleは同時提案でき、それぞれにbaselineが付与される", () => {
+		const result = toDailyReviewProposalEnvelope(
+			baseResult({
+				todoUpdates: [
+					{
+						todoId: "t1",
+						suggestedDueDate: "2026-09-10",
+						suggestedPriority: "high",
+						suggestedTitle: "過去問を10分だけ演習する",
+						reason: "粒度も期限も見直す",
+					},
+				],
+			}),
+			[],
+			todos,
+		);
+		expect(result.todoUpdates[0]).toEqual({
+			todoId: "t1",
+			todoTitle: "過去問を1日1回演習する",
+			baselineDueDate: "2026-08-10",
+			suggestedDueDate: "2026-09-10",
+			baselinePriority: "medium",
+			suggestedPriority: "high",
+			baselineTitle: "過去問を1日1回演習する",
+			suggestedTitle: "過去問を10分だけ演習する",
+			reason: "粒度も期限も見直す",
+			adopted: false,
+		});
+	});
+
+	it("suggestedActionが指定された場合、他のsuggested*フィールドは無視する", () => {
+		const result = toDailyReviewProposalEnvelope(
+			baseResult({
+				todoUpdates: [
+					{
+						todoId: "t1",
+						suggestedAction: "delete",
+						suggestedDueDate: "2026-09-10",
+						suggestedTitle: "無視されるはず",
+						reason: "もう不要",
+					},
+				],
+			}),
+			[],
+			todos,
+		);
+		expect(result.todoUpdates[0]).toEqual({
+			todoId: "t1",
+			todoTitle: "過去問を1日1回演習する",
+			baselineTitle: "過去問を1日1回演習する",
+			suggestedAction: "delete",
+			reason: "もう不要",
+			adopted: false,
+		});
+	});
+
+	it("提案フィールドが1つも無い場合は除外する", () => {
+		const result = toDailyReviewProposalEnvelope(
+			baseResult({
+				todoUpdates: [{ todoId: "t1", reason: "何も提案しない" }],
+			}),
+			[],
+			todos,
+		);
+		expect(result.todoUpdates).toEqual([]);
+	});
+
+	it("todoUpdatesが4件以上返ってもプロンプト指示(最大3件)をサーバー側で強制し3件に切り詰める", () => {
+		const result = toDailyReviewProposalEnvelope(
+			baseResult({
+				todoUpdates: [
+					{ todoId: "t1", suggestedDueDate: "2026-09-10", reason: "1" },
+					{ todoId: "t2", suggestedDueDate: "2026-09-11", reason: "2" },
+					{ todoId: "t3", suggestedDueDate: "2026-09-12", reason: "3" },
+					{ todoId: "t4", suggestedDueDate: "2026-09-13", reason: "4" },
+				],
+			}),
+			[],
+			[
+				...todos,
+				{ id: "t3", title: "t3", isCompleted: false, dueDate: null, priority: "medium" },
+				{ id: "t4", title: "t4", isCompleted: false, dueDate: null, priority: "medium" },
+			],
+		);
+		expect(result.todoUpdates).toHaveLength(3);
 	});
 });

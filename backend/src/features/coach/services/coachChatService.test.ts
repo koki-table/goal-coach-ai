@@ -7,6 +7,7 @@ import {
 	ObjectiveAlreadyAdoptedError,
 	PlanItemAlreadyAdoptedError,
 	PlanItemNotFoundError,
+	TodoUpdateStaleError,
 } from "../../../common/errors";
 import { createDb } from "../../../db";
 import type { Bindings } from "../../../types/env";
@@ -126,9 +127,7 @@ describe("CoachChatService", () => {
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
-			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue(
-				"gemini-3.5-flash-lite",
-			);
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
 
 			const insertStmtSpy = vi.spyOn(messageRepo, "insertStmt");
 			const touchStmtSpy = vi.spyOn(conversationRepo, "touchStmt");
@@ -148,9 +147,7 @@ describe("CoachChatService", () => {
 			};
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<
-					ReturnType<typeof db.batch>
-				>);
+				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<ReturnType<typeof db.batch>>);
 
 			const { uiStream, persistTurn } = await service.startMessageStream(
 				userId,
@@ -287,9 +284,7 @@ describe("CoachChatService", () => {
 			};
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<
-					ReturnType<typeof db.batch>
-				>);
+				.mockResolvedValue([[], [assistantRow]] as unknown as Awaited<ReturnType<typeof db.batch>>);
 
 			const { uiStream, persistTurn } = await service.startMessageStream(
 				userId,
@@ -309,11 +304,7 @@ describe("CoachChatService", () => {
 				}),
 			);
 			// declaredPhase("insight")はcurrent("reality")から1段階前進のため矯正されずそのまま適用される
-			expect(setPhaseStmtSpy).toHaveBeenCalledWith(
-				conversationId,
-				"insight",
-				0,
-			);
+			expect(setPhaseStmtSpy).toHaveBeenCalledWith(conversationId, "insight", 0);
 			expect(touchStmtSpy).not.toHaveBeenCalled();
 			expect(batchSpy).toHaveBeenCalledTimes(1);
 			expect(batchSpy.mock.calls[0][0]).toHaveLength(3);
@@ -369,13 +360,9 @@ describe("CoachChatService", () => {
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
-			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue(
-				"gemini-3.5-flash-lite",
-			);
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
 
-			const model = mockStreamModelReturning(
-				JSON.stringify({ unexpected: "shape" }),
-			);
+			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
 			vi.spyOn(coachModel, "createCoachModel").mockReturnValue(model);
 
 			const batchSpy = vi.spyOn(db, "batch");
@@ -473,9 +460,7 @@ describe("CoachChatService", () => {
 				.spyOn(chatGate, "releaseDecidedMessageReservation")
 				.mockResolvedValue(undefined);
 
-			const model = mockStreamModelReturning(
-				JSON.stringify({ unexpected: "shape" }),
-			);
+			const model = mockStreamModelReturning(JSON.stringify({ unexpected: "shape" }));
 			vi.spyOn(coachModel, "createCoachModel").mockReturnValue(model);
 
 			const { uiStream, persistTurn } = await service.startMessageStream(
@@ -512,10 +497,7 @@ describe("CoachChatService", () => {
 				}
 			).goalRepo;
 
-			vi.spyOn(
-				conversationRepo,
-				"findOpenExplorationByUserId",
-			).mockResolvedValue(undefined);
+			vi.spyOn(conversationRepo, "findOpenExplorationByUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
 			const createExplorationSpy = vi
 				.spyOn(conversationRepo, "createExploration")
@@ -560,20 +542,14 @@ describe("CoachChatService", () => {
 				}
 			).goalRepo;
 
-			vi.spyOn(
-				conversationRepo,
-				"findOpenExplorationByUserId",
-			).mockResolvedValue(undefined);
+			vi.spyOn(conversationRepo, "findOpenExplorationByUserId").mockResolvedValue(undefined);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(2);
-			const createExplorationSpy = vi.spyOn(
-				conversationRepo,
-				"createExploration",
-			);
+			const createExplorationSpy = vi.spyOn(conversationRepo, "createExploration");
 			const createModelSpy = vi.spyOn(coachModel, "createCoachModel");
 
-			await expect(
-				service.startOrGetExplorationConversation(userId),
-			).rejects.toThrow(GoalLimitExceededError);
+			await expect(service.startOrGetExplorationConversation(userId)).rejects.toThrow(
+				GoalLimitExceededError,
+			);
 
 			expect(createExplorationSpy).not.toHaveBeenCalled();
 			expect(createModelSpy).not.toHaveBeenCalled();
@@ -603,14 +579,8 @@ describe("CoachChatService", () => {
 				createdAt: "",
 				updatedAt: "",
 			};
-			vi.spyOn(
-				conversationRepo,
-				"findOpenExplorationByUserId",
-			).mockResolvedValue(existing);
-			const createExplorationSpy = vi.spyOn(
-				conversationRepo,
-				"createExploration",
-			);
+			vi.spyOn(conversationRepo, "findOpenExplorationByUserId").mockResolvedValue(existing);
+			const createExplorationSpy = vi.spyOn(conversationRepo, "createExploration");
 
 			const result = await service.startOrGetExplorationConversation(userId);
 
@@ -663,13 +633,9 @@ describe("CoachChatService", () => {
 			]);
 			const createModelSpy = vi.spyOn(coachModel, "createCoachModel");
 
-			const result = await service.startFirstTurnStream(
-				userId,
-				conversationId,
-				{
-					GEMINI_API_KEY: "dummy",
-				} as Bindings,
-			);
+			const result = await service.startFirstTurnStream(userId, conversationId, {
+				GEMINI_API_KEY: "dummy",
+			} as Bindings);
 
 			expect(result).toBeUndefined();
 			expect(createModelSpy).not.toHaveBeenCalled();
@@ -722,9 +688,7 @@ describe("CoachChatService", () => {
 			});
 			vi.spyOn(messageRepo, "findRecentByConversationId").mockResolvedValue([]);
 			vi.spyOn(goalRepo, "countActiveByUserId").mockResolvedValue(0);
-			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue(
-				"gemini-3.5-flash-lite",
-			);
+			vi.spyOn(chatGate, "resolveForUndecidedMessage").mockResolvedValue("gemini-3.5-flash-lite");
 			const insertStmtSpy = vi.spyOn(messageRepo, "insertStmt");
 			const touchStmtSpy = vi.spyOn(conversationRepo, "touchStmt");
 
@@ -743,17 +707,11 @@ describe("CoachChatService", () => {
 			};
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[assistantRow]] as unknown as Awaited<
-					ReturnType<typeof db.batch>
-				>);
+				.mockResolvedValue([[assistantRow]] as unknown as Awaited<ReturnType<typeof db.batch>>);
 
-			const result = await service.startFirstTurnStream(
-				userId,
-				conversationId,
-				{
-					GEMINI_API_KEY: "dummy",
-				} as Bindings,
-			);
+			const result = await service.startFirstTurnStream(userId, conversationId, {
+				GEMINI_API_KEY: "dummy",
+			} as Bindings);
 			if (!result) throw new Error("expected a result");
 
 			await drainStream(result.uiStream);
@@ -766,9 +724,7 @@ describe("CoachChatService", () => {
 					content: "何にワクワクするペン",
 				}),
 			);
-			expect(insertStmtSpy).not.toHaveBeenCalledWith(
-				expect.objectContaining({ role: "user" }),
-			);
+			expect(insertStmtSpy).not.toHaveBeenCalledWith(expect.objectContaining({ role: "user" }));
 			expect(touchStmtSpy).toHaveBeenCalledWith(conversationId);
 			expect(batchSpy.mock.calls[0][0]).toHaveLength(2);
 			expect(assistantMessage).toEqual(assistantRow);
@@ -836,9 +792,7 @@ describe("CoachChatService", () => {
 				deadline: "2026-12-31",
 				category: "study",
 			},
-			keyResults: [
-				{ title: "模試900点", targetValue: 900, unit: "点", adopted: false },
-			],
+			keyResults: [{ title: "模試900点", targetValue: 900, unit: "点", adopted: false }],
 			todos: [],
 		});
 
@@ -898,9 +852,7 @@ describe("CoachChatService", () => {
 			};
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[createdGoal]] as unknown as Awaited<
-					ReturnType<typeof db.batch>
-				>);
+				.mockResolvedValue([[createdGoal]] as unknown as Awaited<ReturnType<typeof db.batch>>);
 
 			const result = await service.adoptObjective(userId, messageId);
 
@@ -1022,14 +974,8 @@ describe("CoachChatService", () => {
 		});
 
 		it("throws ObjectiveAlreadyAdoptedError when the key results are already adopted", async () => {
-			const {
-				service,
-				messageId,
-				userId,
-				conversationId,
-				messageRepo,
-				conversationRepo,
-			} = setupAdoptObjective();
+			const { service, messageId, userId, conversationId, messageRepo, conversationRepo } =
+				setupAdoptObjective();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -1073,14 +1019,8 @@ describe("CoachChatService", () => {
 		});
 
 		it("throws ExplorationThreadAlreadyLinkedError when the conversation is already linked to a goal", async () => {
-			const {
-				service,
-				messageId,
-				userId,
-				conversationId,
-				messageRepo,
-				conversationRepo,
-			} = setupAdoptObjective();
+			const { service, messageId, userId, conversationId, messageRepo, conversationRepo } =
+				setupAdoptObjective();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -1107,14 +1047,8 @@ describe("CoachChatService", () => {
 		});
 
 		it("throws PlanItemNotFoundError when the proposal has no objective", async () => {
-			const {
-				service,
-				messageId,
-				userId,
-				conversationId,
-				messageRepo,
-				conversationRepo,
-			} = setupAdoptObjective();
+			const { service, messageId, userId, conversationId, messageRepo, conversationRepo } =
+				setupAdoptObjective();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -1146,14 +1080,8 @@ describe("CoachChatService", () => {
 		});
 
 		it("他人のmessage(所有権不成立)は存在しない場合と同じPlanItemNotFoundErrorにする(列挙オラクル防止)", async () => {
-			const {
-				service,
-				messageId,
-				userId,
-				conversationId,
-				messageRepo,
-				conversationRepo,
-			} = setupAdoptObjective();
+			const { service, messageId, userId, conversationId, messageRepo, conversationRepo } =
+				setupAdoptObjective();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -1164,9 +1092,7 @@ describe("CoachChatService", () => {
 				createdAt: "",
 			});
 			// findByIdAndUserIdがundefined = 他人のmessage(所有権なし)
-			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
-				undefined,
-			);
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(undefined);
 
 			await expect(service.adoptObjective(userId, messageId)).rejects.toThrow(
 				PlanItemNotFoundError,
@@ -1297,9 +1223,7 @@ describe("CoachChatService", () => {
 			const updateStmtSpy = vi.spyOn(milestoneRepo, "updateStmt");
 			const batchSpy = vi
 				.spyOn(db, "batch")
-				.mockResolvedValue([[updatedMilestone]] as unknown as Awaited<
-					ReturnType<typeof db.batch>
-				>);
+				.mockResolvedValue([[updatedMilestone]] as unknown as Awaited<ReturnType<typeof db.batch>>);
 
 			const result = await service.adoptPlanItem(userId, messageId, {
 				type: "milestoneUpdate",
@@ -1398,15 +1322,8 @@ describe("CoachChatService", () => {
 		});
 
 		it("既に採用済みのmilestoneUpdateはPlanItemAlreadyAdoptedErrorを投げる", async () => {
-			const {
-				service,
-				messageId,
-				userId,
-				conversationId,
-				goalId,
-				messageRepo,
-				conversationRepo,
-			} = setupAdoptPlanItem();
+			const { service, messageId, userId, conversationId, goalId, messageRepo, conversationRepo } =
+				setupAdoptPlanItem();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -1503,15 +1420,8 @@ describe("CoachChatService", () => {
 		});
 
 		it("存在しないmilestoneUpdateIndexはPlanItemNotFoundErrorにする", async () => {
-			const {
-				service,
-				messageId,
-				userId,
-				conversationId,
-				goalId,
-				messageRepo,
-				conversationRepo,
-			} = setupAdoptPlanItem();
+			const { service, messageId, userId, conversationId, goalId, messageRepo, conversationRepo } =
+				setupAdoptPlanItem();
 
 			vi.spyOn(messageRepo, "findById").mockResolvedValue({
 				id: messageId,
@@ -1592,6 +1502,507 @@ describe("CoachChatService", () => {
 				}),
 			).rejects.toThrow(MilestoneUpdateStaleError);
 			expect(batchSpy).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("adoptPlanItem (todoUpdate)", () => {
+		function setupAdoptTodoUpdate() {
+			const db = createDb(createUnusedD1());
+			const service = new CoachChatService(db);
+			const messageId = 1;
+			const userId = "user-1";
+			const conversationId = "conv-1";
+			const goalId = "goal-1";
+			const todoId = "todo-1";
+
+			const messageRepo = (
+				service as unknown as {
+					messageRepo: {
+						findById: (...args: unknown[]) => unknown;
+						updateProposalStmt: (...args: unknown[]) => unknown;
+					};
+				}
+			).messageRepo;
+			const conversationRepo = (
+				service as unknown as {
+					conversationRepo: {
+						findByIdAndUserId: (...args: unknown[]) => unknown;
+					};
+				}
+			).conversationRepo;
+			const todoRepo = (
+				service as unknown as {
+					todoRepo: {
+						findById: (...args: unknown[]) => unknown;
+						updateStmt: (...args: unknown[]) => unknown;
+						deleteStmt: (...args: unknown[]) => unknown;
+					};
+				}
+			).todoRepo;
+			const todoLogRepo = (
+				service as unknown as {
+					todoLogRepo: {
+						countCompletedByTodoIds: (...args: unknown[]) => unknown;
+					};
+				}
+			).todoLogRepo;
+
+			return {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+				todoLogRepo,
+			};
+		}
+
+		function proposalWithTodoUpdate(overrides: Record<string, unknown> = {}) {
+			return JSON.stringify({
+				version: 1,
+				objective: null,
+				keyResults: [],
+				todos: [],
+				milestoneUpdates: [],
+				todoUpdates: [
+					{
+						todoId: "todo-1",
+						todoTitle: "過去問を1日1回演習する",
+						baselineDueDate: "2026-08-01",
+						suggestedDueDate: "2026-09-01",
+						reason: "期限超過が続いている",
+						adopted: false,
+						...overrides,
+					},
+				],
+			});
+		}
+
+		function mockConversation(conversationId: string, userId: string, goalId: string) {
+			return {
+				id: conversationId,
+				userId,
+				goalId,
+				objectiveStatus: "decided" as const,
+				goalTitleSnapshot: "TOEIC800点を取る",
+				goalDeadlineSnapshot: "2026-12-31",
+				createdAt: "",
+				updatedAt: "",
+			};
+		}
+
+		it("suggestedDueDateをtodoのdueDateに反映し、proposalをadopted=trueに更新する", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+				todoLogRepo,
+			} = setupAdoptTodoUpdate();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "期限を見直すべきだ。",
+				proposal: proposalWithTodoUpdate(),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+			vi.spyOn(todoRepo, "findById").mockResolvedValue({
+				id: todoId,
+				goalId,
+				title: "過去問を1日1回演習する",
+				dueDate: "2026-08-01",
+				priority: "medium",
+				isCompleted: 0,
+			});
+			vi.spyOn(todoLogRepo, "countCompletedByTodoIds").mockResolvedValue(new Map());
+
+			const updatedTodo = {
+				id: todoId,
+				goalId,
+				milestoneId: null,
+				title: "過去問を1日1回演習する",
+				description: null,
+				dueDate: "2026-09-01",
+				estimatedMinutes: null,
+				priority: "medium",
+				taskType: "daily",
+				isCompleted: 0,
+				isAiGenerated: 0,
+				createdAt: "",
+			};
+			const updateStmtSpy = vi.spyOn(todoRepo, "updateStmt");
+			const batchSpy = vi
+				.spyOn(db, "batch")
+				.mockResolvedValue([[updatedTodo]] as unknown as Awaited<ReturnType<typeof db.batch>>);
+
+			const result = await service.adoptPlanItem(userId, messageId, {
+				type: "todoUpdate",
+				todoUpdateIndex: 0,
+			});
+
+			expect(updateStmtSpy).toHaveBeenCalledWith(todoId, { dueDate: "2026-09-01" });
+			expect(batchSpy).toHaveBeenCalledTimes(1);
+			expect(result.proposal.todoUpdates[0].adopted).toBe(true);
+			expect(result.todo?.dueDate).toBe("2026-09-01");
+		});
+
+		it("suggestedAction=completeはisCompleted/completedAtを更新する", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+				todoLogRepo,
+			} = setupAdoptTodoUpdate();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "もう完了扱いにしてよい。",
+				proposal: proposalWithTodoUpdate({
+					baselineDueDate: undefined,
+					suggestedDueDate: undefined,
+					suggestedAction: "complete",
+				}),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+			vi.spyOn(todoRepo, "findById").mockResolvedValue({
+				id: todoId,
+				goalId,
+				title: "過去問を1日1回演習する",
+				dueDate: "2026-08-01",
+				priority: "medium",
+				isCompleted: 0,
+			});
+			vi.spyOn(todoLogRepo, "countCompletedByTodoIds").mockResolvedValue(new Map());
+			const updateStmtSpy = vi.spyOn(todoRepo, "updateStmt");
+			vi.spyOn(db, "batch").mockResolvedValue([
+				[{ id: todoId, goalId, title: "過去問を1日1回演習する", isCompleted: 1 }],
+			] as unknown as Awaited<ReturnType<typeof db.batch>>);
+
+			await service.adoptPlanItem(userId, messageId, {
+				type: "todoUpdate",
+				todoUpdateIndex: 0,
+			});
+
+			expect(updateStmtSpy).toHaveBeenCalledWith(
+				todoId,
+				expect.objectContaining({ isCompleted: 1 }),
+			);
+		});
+
+		it("suggestedAction=deleteはtodoを削除しレスポンスにtodoを含めない", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+			} = setupAdoptTodoUpdate();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "もう不要なので削除する。",
+				proposal: proposalWithTodoUpdate({
+					baselineDueDate: undefined,
+					suggestedDueDate: undefined,
+					suggestedAction: "delete",
+				}),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+			vi.spyOn(todoRepo, "findById").mockResolvedValue({
+				id: todoId,
+				goalId,
+				title: "過去問を1日1回演習する",
+				dueDate: "2026-08-01",
+				priority: "medium",
+				isCompleted: 0,
+			});
+			const deleteStmtSpy = vi.spyOn(todoRepo, "deleteStmt");
+			const batchSpy = vi
+				.spyOn(db, "batch")
+				.mockResolvedValue([] as unknown as Awaited<ReturnType<typeof db.batch>>);
+
+			const result = await service.adoptPlanItem(userId, messageId, {
+				type: "todoUpdate",
+				todoUpdateIndex: 0,
+			});
+
+			expect(deleteStmtSpy).toHaveBeenCalledWith(todoId);
+			expect(batchSpy).toHaveBeenCalledTimes(1);
+			expect(result.todo).toBeUndefined();
+		});
+
+		it("suggestedAction=deleteの対象TODOのタイトルが提案生成後に変化している場合はTodoUpdateStaleErrorにする", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+			} = setupAdoptTodoUpdate();
+
+			// baselineTitle(提案生成時点)は「過去問を1日1回演習する」だが、その後
+			// ユーザーが手動でタイトルを変更済み。意図しない対象を削除してしまう事故を防ぐ
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "もう不要なので削除する。",
+				proposal: proposalWithTodoUpdate({
+					baselineDueDate: undefined,
+					suggestedDueDate: undefined,
+					baselineTitle: "過去問を1日1回演習する",
+					suggestedAction: "delete",
+				}),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+			vi.spyOn(todoRepo, "findById").mockResolvedValue({
+				id: todoId,
+				goalId,
+				title: "過去問を2日に1回演習する",
+				dueDate: "2026-08-01",
+				priority: "medium",
+				isCompleted: 0,
+			});
+			const batchSpy = vi.spyOn(db, "batch");
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "todoUpdate",
+					todoUpdateIndex: 0,
+				}),
+			).rejects.toThrow(TodoUpdateStaleError);
+			expect(batchSpy).not.toHaveBeenCalled();
+		});
+
+		it("既に採用済みのtodoUpdateはPlanItemAlreadyAdoptedErrorを投げる", async () => {
+			const { service, messageId, userId, conversationId, goalId, messageRepo, conversationRepo } =
+				setupAdoptTodoUpdate();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "期限を見直すべきだ。",
+				proposal: proposalWithTodoUpdate({ adopted: true }),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "todoUpdate",
+					todoUpdateIndex: 0,
+				}),
+			).rejects.toThrow(PlanItemAlreadyAdoptedError);
+		});
+
+		it("存在しないtodoUpdateIndexはPlanItemNotFoundErrorにする", async () => {
+			const { service, messageId, userId, conversationId, goalId, messageRepo, conversationRepo } =
+				setupAdoptTodoUpdate();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "期限を見直すべきだ。",
+				proposal: proposalWithTodoUpdate(),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "todoUpdate",
+					todoUpdateIndex: 5,
+				}),
+			).rejects.toThrow(PlanItemNotFoundError);
+		});
+
+		it("todoが別goal所属(IDOR)の場合はPlanItemNotFoundErrorにする", async () => {
+			const {
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+			} = setupAdoptTodoUpdate();
+
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "期限を見直すべきだ。",
+				proposal: proposalWithTodoUpdate(),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+			// todoが別のgoalIdに属している(不正なtodoId指定を想定)
+			vi.spyOn(todoRepo, "findById").mockResolvedValue({
+				id: todoId,
+				goalId: "other-goal",
+				title: "過去問を1日1回演習する",
+				dueDate: "2026-08-01",
+				priority: "medium",
+				isCompleted: 0,
+			});
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "todoUpdate",
+					todoUpdateIndex: 0,
+				}),
+			).rejects.toThrow(PlanItemNotFoundError);
+		});
+
+		it("提案対象フィールド(dueDate)が提案生成後に変化している場合はTodoUpdateStaleErrorにする", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+			} = setupAdoptTodoUpdate();
+
+			// baselineDueDate(提案生成時点)は2026-08-01だが、その後ユーザーが手動で2026-08-15に変更済み
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "期限を見直すべきだ。",
+				proposal: proposalWithTodoUpdate(),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+			vi.spyOn(todoRepo, "findById").mockResolvedValue({
+				id: todoId,
+				goalId,
+				title: "過去問を1日1回演習する",
+				dueDate: "2026-08-15",
+				priority: "medium",
+				isCompleted: 0,
+			});
+			const batchSpy = vi.spyOn(db, "batch");
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "todoUpdate",
+					todoUpdateIndex: 0,
+				}),
+			).rejects.toThrow(TodoUpdateStaleError);
+			expect(batchSpy).not.toHaveBeenCalled();
+		});
+
+		it("提案対象外フィールド(priority)だけが変化している場合はstaleにならない(誤検知防止)", async () => {
+			const {
+				db,
+				service,
+				messageId,
+				userId,
+				conversationId,
+				goalId,
+				todoId,
+				messageRepo,
+				conversationRepo,
+				todoRepo,
+				todoLogRepo,
+			} = setupAdoptTodoUpdate();
+
+			// この提案はdueDateのみを対象にしている(baselinePriorityを持たない)。
+			// priorityが並べ替え等の無関係な操作で変化していても競合検知してはならない
+			vi.spyOn(messageRepo, "findById").mockResolvedValue({
+				id: messageId,
+				conversationId,
+				role: "assistant",
+				content: "期限を見直すべきだ。",
+				proposal: proposalWithTodoUpdate(),
+				createdAt: "",
+			});
+			vi.spyOn(conversationRepo, "findByIdAndUserId").mockResolvedValue(
+				mockConversation(conversationId, userId, goalId),
+			);
+			vi.spyOn(todoRepo, "findById").mockResolvedValue({
+				id: todoId,
+				goalId,
+				title: "過去問を1日1回演習する",
+				dueDate: "2026-08-01",
+				// priorityがbaseline("medium")と異なるが、この提案はpriorityを対象にしていない
+				priority: "high",
+				isCompleted: 0,
+			});
+			vi.spyOn(todoLogRepo, "countCompletedByTodoIds").mockResolvedValue(new Map());
+			vi.spyOn(db, "batch").mockResolvedValue([
+				[{ id: todoId, goalId, title: "過去問を1日1回演習する", dueDate: "2026-09-01" }],
+			] as unknown as Awaited<ReturnType<typeof db.batch>>);
+
+			await expect(
+				service.adoptPlanItem(userId, messageId, {
+					type: "todoUpdate",
+					todoUpdateIndex: 0,
+				}),
+			).resolves.not.toThrow();
 		});
 	});
 });
