@@ -42,7 +42,7 @@ export default function RootLayout({
 			appearance={{ theme: shadcn }}
 		>
 			<html lang="ja">
-				<body className="min-h-screen antialiased">
+				<body className="min-h-dvh antialiased">
 					<SWRProvider>
 						<TooltipProvider>{children}</TooltipProvider>
 					</SWRProvider>

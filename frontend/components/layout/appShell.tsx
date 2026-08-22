@@ -16,7 +16,7 @@ export function AppShell({ children }: AppShellProps) {
 	const [sidebarOpen, setSidebarOpen] = useState(true);
 
 	return (
-		<div className="flex h-screen overflow-hidden">
+		<div className="flex h-dvh overflow-hidden">
 			{/* Desktop Sidebar */}
 			<aside
 				className={`hidden md:flex md:flex-col md:border-r bg-sidebar overflow-hidden transition-all duration-300 ${sidebarOpen ? "md:w-60" : "md:w-0 md:border-r-0"}`}
